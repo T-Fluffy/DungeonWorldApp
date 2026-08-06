@@ -1,0 +1,71 @@
+name: dungeonworld
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dungeonworld-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: dw_user
+      POSTGRES_PASSWORD: dw_password
+      POSTGRES_DB: dungeonworld
+    volumes:
+      - dungeonworld-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dw_user -d dungeonworld"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dungeonworld-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dungeonworld-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/Storage:/app/Storage
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      FileStorage__PdfUploadPath: /app/Storage/Uploads
+      FileStorage__ImageOutputPath: /app/Storage/GameArt
+      Cors__Origins: http://localhost:5173
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=dungeonworld;Username=dw_user;Password=dw_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dungeonworld-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: dungeonworld-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      VITE_BACKEND_URL: http://backend:8080
+    depends_on:
+      - backend
+    networks:
+      - dungeonworld-network
+    restart: unless-stopped
+
+networks:
+  dungeonworld-network:
+    driver: bridge
+
+volumes:
+  dungeonworld-postgres-data:

@@ -1,0 +1,16 @@
+# Use the exact latest LTS version you found
+FROM node:24.13.0-slim
+
+# Force a system update to catch any patches released since the image was published
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host"]

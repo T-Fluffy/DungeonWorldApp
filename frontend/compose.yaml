@@ -1,0 +1,10 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules # Prevents local node_modules from overwriting container modules
+    environment:
+      - NODE_ENV=development

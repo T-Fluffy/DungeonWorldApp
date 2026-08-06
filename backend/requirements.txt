@@ -1,0 +1,6 @@
+torch
+torchvision
+ultralytics
+labelImg
+opencv-python
+PyMuPDF

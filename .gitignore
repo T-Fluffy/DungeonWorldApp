@@ -1,0 +1,48 @@
+# --- .NET build output ---
+bin/
+obj/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Python / ML ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+backend/ML_Pipeline/dataset/
+
+# --- Runtime storage (copyrighted book PDFs, extracted art, processed JSON) ---
+backend/Storage/
+
+# --- Test fixtures with copyrighted content ---
+backend/DungeonWorld.Tests/Storage/
+
+# --- Editor / OS ---
+**/.vscode/*
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Secrets ---
+*.env
+.env.*
+!.env.example
+appsettings.Local.json

@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Pirata+One&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #1A1A1D;
+  color: #e5e5e5;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  margin: 0; /* Important: Remove default margins */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1A1A1D; }
+::-webkit-scrollbar-thumb { 
+  background: #2D2D35; 
+  border-radius: 4px; 
+}
+::-webkit-scrollbar-thumb:hover { background: #FF6B35; }
+
+/* Text Glows */
+.text-glow {
+  text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+}
+
+.text-glow-strong {
+  text-shadow: 0 0 20px rgba(255, 107, 53, 0.8), 0 0 40px rgba(193, 18, 31, 0.4);
+}
+
+.font-gothic {
+  font-family: 'Pirata One', cursive;
+}
+
+@keyframes fog-drift {
+  from { transform: scale(1.5) translateX(-10%); }
+  to { transform: scale(1.5) translateX(10%); }
+}
+
+.animate-fog-drift {
+  animation: fog-drift 20s ease-in-out infinite alternate;
+}
+
+/* Ensure the background image actually shows up */
+.bg-fog-pattern {
+  background-image: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+}
+
+@media screen and (orientation: portrait) and (max-width: 1024px) {
+  .portrait-warning {
+    display: flex !important;
+  }
+  .game-interface {
+    display: none;
+  }
+}
+
+.portrait-warning {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: black;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Custom Scrollbar for side panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(251, 191, 36, 0.2);
+  border-radius: 10px;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(5px); }
+  50% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+.crit-shake {
+  animation: shake 0.2s ease-in-out;
+}
