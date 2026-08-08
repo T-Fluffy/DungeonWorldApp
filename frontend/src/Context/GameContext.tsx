@@ -3,6 +3,7 @@ import { Item, PlayerStats, StatType, User, CharacterClass } from '@/types/game'
 import { useState, ReactNode, useCallback } from 'react';
 import { login as apiLogin, registerUser as apiRegister, setToken, AuthResponse } from '@/api/client';
 import { GameContext } from './useGame';
+import { LogoutLoading } from '@/components/LogoutLoading';
 
 const SESSION_KEY = 'dw-session';
 const CHARACTER_KEY = 'dw-character';
@@ -62,6 +63,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // The book currently being played (set from the FileSelector ritual)
   const [currentBook, setCurrentBook] = useState<string | null>(null);
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [items, setItems] = useState<Item[]>([
     {
@@ -127,11 +130,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
-    localStorage.removeItem(SESSION_KEY);
-    setUser(null);
-    setCurrentBook(null);
-  }, []);
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    // Let the parting ritual play out before severing the pact
+    setTimeout(() => {
+      setToken(null);
+      localStorage.removeItem(SESSION_KEY);
+      setUser(null);
+      setCurrentBook(null);
+      setIsLoggingOut(false);
+    }, 3200);
+  }, [isLoggingOut]);
 
   const setAvatar = useCallback((avatarPath: string | null) => {
     setUser((prev) => {
@@ -148,6 +157,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       items,
       stats,
       currentBook,
+      isLoggingOut,
       addItem,
       removeItem,
       updateStat,
@@ -157,6 +167,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       logout,
       setAvatar
     }}>
+      {isLoggingOut && <LogoutLoading />}
       {children}
     </GameContext.Provider>
   );

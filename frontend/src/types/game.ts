@@ -38,6 +38,7 @@ export interface GameState {
   items: Item[];
   stats: PlayerStats;
   currentBook: string | null;
+  isLoggingOut: boolean;
   addItem: (item: Item) => void;
   removeItem: (id: string) => void;
   updateStat: (stat: StatType, value: number) => void;
