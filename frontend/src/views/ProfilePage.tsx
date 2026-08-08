@@ -14,11 +14,13 @@ import {
   Scroll, 
   Crown,
   Ghost,
-  Loader
+  Loader,
+  Upload,
+  Trash2
 } from 'lucide-react';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 import { Item, ItemType } from '../types/game';
-import { getUser, UserResponse, AssetResponse, apiError } from '../api/client';
+import { getUser, UserResponse, AssetResponse, apiError, uploadAvatar, deleteAvatar } from '../api/client';
 
 function toItem(asset: AssetResponse): Item {
   const validTypes: ItemType[] = ['weapon', 'consumable', 'quest', 'artifact'];
@@ -38,6 +40,8 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,10 +49,50 @@ export function ProfilePage() {
 
     getUser()
       .then((data) => { if (!cancelled) setProfile(data); })
-      .catch((err) => { if (!cancelled) setError(apiError(err)); });
+      .catch((err) => {
+        if (!cancelled) {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          // A 401/404 on /me means the saved token is stale (e.g. DB was reset) —
+          // the interceptor already cleared it, so send the user back to login.
+          if (status === 401 || status === 404) {
+            navigate('/login');
+            return;
+          }
+          setError(apiError(err));
+        }
+      });
 
     return () => { cancelled = true; };
-  }, [user?.isLoggedIn]);
+  }, [user?.isLoggedIn, navigate]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    setError(null);
+    try {
+      const { avatarPath } = await uploadAvatar(file);
+      setProfile((prev) => prev ? { ...prev, avatarPath } : prev);
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setUploadingAvatar(true);
+    setError(null);
+    try {
+      const { avatarPath } = await deleteAvatar();
+      setProfile((prev) => prev ? { ...prev, avatarPath } : prev);
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const statDisplay = [
     { label: 'Vitality', value: stats.vitality, color: 'bg-crimson', icon: Shield },
@@ -56,6 +100,15 @@ export function ProfilePage() {
     { label: 'Essence', value: stats.essence, color: 'bg-purple-600', icon: Zap },
     { label: 'Corruption', value: stats.corruption, color: 'bg-ember', icon: Skull }
   ];
+
+  const ffStats = profile
+    ? [
+        { label: 'SKILL', value: profile.skill, icon: Sword, color: 'text-ember' },
+        { label: 'STAMINA', value: profile.stamina, icon: Shield, color: 'text-emerald-400' },
+        { label: 'LUCK', value: profile.luck, icon: Zap, color: 'text-amber-400' },
+        { label: 'XP', value: profile.experience, icon: Scroll, color: 'text-purple-400' }
+      ]
+    : [];
 
   const displayedItems: Item[] =
     profile && profile.assets.length > 0 ? profile.assets.map(toItem) : items;
@@ -77,20 +130,52 @@ export function ProfilePage() {
         initial={{ opacity: 0, scale: 0.9 }} 
         animate={{ opacity: 1, scale: 1 }} 
         transition={{ duration: 1 }} 
-        className="relative w-48 h-48 md:w-64 md:h-64 mb-12"
+        className="relative w-48 h-48 md:w-64 md:h-64 mb-4"
       >
         <div className="absolute inset-0 rounded-full border-2 border-ember/30 animate-pulse" />
         <div className="absolute inset-4 rounded-full border border-white/10" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full overflow-hidden backdrop-blur-sm">
-          <div className="w-32 h-32 bg-gray-900 rounded-full relative overflow-hidden">
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-24 bg-gray-800 rounded-t-full" />
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-gray-700 rounded-full" />
-          </div>
+          {profile?.avatarPath ? (
+            <img src={profile.avatarPath} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-32 h-32 bg-gray-900 rounded-full relative overflow-hidden">
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-24 bg-gray-800 rounded-t-full" />
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-gray-700 rounded-full" />
+            </div>
+          )}
         </div>
         <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-charcoal border-2 border-ember rounded-full flex flex-col items-center justify-center shadow-[0_0_20px_rgba(255,107,53,0.4)]">
           <span className="text-[10px] text-gray-400 uppercase leading-none">Level</span>
           <span className="text-2xl font-gothic text-white">{user?.level ?? 1}</span>
         </div>
+        {/* Avatar actions */}
+        <div className="absolute -bottom-4 -left-4 flex gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="w-10 h-10 bg-charcoal border border-white/10 hover:border-ember rounded-full flex items-center justify-center text-gray-400 hover:text-ember transition-all disabled:opacity-50"
+            title="Upload avatar"
+          >
+            {uploadingAvatar ? <Loader className="w-4 h-4 animate-spin" /> : <Upload size={16} />}
+          </button>
+          {profile?.avatarPath && (
+            <button
+              onClick={handleRemoveAvatar}
+              disabled={uploadingAvatar}
+              className="w-10 h-10 bg-charcoal border border-white/10 hover:border-red-500/50 rounded-full flex items-center justify-center text-gray-400 hover:text-red-400 transition-all disabled:opacity-50"
+              title="Remove avatar"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       </motion.div>
 
       <h1 className="text-4xl font-gothic text-white mb-2 text-glow">{user?.name ?? 'Shadow Walker'}</h1>
@@ -139,6 +224,25 @@ export function ProfilePage() {
           </motion.div>
         ))}
       </div>
+
+      {/* 2b. Fighting Fantasy Stats (SKILL / STAMINA / LUCK / XP) */}
+      {ffStats.length > 0 && (
+        <div className="w-full max-w-2xl grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {ffStats.map((s, index) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-black/40 border border-white/10 rounded-lg p-4 text-center hover:border-ember/40 transition-colors"
+            >
+              <s.icon size={18} className={`mx-auto mb-2 ${s.color}`} />
+              <p className="text-[10px] uppercase tracking-widest text-gray-500">{s.label}</p>
+              <p className="text-3xl font-mono text-white mt-1">{s.value}</p>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* 3. Traveler's Pack */}
       <div className="w-full max-w-2xl mb-12">

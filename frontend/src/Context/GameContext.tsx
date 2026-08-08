@@ -1,7 +1,8 @@
 // GameContext.tsx
-import { GameState, Item, PlayerStats, StatType, User, CharacterClass } from '@/types/game';
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { Item, PlayerStats, StatType, User, CharacterClass } from '@/types/game';
+import { useState, ReactNode, useCallback } from 'react';
 import { login as apiLogin, registerUser as apiRegister, setToken, AuthResponse } from '@/api/client';
+import { GameContext } from './useGame';
 
 const SESSION_KEY = 'dw-session';
 const CHARACTER_KEY = 'dw-character';
@@ -47,10 +48,13 @@ function toGameUser(resp: AuthResponse, meta: CharacterMeta): User {
     title: meta.title,
     class: meta.class,
     isLoggedIn: true,
+    avatarPath: user.avatarPath,
+    skill: user.skill,
+    stamina: user.stamina,
+    luck: user.luck,
+    experience: user.experience,
   };
 }
-
-const GameContext = createContext<GameState | undefined>(undefined);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   // 1. Initialize User State (restored from session)
@@ -97,7 +101,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (req: { username: string; email: string; password: string; className: CharacterClass }): Promise<User> => {
-    const resp = await apiRegister({ username: req.username, email: req.email, password: req.password });
+    // Fighting Fantasy starting stats per class (SKILL / STAMINA / LUCK)
+    const classStats: Record<CharacterClass, { skill: number; stamina: number; luck: number }> = {
+      'Dreadknight': { skill: 9, stamina: 22, luck: 8 },
+      'Abyssal Mage': { skill: 8, stamina: 18, luck: 12 },
+      'Shadow Rogue': { skill: 11, stamina: 18, luck: 10 },
+    };
+    const stats = classStats[req.className];
+
+    const resp = await apiRegister({
+      username: req.username,
+      email: req.email,
+      password: req.password,
+      skill: stats.skill,
+      stamina: stats.stamina,
+      luck: stats.luck,
+    });
     setToken(resp.token);
     const meta: CharacterMeta = { level: 1, title: 'Initiate of the Abyss', class: req.className };
     saveCharacter(resp.user.id, meta);
@@ -114,6 +133,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setCurrentBook(null);
   }, []);
 
+  const setAvatar = useCallback((avatarPath: string | null) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, avatarPath: avatarPath ?? null };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
     <GameContext.Provider value={{
       user,
@@ -126,15 +154,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setCurrentBook,
       login,
       register,
-      logout
+      logout,
+      setAvatar
     }}>
       {children}
     </GameContext.Provider>
   );
-}
-
-export function useGame() {
-  const context = useContext(GameContext);
-  if (!context) throw new Error('useGame must be used within a GameProvider');
-  return context;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FileText, Book, User, LogOut } from 'lucide-react';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 
 export function Navigation() {
   const location = useLocation();

@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { useGame } from '../Context/GameContext';
-import { apiError } from '../api/client';
-import { UserPlus, Shield, Zap, Target, Sparkles, Heart, Sword, Flame, KeyRound, Mail, LucideIcon } from 'lucide-react';
+import { useGame } from '../Context/useGame';
+import { apiError, uploadAvatar } from '../api/client';
+import { UserPlus, Shield, Zap, Target, Sparkles, Heart, Sword, Flame, KeyRound, Mail, Camera, ArrowLeft, LucideIcon } from 'lucide-react';
 import { CharacterClass } from '../types/game';
 
 export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('Dreadknight');
-  const { register, updateStat } = useGame();
+  const { register, updateStat, setAvatar } = useGame();
   const navigate = useNavigate();
 
   const classes = [
@@ -42,6 +44,22 @@ export function RegisterPage() {
 
   const currentClassStats = classes.find(c => c.id === selectedClass)?.stats;
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      setError('Avatar must be a JPG, PNG, WEBP or GIF image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Avatar must be 5MB or smaller.');
+      return;
+    }
+    setError(null);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password) return;
@@ -55,6 +73,12 @@ export function RegisterPage() {
         password,
         className: selectedClass
       });
+
+      // Upload the chosen avatar once the new account is active.
+      if (avatarFile) {
+        const { avatarPath } = await uploadAvatar(avatarFile);
+        setAvatar(avatarPath);
+      }
 
       // Sync stats to context
       updateStat('vitality', currentClassStats!.vit);
@@ -78,6 +102,14 @@ export function RegisterPage() {
       >
         {/* Left Side: Form */}
         <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <Link to="/login" className="flex items-center gap-2 text-gray-400 hover:text-ember transition-colors text-xs uppercase tracking-widest">
+              <ArrowLeft className="w-4 h-4" />
+              Return
+            </Link>
+            <span className="text-gray-600 text-[10px] uppercase tracking-widest">Step 1 of 1</span>
+          </div>
+
           <div className="text-left">
             <h1 className="text-4xl font-gothic text-white uppercase tracking-tighter">Forge Your Soul</h1>
             <p className="text-gray-500 text-[10px] uppercase tracking-[0.3em] mt-2">The ink is dry, the pact awaits</p>
@@ -126,6 +158,25 @@ export function RegisterPage() {
                   placeholder="A secret only the void knows..." 
                 />
                 <KeyRound className="absolute right-4 top-4 w-5 h-5 text-gray-600" />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-widest text-ember/70">Countenance</label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-ember/30 bg-white/5 flex items-center justify-center shrink-0">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-gray-600" />
+                  )}
+                </div>
+                <label className="flex-1 cursor-pointer">
+                  <span className="block w-full text-center bg-white/5 border border-white/10 p-3 rounded-lg text-sm text-gray-400 hover:border-ember/50 hover:text-white transition-all">
+                    {avatarFile ? avatarFile.name : 'Choose an image (optional)'}
+                  </span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarChange} className="hidden" />
+                </label>
               </div>
             </div>
 
@@ -179,7 +230,7 @@ export function RegisterPage() {
           </div>
 
           <div className="mt-6 text-center">
-            <Link to="/login" className="text-gray-500 hover:text-ember transition-colors text-[10px] uppercase tracking-widest">
+            <Link to="/login" className="text-gray-500 hover:text-white transition-colors text-xs uppercase tracking-widest">
               Already sworn? Return
             </Link>
           </div>

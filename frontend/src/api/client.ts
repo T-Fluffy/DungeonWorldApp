@@ -45,6 +45,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Clear an invalid/expired token automatically so a stale session
+// (e.g. after a database reset) doesn't leave the app stuck.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const isAuthCall = typeof error?.config?.url === 'string' &&
+      (error.config.url.includes('/user/me') || error.config.url.includes('/user/login'));
+    if ((status === 401 || status === 404) && isAuthCall && getToken()) {
+      setToken(null);
+      localStorage.removeItem('dw-session');
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const listBooks = async (): Promise<string[]> => {
   const { data } = await api.get<string[]>('/game/list-books');
   return data;
@@ -92,6 +108,9 @@ export interface RegisterRequest {
   email: string;
   password: string;
   displayName?: string | null;
+  skill?: number;
+  stamina?: number;
+  luck?: number;
 }
 
 export interface LoginRequest {
@@ -143,6 +162,10 @@ export interface UserResponse {
   email: string;
   displayName: string | null;
   avatarPath: string | null;
+  skill: number;
+  stamina: number;
+  luck: number;
+  experience: number;
   createdAt: string;
   lastLoginAt: string | null;
   subscription: SubscriptionResponse | null;
@@ -154,6 +177,55 @@ export interface UserResponse {
 export interface AuthResponse {
   token: string;
   user: UserResponse;
+}
+
+// --- Game catalog DTOs (mirroring DungeonWorld.API CatalogController) ---
+
+export interface ItemResponse {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  rarity: string;
+  bookTitle: string | null;
+  sectionNumber: number | null;
+  requiredLevel: number;
+  requiredSkill: number | null;
+  requiredStamina: number | null;
+  requiredLuck: number | null;
+  effects: string | null;
+}
+
+export interface SpellResponse {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  effects: string | null;
+  bookTitle: string | null;
+  sectionNumber: number | null;
+  requiredLevel: number;
+  requiredSkill: number | null;
+  requiredStamina: number | null;
+  requiredLuck: number | null;
+}
+
+export interface GameCommandResponse {
+  id: string;
+  name: string;
+  aliases: string[];
+  description: string;
+  usage: string;
+  category: string;
+}
+
+export interface AdventureCatalogResponse {
+  id: string;
+  bookTitle: string;
+  sectionCount: number;
+  description: string | null;
+  medallionTitle: string;
+  medallionDescription: string | null;
 }
 
 const TOKEN_KEY = 'dw-token';
@@ -182,9 +254,23 @@ export const getUser = async (): Promise<UserResponse> => {
 };
 
 export const updateProfile = async (
-  payload: { displayName?: string | null; avatarPath?: string | null }
+  payload: { displayName?: string | null; avatarPath?: string | null; skill?: number; stamina?: number; luck?: number; experience?: number }
 ): Promise<UserResponse> => {
   const { data } = await api.put<UserResponse>('/user/me', payload);
+  return data;
+};
+
+export const uploadAvatar = async (file: File): Promise<{ avatarPath: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post<{ avatarPath: string }>('/user/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const deleteAvatar = async (): Promise<{ avatarPath: string | null }> => {
+  const { data } = await api.delete<{ avatarPath: string | null }>('/user/me/avatar');
   return data;
 };
 
@@ -250,4 +336,31 @@ export const apiError = (err: unknown): string => {
     return err.message;
   }
   return 'Something went wrong.';
+};
+
+// --- Game catalog API (mirrors DungeonWorld.API CatalogController) ---
+
+export const getItems = async (): Promise<ItemResponse[]> => {
+  const { data } = await api.get<ItemResponse[]>('/catalog/items');
+  return data;
+};
+
+export const getSpells = async (): Promise<SpellResponse[]> => {
+  const { data } = await api.get<SpellResponse[]>('/catalog/spells');
+  return data;
+};
+
+export const getCommands = async (): Promise<GameCommandResponse[]> => {
+  const { data } = await api.get<GameCommandResponse[]>('/catalog/commands');
+  return data;
+};
+
+export const getAdventureCatalog = async (): Promise<AdventureCatalogResponse[]> => {
+  const { data } = await api.get<AdventureCatalogResponse[]>('/catalog/adventures');
+  return data;
+};
+
+export const getAdventureCatalogItem = async (bookTitle: string): Promise<AdventureCatalogResponse> => {
+  const { data } = await api.get<AdventureCatalogResponse>(`/catalog/adventures/${encodeURIComponent(bookTitle)}`);
+  return data;
 };

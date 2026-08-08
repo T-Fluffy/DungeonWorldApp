@@ -31,6 +31,9 @@
     <None Update="Storage\Uploads\Seas of Blood.pdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Storage\Uploads\Seas of Blood.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

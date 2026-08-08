@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, CheckCircle, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 import { RitualCircle } from '../components/RitualCircle';
 import { uploadPdf, ingestBook } from '../api/client';
 

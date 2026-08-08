@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal, ChevronRight, RefreshCw, Package, Zap, CheckCircle2, BookOpen } from 'lucide-react';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 import { StatusHUD } from '../components/StatusHUD';
 import { QuestTracker } from '../components/QuestTracker';
 import { QuickGear } from '../components/QuickGear';

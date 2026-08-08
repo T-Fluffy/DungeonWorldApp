@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 import { apiError } from '../api/client';
 import { Skull, Ghost, KeyRound } from 'lucide-react';
 

@@ -13,6 +13,11 @@ public class DungeonWorldDbContext : DbContext
     public DbSet<UserAsset> UserAssets => Set<UserAsset>();
     public DbSet<AdventureProgress> AdventureProgress => Set<AdventureProgress>();
 
+    public DbSet<GameItem> Items => Set<GameItem>();
+    public DbSet<Spell> Spells => Set<Spell>();
+    public DbSet<GameCommand> Commands => Set<GameCommand>();
+    public DbSet<Adventure> Adventures => Set<Adventure>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity =>
@@ -45,6 +50,26 @@ public class DungeonWorldDbContext : DbContext
         modelBuilder.Entity<AdventureProgress>(entity =>
         {
             entity.HasIndex(a => new { a.UserId, a.BookTitle }).IsUnique();
+        });
+
+        modelBuilder.Entity<GameItem>(entity =>
+        {
+            entity.HasIndex(i => i.Name);
+        });
+
+        modelBuilder.Entity<Spell>(entity =>
+        {
+            entity.HasIndex(s => s.Name);
+        });
+
+        modelBuilder.Entity<GameCommand>(entity =>
+        {
+            entity.HasIndex(c => c.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<Adventure>(entity =>
+        {
+            entity.HasIndex(a => a.BookTitle).IsUnique();
         });
     }
 }

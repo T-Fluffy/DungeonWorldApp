@@ -2,11 +2,13 @@ using System.Security.Claims;
 using DungeonWorld.API.Auth;
 using DungeonWorld.API.DTOs;
 using DungeonWorld.Core.Entities;
+using DungeonWorld.Core.Options;
 using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace DungeonWorld.API.Controllers;
 
@@ -16,11 +18,13 @@ public class UserController : ControllerBase
 {
     private readonly DungeonWorldDbContext _db;
     private readonly ITokenIssuer _tokenIssuer;
+    private readonly FileStorageOptions _storageOptions;
 
-    public UserController(DungeonWorldDbContext db, ITokenIssuer tokenIssuer)
+    public UserController(DungeonWorldDbContext db, ITokenIssuer tokenIssuer, IOptions<FileStorageOptions> storageOptions)
     {
         _db = db;
         _tokenIssuer = tokenIssuer;
+        _storageOptions = storageOptions.Value;
     }
 
     private IQueryable<User> Query() =>
@@ -58,7 +62,10 @@ public class UserController : ControllerBase
             Username = username,
             Email = email ?? "",
             PasswordHash = PasswordHasher.Hash(request.Password),
-            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim()
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim(),
+            Skill = Math.Max(1, Math.Min(20, request.Skill)),
+            Stamina = Math.Max(1, Math.Min(40, request.Stamina)),
+            Luck = Math.Max(1, Math.Min(20, request.Luck))
         };
 
         _db.Users.Add(user);
@@ -119,8 +126,78 @@ public class UserController : ControllerBase
         if (request.AvatarPath != null)
             user.AvatarPath = request.AvatarPath;
 
+        // Player stats & XP are only ever changed here, never on the client directly.
+        if (request.Skill.HasValue)
+            user.Skill = Math.Max(1, Math.Min(20, request.Skill.Value));
+        if (request.Stamina.HasValue)
+            user.Stamina = Math.Max(1, Math.Min(40, request.Stamina.Value));
+        if (request.Luck.HasValue)
+            user.Luck = Math.Max(1, Math.Min(20, request.Luck.Value));
+        if (request.Experience.HasValue)
+            user.Experience = Math.Max(0, request.Experience.Value);
+
         await _db.SaveChangesAsync();
         return Ok(ToUserResponse(user));
+    }
+
+    [Authorize]
+    [HttpPost("me/avatar")]
+    [RequestSizeLimit(5_000_000)]
+    public async Task<IActionResult> UploadAvatar(IFormFile file)
+    {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new { error = "No file uploaded." });
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        if (!allowed.Contains(ext))
+            return BadRequest(new { error = "Only image files (.jpg, .png, .webp, .gif) are accepted." });
+
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound(new { error = "User not found." });
+
+        try
+        {
+            var avatarsPath = Path.GetFullPath(_storageOptions.AvatarPath);
+            Directory.CreateDirectory(avatarsPath);
+
+            var safeName = $"{userId:N}{ext}";
+            var fullPath = Path.Combine(avatarsPath, safeName);
+
+            await using (var stream = System.IO.File.Create(fullPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            user.AvatarPath = $"/assets/avatars/{safeName}";
+            await _db.SaveChangesAsync();
+
+            return Ok(new { avatarPath = user.AvatarPath });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Failed to save avatar.", details = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpDelete("me/avatar")]
+    public async Task<IActionResult> DeleteAvatar()
+    {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound(new { error = "User not found." });
+
+        user.AvatarPath = null;
+        await _db.SaveChangesAsync();
+        return Ok(new { avatarPath = (string?)null });
     }
 
     [Authorize]
@@ -401,7 +478,52 @@ public class UserController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+
+        // Conquering an adventure: award XP and unlock the medallion achievement.
+        if (request.IsComplete)
+        {
+            var user = await _db.Users.FindAsync(userId);
+            if (user != null)
+            {
+                const int completionXp = 100;
+                user.Experience += completionXp;
+            }
+
+            var adventureCatalog = await _db.Adventures
+                .FirstOrDefaultAsync(a => a.BookTitle == request.BookTitle);
+
+            var medallionCode = "MEDALLION_" + Slugify(request.BookTitle);
+            var medallionTitle = adventureCatalog?.MedallionTitle ?? $"Medallion of {request.BookTitle}";
+            var medallionDescription = adventureCatalog?.MedallionDescription;
+
+            var alreadyUnlocked = await _db.Achievements
+                .AnyAsync(a => a.UserId == userId && a.Code == medallionCode);
+
+            if (!alreadyUnlocked)
+            {
+                _db.Achievements.Add(new Achievement
+                {
+                    UserId = userId.Value,
+                    Code = medallionCode,
+                    Title = medallionTitle,
+                    Description = medallionDescription
+                });
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
         return Ok(ToDto(adventure));
+    }
+
+    private static string Slugify(string value)
+    {
+        var chars = value
+            .Trim()
+            .ToUpperInvariant()
+            .Select(c => char.IsLetterOrDigit(c) ? c : '_')
+            .ToArray();
+        return new string(chars).Replace("__", "_").Trim('_');
     }
 
     [Authorize]
@@ -432,6 +554,10 @@ public class UserController : ControllerBase
         u.Email,
         u.DisplayName,
         u.AvatarPath,
+        u.Skill,
+        u.Stamina,
+        u.Luck,
+        u.Experience,
         u.CreatedAt,
         u.LastLoginAt,
         u.Subscription == null ? null : ToDto(u.Subscription),

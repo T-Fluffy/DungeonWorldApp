@@ -11,6 +11,14 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
 
+    // Player stats (Fighting Fantasy style: SKILL / STAMINA / LUCK)
+    public int Skill { get; set; }
+    public int Stamina { get; set; }
+    public int Luck { get; set; }
+
+    // Experience points earned along adventures (used to unlock items & spells later)
+    public int Experience { get; set; }
+
     public Subscription? Subscription { get; set; }
     public List<Achievement> Achievements { get; set; } = new();
     public List<UserAsset> Assets { get; set; } = new();

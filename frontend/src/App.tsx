@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Context & Components
-import { GameProvider, useGame } from './Context/GameContext'; 
+import { GameProvider } from './Context/GameContext'; 
+import { useGame } from './Context/useGame';
 import { RitualLoading } from './components/RitualLoading';
 import { Navigation } from './components/Navigation';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -26,11 +27,13 @@ function AnimatedRoutes() {
 
   // We listen for changes in the login state to trigger the ritual
   useEffect(() => {
-    if (user?.isLoggedIn) {
-      setGlobalLoading(true);
-      const timer = setTimeout(() => setGlobalLoading(false), 2000);
-      return () => clearTimeout(timer);
-    }
+    if (!user?.isLoggedIn) return;
+    const showTimer = setTimeout(() => setGlobalLoading(true), 0);
+    const hideTimer = setTimeout(() => setGlobalLoading(false), 2000);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
   }, [user?.isLoggedIn]);
 
   if (globalLoading) return <RitualLoading />;

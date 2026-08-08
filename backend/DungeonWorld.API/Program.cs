@@ -1,4 +1,5 @@
 using System.Text;
+using DungeonWorld.API;
 using DungeonWorld.API.Auth;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
@@ -98,16 +99,23 @@ var storageConfig = app.Configuration.GetSection(FileStorageOptions.SectionName)
 // Fallback just in case, but usually these won't be null
 string imagePath = Path.GetFullPath(storageConfig?.ImageOutputPath ?? "Storage/GameArt");
 string uploadPath = Path.GetFullPath(storageConfig?.PdfUploadPath ?? "Storage/Uploads");
+string avatarPath = Path.GetFullPath(storageConfig?.AvatarPath ?? "Storage/Avatars");
 
 // Ensure directories exist
 Directory.CreateDirectory(imagePath);
 Directory.CreateDirectory(uploadPath);
+Directory.CreateDirectory(avatarPath);
 
 app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(imagePath),
     RequestPath = "/assets/game-art"
+});
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(avatarPath),
+    RequestPath = "/assets/avatars"
 });
 
 app.UseCors(corsPolicy);
@@ -122,6 +130,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DungeonWorldDbContext>();
     db.Database.EnsureCreated();
+    await CatalogSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 app.Run();

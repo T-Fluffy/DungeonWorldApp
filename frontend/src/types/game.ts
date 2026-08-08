@@ -19,6 +19,11 @@ export interface User {
   title: string;
   class: CharacterClass;
   isLoggedIn: boolean;
+  avatarPath?: string | null;
+  skill?: number;
+  stamina?: number;
+  luck?: number;
+  experience?: number;
 }
 
 export interface PlayerStats {
@@ -40,6 +45,7 @@ export interface GameState {
   login: (usernameOrEmail: string, password: string) => Promise<User>;
   register: (req: { username: string; email: string; password: string; className: CharacterClass }) => Promise<User>;
   logout: () => void;
+  setAvatar: (avatarPath: string | null) => void;
 }
 
 export interface LogEntry {

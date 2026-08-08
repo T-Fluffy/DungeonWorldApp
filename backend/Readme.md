@@ -18,7 +18,9 @@ The backend of **Dungeon World** — a .NET 8 service that turns Fighting Fantas
 | **PDF Ingestion** | Upload a gamebook PDF and parse it into structured JSON (sections, choices, images, map, front matter) |
 | **Layout Detection** | Automatically detects whether a scan is single-page or double-page (2-up) and picks the right parser |
 | **Game Data API** | Read book metadata, individual sections, choices, and the list of ingested books |
-| **Player Accounts** | Register / login with PBKDF2-hashed passwords, profiles, subscriptions, achievements |
+| **Player Accounts** | Register / login with PBKDF2-hashed passwords, profiles, avatar upload, subscriptions, achievements |
+| **Player Stats** | Fighting Fantasy-style **SKILL / STAMINA / LUCK** plus **Experience Points** earned on each conquered adventure (used to unlock items & spells) |
+| **Game Catalog** | Auto-seeded `Items`, `Spells`, `Commands`, and `Adventures` tables; admin CRUD + public read endpoints |
 | **Progress & Inventory** | Save adventure progress, collect assets, resume books per player |
 
 ## 🏗️ Architecture
@@ -28,16 +30,19 @@ Clean Architecture split across four projects:
 ```
 backend/
 ├── DungeonWorld.Core/             # Domain model & contracts (no dependencies)
-│   ├── Entities/                  # Book, Section, Choice, User, Subscription, Achievement, UserAsset, AdventureProgress
+│   ├── Entities/                  # Book, Section, Choice, User, GameItem, Spell, GameCommand,
+│   │                              # Adventure, Subscription, Achievement, UserAsset, AdventureProgress
 │   ├── Interfaces/                # IBookParser
-│   └── Options/                   # FileStorageOptions (PDF/image paths)
+│   └── Options/                   # FileStorageOptions (PDF/image/avatar paths)
 ├── DungeonWorld.Infrastructure/   # Implementations
 │   ├── Parsers/                   # SinglePageParser, DoublePageParser, DungeonWorldBookParser, DungeonWorldParserFactory
 │   ├── Helpers/                   # PdfPigLayoutAnalyzer, PasswordHasher
 │   ├── Interfaces/                # IParserFactory, ILayoutAnalyzer
 │   └── Persistence/               # DungeonWorldDbContext (EF Core / Npgsql)
 ├── DungeonWorld.API/              # ASP.NET Core Web API
-│   ├── Controllers/               # Admin, Game, User
+│   ├── Controllers/               # Admin, Game, User, Catalog
+│   ├── CatalogSeeder.cs           # Startup seeding: commands, adventures, heuristic item/spell extraction
+│   ├── GameContentExtractor.cs    # Heuristic item/spell extraction from processed book prose
 │   ├── DTOs/                      # UserDtos
 │   └── Program.cs                 # DI, CORS, Swagger, static files, schema bootstrap
 ├── DungeonWorld.Tests/            # xUnit + FluentAssertions
@@ -65,13 +70,37 @@ All routes are exposed under `/api`. Swagger UI is available at `/swagger` in De
 ### User — accounts & progression
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/user/register` | Create an account (unique username/email) |
+| `POST` | `/api/user/register` | Create an account (unique username/email) + initial SKILL/STAMINA/LUCK |
 | `POST` | `/api/user/login` | Login by username or email (PBKDF2 verify) |
-| `GET/PUT/DELETE` | `/api/user/{id}` | Fetch / update / delete a profile |
-| `GET/POST/DELETE` | `/api/user/{id}/subscription` | Manage the player's plan subscription |
-| `GET/POST/DELETE` | `/api/user/{id}/achievements` | Unlock / list / remove achievements |
-| `GET/POST/DELETE` | `/api/user/{id}/assets` | Collected in-game items |
-| `GET/POST/DELETE` | `/api/user/{id}/adventures` | Per-book progress (section, Skill/Stamina/Luck) |
+| `GET` | `/api/user/me` | Fetch the current user's profile + stats + XP |
+| `PUT` | `/api/user/me` | Update profile / avatar path / stats / XP |
+| `POST` | `/api/user/me/avatar` | Upload an avatar image (≤ 5 MB, jpg/png/webp/gif) |
+| `DELETE` | `/api/user/me/avatar` | Remove the avatar |
+| `DELETE` | `/api/user/me` | Delete the current user |
+| `GET/POST/DELETE` | `/api/user/me/subscription` | Manage the player's plan subscription |
+| `GET/POST/DELETE` | `/api/user/me/achievements` | Unlock / list / remove achievements (medallions on conquered adventures) |
+| `GET/POST/DELETE` | `/api/user/me/assets` | Collected in-game items |
+| `GET/POST/DELETE` | `/api/user/me/adventures` | Per-book progress (section, Skill/Stamina/Luck); marking `IsComplete` awards XP + a medallion achievement |
+
+### Catalog — the game database (public read, admin write)
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/catalog/items` | All game items (auto-extracted from the adventure books) |
+| `GET` | `/api/catalog/spells` | All spells a player can cast when requirements are met |
+| `GET` | `/api/catalog/commands` | Chat-box commands the player uses to interact with the game |
+| `GET` | `/api/catalog/adventures` | Adventure books: title, section count, medallion awarded |
+| `GET` | `/api/catalog/adventures/{bookTitle}` | A single adventure's catalog entry |
+| `POST/PUT/DELETE` | `/api/catalog/{items,spells,commands,adventures}[/{id}]` | Admin CRUD for the catalog tables |
+
+## 🗄️ Catalog Seeding
+
+On startup, `CatalogSeeder` populates the game database:
+
+- **Commands** — 14 default chat-box commands (`GO`, `LOOK`, `BACK`, `INVENTORY`, `TAKE`, `USE`, `DROP`, `CAST`, `FIGHT`, `FLEE`, `SAVE`, `HELP`, `RESTART`, `REREAD`) with aliases and usage examples.
+- **Adventures** — one row per processed book (title, section count, `Medallion of <Title>` reward).
+- **Items & Spells** — `GameContentExtractor` heuristically scans each processed book's prose for item mentions (acquisition phrases, `If you have the X...`, and proper-noun artifacts like *Crossbow of Axillon*), classifies each into a type (`weapon`, `armour`, `consumable`, `quest`, `artifact`) and rarity, and records the section where it appears. Place names and in-world scores (e.g. *Booty*) are filtered out.
+
+> Because the schema is bootstrapped with `EnsureCreated()`, changing an entity requires a full DB wipe (see Docker notes).
 
 ## 🔍 How The Parser Works
 
@@ -111,6 +140,7 @@ The suite uses **xUnit** with **FluentAssertions**:
 - **Layout detection** — `CanHandle` correctly classifies single vs double-page PDFs.
 - **Parser regression** — Section 50 / victory-terminator patches stay functional after logic changes.
 - **Data validation** — section numbering constraints enforced during ingestion.
+- **Content extraction** — `GameContentExtractorTests` cover normalization, proper-noun artifact detection, item classification, and place-name rejection.
 
 ```bash
 dotnet test DungeonWorldBackend.sln
@@ -120,7 +150,9 @@ dotnet test DungeonWorldBackend.sln
 
 - EF Core over Npgsql (`DungeonWorldDbContext`), with retry-on-failure enabled for container startup races.
 - Schema is bootstrapped via `Database.EnsureCreated()` at startup (swap for EF migrations in production).
+- Tables: `Users` (incl. SKILL/STAMINA/LUCK/XP + avatar path), `GameItems`, `Spells`, `Commands`, `Adventures`, `Subscriptions`, `Achievements`, `UserAssets`, `AdventureProgresses`.
 - Passwords are hashed with **PBKDF2** (100k iterations, 16-byte salt), stored as `base64(salt):base64(hash)`.
+- Avatars are saved to `Storage/Avatars` and served statically at `/assets/avatars`.
 
 ## 🧠 ML_Pipeline
 

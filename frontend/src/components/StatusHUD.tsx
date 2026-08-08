@@ -1,7 +1,7 @@
 import React from 'react';
 import { m } from 'framer-motion';
 import { Heart, Zap, Shield } from 'lucide-react';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 
 export const StatusHUD = () => {
   const { stats, user } = useGame();

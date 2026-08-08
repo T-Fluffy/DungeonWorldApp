@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#1A1A1D"/>
+  <!-- Dragon head silhouette in ember -->
+  <g fill="#FF6B35">
+    <!-- horns -->
+    <path d="M16 18 C12 12 8 12 6 16 C4 12 8 8 14 10 C16 14 16 16 16 18 Z"/>
+    <path d="M48 18 C52 12 56 12 58 16 C60 12 56 8 50 10 C48 14 48 16 48 18 Z"/>
+    <!-- skull -->
+    <path d="M32 8 C22 8 16 14 16 24 L16 34 C16 40 22 46 32 46 C42 46 48 40 48 34 L48 24 C48 14 42 8 32 8 Z"/>
+    <!-- brow ridge -->
+    <path d="M20 22 L28 20 L30 26 L24 30 Z"/>
+    <path d="M44 22 L36 20 L34 26 L40 30 Z"/>
+    <!-- jaw -->
+    <path d="M22 36 C26 42 38 42 42 36 L40 40 C36 44 28 44 24 40 Z"/>
+  </g>
+  <!-- eye sockets -->
+  <circle cx="26" cy="26" r="3.5" fill="#1A1A1D"/>
+  <circle cx="38" cy="26" r="3.5" fill="#1A1A1D"/>
+  <!-- nostril -->
+  <ellipse cx="28" cy="34" rx="1.5" ry="2" fill="#1A1A1D"/>
+  <ellipse cx="36" cy="34" rx="1.5" ry="2" fill="#1A1A1D"/>
+  <!-- open maw flame -->
+  <path d="M32 38 L38 42 L32 46 L26 42 Z" fill="#1A1A1D"/>
+  <path d="M32 41 C34 42 34 44 32 45 C30 44 30 42 32 41 Z" fill="#FF6B35"/>
+</svg>

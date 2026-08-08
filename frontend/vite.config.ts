@@ -25,6 +25,10 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
       },
+      '/assets/avatars': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

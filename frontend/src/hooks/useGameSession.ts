@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getSection, getBookMeta, upsertAdventure, getAdventure } from '../api/client';
-import { useGame } from '../Context/GameContext';
+import { useGame } from '../Context/useGame';
 import type { SectionDto, BookMetaDto } from '../api/client';
 
 export type LogType = 'narrator' | 'player' | 'system';
@@ -46,15 +46,15 @@ export const useGameSession = (bookTitle: string | null) => {
       await upsertAdventure({
         bookTitle,
         currentSection: section.sectionNumber,
-        skill: stats.might,
-        stamina: stats.vitality,
-        luck: stats.essence,
+        skill: user.skill ?? stats.might,
+        stamina: user.stamina ?? stats.vitality,
+        luck: user.luck ?? stats.essence,
         isComplete: complete,
       });
     } catch {
       // Saving is best-effort; navigation should never block on it.
     }
-  }, [bookTitle, user?.isLoggedIn, section, stats]);
+  }, [bookTitle, user?.isLoggedIn, user?.skill, user?.stamina, user?.luck, section, stats]);
 
   const goTo = useCallback(async (sectionNumber: number) => {
     if (!bookTitle || isProcessing) return;
