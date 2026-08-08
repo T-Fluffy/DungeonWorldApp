@@ -41,14 +41,14 @@ export function ProfilePage() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!user?.id) return;
+    if (!user?.isLoggedIn) return;
 
-    getUser(user.id)
+    getUser()
       .then((data) => { if (!cancelled) setProfile(data); })
       .catch((err) => { if (!cancelled) setError(apiError(err)); });
 
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.isLoggedIn]);
 
   const statDisplay = [
     { label: 'Vitality', value: stats.vitality, color: 'bg-crimson', icon: Shield },

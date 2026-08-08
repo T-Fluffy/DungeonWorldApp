@@ -1,6 +1,7 @@
 using DungeonWorld.Core.Options;
 using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Parsers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -8,6 +9,7 @@ namespace DungeonWorld.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AdminController : ControllerBase
 {
     private readonly IParserFactory _parserFactory; // Changed from IBookParser

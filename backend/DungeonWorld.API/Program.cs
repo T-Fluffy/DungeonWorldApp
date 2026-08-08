@@ -1,9 +1,13 @@
+using System.Text;
+using DungeonWorld.API.Auth;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
 using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Parsers;
 using DungeonWorld.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +15,33 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Configuration
 builder.Services.Configure<FileStorageOptions>(
     builder.Configuration.GetSection(FileStorageOptions.SectionName));
+
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+if (string.IsNullOrWhiteSpace(jwtOptions.Key))
+    throw new InvalidOperationException("The 'Jwt:Key' secret is not configured.");
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+
+// JWT Bearer authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+builder.Services.AddAuthorization();
+
+// Token issuer for login/register
+builder.Services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
 
 // 2. Database (PostgreSQL via EF Core)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -80,6 +111,9 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseCors(corsPolicy);
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

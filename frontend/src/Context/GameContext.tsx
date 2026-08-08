@@ -1,7 +1,7 @@
 // GameContext.tsx
 import { GameState, Item, PlayerStats, StatType, User, CharacterClass } from '@/types/game';
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { login as apiLogin, registerUser as apiRegister, UserResponse } from '@/api/client';
+import { login as apiLogin, registerUser as apiRegister, setToken, AuthResponse } from '@/api/client';
 
 const SESSION_KEY = 'dw-session';
 const CHARACTER_KEY = 'dw-character';
@@ -36,12 +36,13 @@ function saveCharacter(userId: string, meta: CharacterMeta) {
   localStorage.setItem(`${CHARACTER_KEY}-${userId}`, JSON.stringify(meta));
 }
 
-function toGameUser(resp: UserResponse, meta: CharacterMeta): User {
+function toGameUser(resp: AuthResponse, meta: CharacterMeta): User {
+  const user = resp.user;
   return {
-    id: resp.id,
-    username: resp.username,
-    email: resp.email,
-    name: resp.displayName || resp.username,
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.displayName || user.username,
     level: meta.level,
     title: meta.title,
     class: meta.class,
@@ -87,7 +88,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (usernameOrEmail: string, password: string): Promise<User> => {
     const resp = await apiLogin({ usernameOrEmail, password });
-    const meta = loadCharacter(resp.id) ?? { level: 1, title: 'Returning Shade', class: 'Dreadknight' };
+    setToken(resp.token);
+    const meta = loadCharacter(resp.user.id) ?? { level: 1, title: 'Returning Shade', class: 'Dreadknight' };
     const next = toGameUser(resp, meta);
     localStorage.setItem(SESSION_KEY, JSON.stringify(next));
     setUser(next);
@@ -96,8 +98,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (req: { username: string; email: string; password: string; className: CharacterClass }): Promise<User> => {
     const resp = await apiRegister({ username: req.username, email: req.email, password: req.password });
+    setToken(resp.token);
     const meta: CharacterMeta = { level: 1, title: 'Initiate of the Abyss', class: req.className };
-    saveCharacter(resp.id, meta);
+    saveCharacter(resp.user.id, meta);
     const next = toGameUser(resp, meta);
     localStorage.setItem(SESSION_KEY, JSON.stringify(next));
     setUser(next);
@@ -105,6 +108,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    setToken(null);
     localStorage.removeItem(SESSION_KEY);
     setUser(null);
     setCurrentBook(null);

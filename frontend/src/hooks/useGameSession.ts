@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getSection, getBookMeta } from '../api/client';
+import { getSection, getBookMeta, upsertAdventure, getAdventure } from '../api/client';
+import { useGame } from '../Context/GameContext';
 import type { SectionDto, BookMetaDto } from '../api/client';
 
 export type LogType = 'narrator' | 'player' | 'system';
@@ -17,6 +18,7 @@ const extractError = (err: unknown): string => {
 };
 
 export const useGameSession = (bookTitle: string | null) => {
+  const { user, stats } = useGame();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [meta, setMeta] = useState<BookMetaDto | null>(null);
   const [section, setSection] = useState<SectionDto | null>(null);
@@ -36,6 +38,24 @@ export const useGameSession = (bookTitle: string | null) => {
     setLogs((prev) => [...prev, createLog(content, type)]);
   }, [createLog]);
 
+  // Persist the current section + stats to the backend
+  const save = useCallback(async (complete: boolean = false) => {
+    if (!bookTitle || !user?.isLoggedIn || !section) return;
+
+    try {
+      await upsertAdventure({
+        bookTitle,
+        currentSection: section.sectionNumber,
+        skill: stats.might,
+        stamina: stats.vitality,
+        luck: stats.essence,
+        isComplete: complete,
+      });
+    } catch {
+      // Saving is best-effort; navigation should never block on it.
+    }
+  }, [bookTitle, user?.isLoggedIn, section, stats]);
+
   const goTo = useCallback(async (sectionNumber: number) => {
     if (!bookTitle || isProcessing) return;
 
@@ -54,12 +74,16 @@ export const useGameSession = (bookTitle: string | null) => {
       if (data.choices.length === 0) {
         addLog('The path ends here. (Victory, or a dead end?)', 'system');
       }
+
+      // Auto-save after every navigation (best-effort)
+      const completed = sectionNumber >= 400 || data.choices.length === 0;
+      await save(completed);
     } catch (err) {
       addLog(extractError(err), 'system');
     } finally {
       setIsProcessing(false);
     }
-  }, [bookTitle, isProcessing, addLog]);
+  }, [bookTitle, isProcessing, addLog, save]);
 
   const reset = useCallback(() => {
     setLogs([]);
@@ -69,7 +93,7 @@ export const useGameSession = (bookTitle: string | null) => {
     setError(null);
   }, []);
 
-  // Load the book on mount (or when the title changes)
+  // Load the book on mount (or when the title changes), resuming a saved run
   useEffect(() => {
     if (!bookTitle) return;
 
@@ -85,10 +109,21 @@ export const useGameSession = (bookTitle: string | null) => {
         if (bookMeta.introduction) {
           addLog(bookMeta.introduction, 'narrator');
         }
-        const first = await getSection(bookTitle, 1);
+
+        // Resume from a saved adventure if one exists
+        const saved = user?.isLoggedIn ? await getAdventure(bookTitle) : null;
+        if (cancelled) return;
+        const startSection = saved && !saved.isComplete && saved.currentSection > 1
+          ? saved.currentSection
+          : 1;
+        if (saved && saved.currentSection > 1 && !saved.isComplete) {
+          addLog('Resuming from your saved chronicle...', 'system');
+        }
+
+        const first = await getSection(bookTitle, startSection);
         if (cancelled) return;
         setSection(first);
-        setHistory([1]);
+        setHistory([startSection]);
         addLog(`- Section ${first.sectionNumber} -`, 'system');
         addLog(first.content, 'narrator');
       } catch (err) {
@@ -102,7 +137,7 @@ export const useGameSession = (bookTitle: string | null) => {
     return () => {
       cancelled = true;
     };
-  }, [bookTitle, addLog, reset]);
+  }, [bookTitle, addLog, reset, user?.isLoggedIn]);
 
   const processCommand = useCallback(async (command: string) => {
     if (!command.trim() || !bookTitle) return;
@@ -129,7 +164,10 @@ export const useGameSession = (bookTitle: string | null) => {
       responseContent = 'Commands: LOOK, GO [section number], INVENTORY, SAVE';
       responseType = 'system';
     } else if (lower.includes('save')) {
-      responseContent = 'Progress saved to your Grimoire.';
+      await save();
+      responseContent = user?.isLoggedIn
+        ? 'Progress sealed into your Grimoire.'
+        : 'You must be signed in to seal your progress.';
       responseType = 'system';
     } else if (lower.includes('inventory')) {
       responseContent = 'Your pack feels light. Perhaps fate will provide.';
@@ -140,7 +178,7 @@ export const useGameSession = (bookTitle: string | null) => {
 
     addLog(responseContent, responseType);
     setIsProcessing(false);
-  }, [bookTitle, section, addLog, goTo]);
+  }, [bookTitle, section, addLog, goTo, save, user?.isLoggedIn]);
 
   return {
     logs,

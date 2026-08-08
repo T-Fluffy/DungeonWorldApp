@@ -38,6 +38,13 @@ const api = axios.create({
   timeout: 120000, // PDF parsing can take a while
 });
 
+// Attach the JWT to every request
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
 export const listBooks = async (): Promise<string[]> => {
   const { data } = await api.get<string[]>('/game/list-books');
   return data;
@@ -144,87 +151,95 @@ export interface UserResponse {
   adventures: AdventureResponse[];
 }
 
+export interface AuthResponse {
+  token: string;
+  user: UserResponse;
+}
+
+const TOKEN_KEY = 'dw-token';
+
+export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+export const setToken = (token: string | null) => {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+};
+
 // --- User / auth API ---
 
-export const registerUser = async (payload: RegisterRequest): Promise<UserResponse> => {
-  const { data } = await api.post<UserResponse>('/user/register', payload);
+export const registerUser = async (payload: RegisterRequest): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>('/user/register', payload);
   return data;
 };
 
-export const login = async (payload: LoginRequest): Promise<UserResponse> => {
-  const { data } = await api.post<UserResponse>('/user/login', payload);
+export const login = async (payload: LoginRequest): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>('/user/login', payload);
   return data;
 };
 
-export const getUser = async (id: string): Promise<UserResponse> => {
-  const { data } = await api.get<UserResponse>(`/user/${id}`);
+export const getUser = async (): Promise<UserResponse> => {
+  const { data } = await api.get<UserResponse>('/user/me');
   return data;
 };
 
 export const updateProfile = async (
-  id: string,
   payload: { displayName?: string | null; avatarPath?: string | null }
 ): Promise<UserResponse> => {
-  const { data } = await api.put<UserResponse>(`/user/${id}`, payload);
+  const { data } = await api.put<UserResponse>('/user/me', payload);
   return data;
 };
 
-export const getSubscription = async (id: string): Promise<SubscriptionResponse | null> => {
-  const { data } = await api.get<SubscriptionResponse | null>(`/user/${id}/subscription`);
+export const getSubscription = async (): Promise<SubscriptionResponse | null> => {
+  const { data } = await api.get<SubscriptionResponse | null>('/user/me/subscription');
   return data;
 };
 
 export const upsertSubscription = async (
-  id: string,
   payload: { plan: string; expiresAt?: string | null }
 ): Promise<SubscriptionResponse> => {
-  const { data } = await api.post<SubscriptionResponse>(`/user/${id}/subscription`, payload);
+  const { data } = await api.post<SubscriptionResponse>('/user/me/subscription', payload);
   return data;
 };
 
-export const getAchievements = async (id: string): Promise<AchievementResponse[]> => {
-  const { data } = await api.get<AchievementResponse[]>(`/user/${id}/achievements`);
+export const getAchievements = async (): Promise<AchievementResponse[]> => {
+  const { data } = await api.get<AchievementResponse[]>('/user/me/achievements');
   return data;
 };
 
 export const unlockAchievement = async (
-  id: string,
   payload: { code: string; title: string; description?: string | null }
 ): Promise<AchievementResponse> => {
-  const { data } = await api.post<AchievementResponse>(`/user/${id}/achievements`, payload);
+  const { data } = await api.post<AchievementResponse>('/user/me/achievements', payload);
   return data;
 };
 
-export const getAssets = async (id: string): Promise<AssetResponse[]> => {
-  const { data } = await api.get<AssetResponse[]>(`/user/${id}/assets`);
+export const getAssets = async (): Promise<AssetResponse[]> => {
+  const { data } = await api.get<AssetResponse[]>('/user/me/assets');
   return data;
 };
 
 export const addAsset = async (
-  id: string,
   payload: { name: string; type: string; description?: string | null; bookTitle?: string | null; sectionNumber?: number | null }
 ): Promise<AssetResponse> => {
-  const { data } = await api.post<AssetResponse>(`/user/${id}/assets`, payload);
+  const { data } = await api.post<AssetResponse>('/user/me/assets', payload);
   return data;
 };
 
-export const getAdventures = async (id: string): Promise<AdventureResponse[]> => {
-  const { data } = await api.get<AdventureResponse[]>(`/user/${id}/adventures`);
+export const getAdventures = async (): Promise<AdventureResponse[]> => {
+  const { data } = await api.get<AdventureResponse[]>('/user/me/adventures');
   return data;
 };
 
-export const getAdventure = async (id: string, bookTitle: string): Promise<AdventureResponse | null> => {
+export const getAdventure = async (bookTitle: string): Promise<AdventureResponse | null> => {
   const { data } = await api.get<AdventureResponse | null>(
-    `/user/${id}/adventures/${encodeURIComponent(bookTitle)}`
+    `/user/me/adventures/${encodeURIComponent(bookTitle)}`
   );
   return data;
 };
 
 export const upsertAdventure = async (
-  id: string,
   payload: { bookTitle: string; currentSection: number; skill?: number | null; stamina?: number | null; luck?: number | null; isComplete?: boolean }
 ): Promise<AdventureResponse> => {
-  const { data } = await api.post<AdventureResponse>(`/user/${id}/adventures`, payload);
+  const { data } = await api.post<AdventureResponse>('/user/me/adventures', payload);
   return data;
 };
 

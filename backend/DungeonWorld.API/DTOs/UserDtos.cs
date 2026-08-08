@@ -33,6 +33,10 @@ public record AdventureRequest(
 
 // --- Responses ---
 
+public record AuthResponse(
+    string Token,
+    UserResponse User);
+
 public record SubscriptionResponse(
     Guid Id,
     string Plan,

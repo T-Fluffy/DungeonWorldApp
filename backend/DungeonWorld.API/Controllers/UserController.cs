@@ -1,7 +1,10 @@
+using System.Security.Claims;
+using DungeonWorld.API.Auth;
 using DungeonWorld.API.DTOs;
 using DungeonWorld.Core.Entities;
 using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +15,12 @@ namespace DungeonWorld.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly DungeonWorldDbContext _db;
+    private readonly ITokenIssuer _tokenIssuer;
 
-    public UserController(DungeonWorldDbContext db)
+    public UserController(DungeonWorldDbContext db, ITokenIssuer tokenIssuer)
     {
         _db = db;
+        _tokenIssuer = tokenIssuer;
     }
 
     private IQueryable<User> Query() =>
@@ -25,8 +30,14 @@ public class UserController : ControllerBase
             .Include(u => u.Assets)
             .Include(u => u.Adventures);
 
+    // The authenticated user's id always comes from the JWT, never from the route.
+    private Guid? CurrentUserId =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                      User.FindFirstValue("sub"), out var id) ? id : null;
+
     // --- Auth ---
 
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
@@ -53,9 +64,10 @@ public class UserController : ControllerBase
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ToDto(user));
+        return CreatedAtAction(nameof(GetUser), ToDto(user, _tokenIssuer.CreateToken(user)));
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
@@ -72,25 +84,33 @@ public class UserController : ControllerBase
         user.LastLoginAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(ToDto(user));
+        return Ok(ToDto(user, _tokenIssuer.CreateToken(user)));
     }
 
     // --- Profile ---
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetUser(Guid id)
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetUser()
     {
-        var user = await Query().FirstOrDefaultAsync(u => u.Id == id);
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        var user = await Query().FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
             return NotFound(new { error = "User not found." });
 
-        return Ok(ToDto(user));
+        return Ok(ToUserResponse(user));
     }
 
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateUser(Guid id, UpdateUserRequest request)
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateUser(UpdateUserRequest request)
     {
-        var user = await Query().FirstOrDefaultAsync(u => u.Id == id);
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        var user = await Query().FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
             return NotFound(new { error = "User not found." });
 
@@ -100,13 +120,17 @@ public class UserController : ControllerBase
             user.AvatarPath = request.AvatarPath;
 
         await _db.SaveChangesAsync();
-        return Ok(ToDto(user));
+        return Ok(ToUserResponse(user));
     }
 
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [Authorize]
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteUser()
     {
-        var user = await _db.Users.FindAsync(id);
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        var user = await _db.Users.FindAsync(userId);
         if (user == null)
             return NotFound(new { error = "User not found." });
 
@@ -117,32 +141,37 @@ public class UserController : ControllerBase
 
     // --- Subscription ---
 
-    [HttpGet("{id:guid}/subscription")]
-    public async Task<IActionResult> GetSubscription(Guid id)
+    [Authorize]
+    [HttpGet("me/subscription")]
+    public async Task<IActionResult> GetSubscription()
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var subscription = await _db.Subscriptions
-            .FirstOrDefaultAsync(s => s.UserId == id);
+            .FirstOrDefaultAsync(s => s.UserId == userId);
 
         return Ok(subscription == null ? null : ToDto(subscription));
     }
 
-    [HttpPost("{id:guid}/subscription")]
-    public async Task<IActionResult> UpsertSubscription(Guid id, SubscriptionRequest request)
+    [Authorize]
+    [HttpPost("me/subscription")]
+    public async Task<IActionResult> UpsertSubscription(SubscriptionRequest request)
     {
-        if (!await _db.Users.AnyAsync(u => u.Id == id))
-            return NotFound(new { error = "User not found." });
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
 
         if (string.IsNullOrWhiteSpace(request.Plan))
             return BadRequest(new { error = "Plan is required." });
 
         var subscription = await _db.Subscriptions
-            .FirstOrDefaultAsync(s => s.UserId == id);
+            .FirstOrDefaultAsync(s => s.UserId == userId);
 
         if (subscription == null)
         {
             subscription = new Subscription
             {
-                UserId = id,
+                UserId = userId.Value,
                 Plan = request.Plan,
                 ExpiresAt = request.ExpiresAt,
                 RenewsAt = request.ExpiresAt
@@ -160,10 +189,14 @@ public class UserController : ControllerBase
         return Ok(ToDto(subscription));
     }
 
-    [HttpDelete("{id:guid}/subscription")]
-    public async Task<IActionResult> DeleteSubscription(Guid id)
+    [Authorize]
+    [HttpDelete("me/subscription")]
+    public async Task<IActionResult> DeleteSubscription()
     {
-        var subscription = await _db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == id);
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
+        var subscription = await _db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId);
         if (subscription == null)
             return NotFound(new { error = "Subscription not found." });
 
@@ -174,37 +207,42 @@ public class UserController : ControllerBase
 
     // --- Achievements ---
 
-    [HttpGet("{id:guid}/achievements")]
-    public async Task<IActionResult> GetAchievements(Guid id)
+    [Authorize]
+    [HttpGet("me/achievements")]
+    public async Task<IActionResult> GetAchievements()
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var achievements = await _db.Achievements
-            .Where(a => a.UserId == id)
+            .Where(a => a.UserId == userId)
             .OrderBy(a => a.UnlockedAt)
             .ToListAsync();
 
         return Ok(achievements.Select(ToDto));
     }
 
-    [HttpPost("{id:guid}/achievements")]
-    public async Task<IActionResult> UnlockAchievement(Guid id, AchievementRequest request)
+    [Authorize]
+    [HttpPost("me/achievements")]
+    public async Task<IActionResult> UnlockAchievement(AchievementRequest request)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Title))
             return BadRequest(new { error = "Code and Title are required." });
-
-        if (!await _db.Users.AnyAsync(u => u.Id == id))
-            return NotFound(new { error = "User not found." });
 
         var code = request.Code.Trim().ToUpperInvariant();
 
         var alreadyUnlocked = await _db.Achievements
-            .AnyAsync(a => a.UserId == id && a.Code == code);
+            .AnyAsync(a => a.UserId == userId && a.Code == code);
 
         if (alreadyUnlocked)
             return Conflict(new { error = $"Achievement '{code}' is already unlocked." });
 
         var achievement = new Achievement
         {
-            UserId = id,
+            UserId = userId.Value,
             Code = code,
             Title = request.Title.Trim(),
             Description = request.Description
@@ -216,11 +254,15 @@ public class UserController : ControllerBase
         return Ok(ToDto(achievement));
     }
 
-    [HttpDelete("{id:guid}/achievements/{achievementId:guid}")]
-    public async Task<IActionResult> DeleteAchievement(Guid id, Guid achievementId)
+    [Authorize]
+    [HttpDelete("me/achievements/{achievementId:guid}")]
+    public async Task<IActionResult> DeleteAchievement(Guid achievementId)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var achievement = await _db.Achievements
-            .FirstOrDefaultAsync(a => a.Id == achievementId && a.UserId == id);
+            .FirstOrDefaultAsync(a => a.Id == achievementId && a.UserId == userId);
 
         if (achievement == null)
             return NotFound(new { error = "Achievement not found." });
@@ -232,29 +274,34 @@ public class UserController : ControllerBase
 
     // --- Assets (items collected in adventures) ---
 
-    [HttpGet("{id:guid}/assets")]
-    public async Task<IActionResult> GetAssets(Guid id)
+    [Authorize]
+    [HttpGet("me/assets")]
+    public async Task<IActionResult> GetAssets()
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var assets = await _db.UserAssets
-            .Where(a => a.UserId == id)
+            .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.AcquiredAt)
             .ToListAsync();
 
         return Ok(assets.Select(ToDto));
     }
 
-    [HttpPost("{id:guid}/assets")]
-    public async Task<IActionResult> AddAsset(Guid id, AssetRequest request)
+    [Authorize]
+    [HttpPost("me/assets")]
+    public async Task<IActionResult> AddAsset(AssetRequest request)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type))
             return BadRequest(new { error = "Name and Type are required." });
 
-        if (!await _db.Users.AnyAsync(u => u.Id == id))
-            return NotFound(new { error = "User not found." });
-
         var asset = new UserAsset
         {
-            UserId = id,
+            UserId = userId.Value,
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),
             Description = request.Description,
@@ -265,14 +312,18 @@ public class UserController : ControllerBase
         _db.UserAssets.Add(asset);
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetAssets), new { id }, ToDto(asset));
+        return CreatedAtAction(nameof(GetAssets), ToDto(asset));
     }
 
-    [HttpDelete("{id:guid}/assets/{assetId:guid}")]
-    public async Task<IActionResult> DeleteAsset(Guid id, Guid assetId)
+    [Authorize]
+    [HttpDelete("me/assets/{assetId:guid}")]
+    public async Task<IActionResult> DeleteAsset(Guid assetId)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var asset = await _db.UserAssets
-            .FirstOrDefaultAsync(a => a.Id == assetId && a.UserId == id);
+            .FirstOrDefaultAsync(a => a.Id == assetId && a.UserId == userId);
 
         if (asset == null)
             return NotFound(new { error = "Asset not found." });
@@ -284,43 +335,52 @@ public class UserController : ControllerBase
 
     // --- Adventure progress ---
 
-    [HttpGet("{id:guid}/adventures")]
-    public async Task<IActionResult> GetAdventures(Guid id)
+    [Authorize]
+    [HttpGet("me/adventures")]
+    public async Task<IActionResult> GetAdventures()
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var adventures = await _db.AdventureProgress
-            .Where(a => a.UserId == id)
+            .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.UpdatedAt)
             .ToListAsync();
 
         return Ok(adventures.Select(ToDto));
     }
 
-    [HttpGet("{id:guid}/adventures/{bookTitle}")]
-    public async Task<IActionResult> GetAdventure(Guid id, string bookTitle)
+    [Authorize]
+    [HttpGet("me/adventures/{bookTitle}")]
+    public async Task<IActionResult> GetAdventure(string bookTitle)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var adventure = await _db.AdventureProgress
-            .FirstOrDefaultAsync(a => a.UserId == id && a.BookTitle == bookTitle);
+            .FirstOrDefaultAsync(a => a.UserId == userId && a.BookTitle == bookTitle);
 
         return Ok(adventure == null ? null : ToDto(adventure));
     }
 
-    [HttpPost("{id:guid}/adventures")]
-    public async Task<IActionResult> UpsertAdventure(Guid id, AdventureRequest request)
+    [Authorize]
+    [HttpPost("me/adventures")]
+    public async Task<IActionResult> UpsertAdventure(AdventureRequest request)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         if (string.IsNullOrWhiteSpace(request.BookTitle))
             return BadRequest(new { error = "BookTitle is required." });
 
-        if (!await _db.Users.AnyAsync(u => u.Id == id))
-            return NotFound(new { error = "User not found." });
-
         var adventure = await _db.AdventureProgress
-            .FirstOrDefaultAsync(a => a.UserId == id && a.BookTitle == request.BookTitle);
+            .FirstOrDefaultAsync(a => a.UserId == userId && a.BookTitle == request.BookTitle);
 
         if (adventure == null)
         {
             adventure = new AdventureProgress
             {
-                UserId = id,
+                UserId = userId.Value,
                 BookTitle = request.BookTitle,
                 CurrentSection = request.CurrentSection,
                 Skill = request.Skill,
@@ -344,11 +404,15 @@ public class UserController : ControllerBase
         return Ok(ToDto(adventure));
     }
 
-    [HttpDelete("{id:guid}/adventures/{bookTitle}")]
-    public async Task<IActionResult> DeleteAdventure(Guid id, string bookTitle)
+    [Authorize]
+    [HttpDelete("me/adventures/{bookTitle}")]
+    public async Task<IActionResult> DeleteAdventure(string bookTitle)
     {
+        var userId = CurrentUserId;
+        if (userId == null) return Unauthorized(new { error = "Invalid token." });
+
         var adventure = await _db.AdventureProgress
-            .FirstOrDefaultAsync(a => a.UserId == id && a.BookTitle == bookTitle);
+            .FirstOrDefaultAsync(a => a.UserId == userId && a.BookTitle == bookTitle);
 
         if (adventure == null)
             return NotFound(new { error = "Adventure not found." });
@@ -360,7 +424,9 @@ public class UserController : ControllerBase
 
     // --- Mapping ---
 
-    private static UserResponse ToDto(User u) => new(
+    private AuthResponse ToDto(User u, string token) => new(token, ToUserResponse(u));
+
+    private UserResponse ToUserResponse(User u) => new(
         u.Id,
         u.Username,
         u.Email,
