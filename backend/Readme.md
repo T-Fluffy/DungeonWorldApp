@@ -107,8 +107,11 @@ On startup, `CatalogSeeder` populates the game database:
 1. **Layout analysis** — `PdfPigLayoutAnalyzer` inspects the PDF and reports single-page vs 2-up layout.
 2. **Parser selection** — `DungeonWorldParserFactory` picks the first registered parser whose `CanHandle()` matches (defaults to `DoublePageParser`, the most common FF scan format).
 3. **Geometric parsing** — `BaseDungeonWorldParser` locates section headers by centered X/Y coordinates (ignoring page-top navigation numbers), extracts body text, choices (`Turn to N` / `If you have...`), and embedded illustrations.
-4. **Patches** — hard-coded rules fix known layout quirks (e.g. a section that is printed without its number) and the *Victory Terminator* stops ingestion once the story's "You have won" signature appears, keeping publisher back-matter out of the data.
-5. **Output** — each book is written as `<Title>.json` under `Storage/Uploads/ProcessedBooks`, with extracted images under `Storage/GameArt`, served statically at `/assets/game-art`.
+4. **Physical page tracking** — each text line records the **physical PDF page** it came from (`LineInfo.PhysicalPage`). When a section is flushed, its illustration path is derived from that physical page (`p{physicalPage}_i0.png`) rather than a sequential index — critical for double-page books, where the section's logical position and its source page diverge. This guarantees `/assets/game-art/...` links match the extracted PNGs.
+5. **Patches** — hard-coded rules fix known layout quirks (e.g. a section that is printed without its number) and the *Victory Terminator* stops ingestion once the story's "You have won" signature appears, keeping publisher back-matter out of the data.
+6. **Output** — each book is written as `<Title>.json` under `Storage/Uploads/ProcessedBooks`, with extracted images under `Storage/GameArt`, served statically at `/assets/game-art`.
+
+> **Existing books:** the physical-page change was also applied in place to already-ingested books — `Seas of Blood` had 345 illustration paths remapped and 48 nulled (kept under `Storage/Uploads/ProcessedBooks/Seas of Blood.json.bak`). New ingestions get correct paths automatically from the parser.
 
 ## 🛠️ Local Setup (without Docker)
 

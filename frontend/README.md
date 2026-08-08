@@ -20,7 +20,8 @@
 | **Avatars** | Upload a profile image during registration **or** from the profile page; served via `/assets/avatars` |
 | **Player Stats** | Fighting Fantasy-style SKILL / STAMINA / LUCK + Experience Points shown on the profile, persisted to the backend |
 | **The Ritual** | Drag-and-drop PDF "summoning" — uploads the file, triggers backend ingestion, and binds the book to your session |
-| **The Chronicle** | Terminal-style reader that loads a book, walks its sections, shows choices and combat, and accepts commands (`GO 42`, `LOOK`, `INVENTORY`, `SAVE`, `HELP`) |
+| **The Chronicle** | Terminal-style reader that loads a book, walks its sections, shows choices and combat, and accepts commands (`GO 42`, `LOOK`, `INVENTORY`, `SAVE`, `RESET`, `LOGOUT`, `HELP`). Progress auto-saves to the backend on every navigation |
+| **Grimoire Switching** | Swap books mid-session via the header slider (with cover thumbnails) or the feed's "Switch Grimoire" dropdown — the current run is sealed (saved) first; saved progress shows as `S<n>` / `Complete` badges |
 | **Character Sheet** | Profile page with FF stats + XP, avatar, a 16-slot Traveler's Pack, saved adventures with progress bars, and earned medallion achievements |
 | **Protection** | `ProtectedRoute` guards `Files`, `Log`, and `Profile` behind login |
 
@@ -29,18 +30,33 @@
 | Route | View | Description |
 | --- | --- | --- |
 | `/` | **HomePage** | Thematic landing with "Begin the Ritual" call-to-action |
-| `/login` · `/register` | **LoginPage / RegisterPage** | Real auth against `POST /api/user/login` & `/register` with inline errors; registration includes class selection + optional avatar upload and a Return button |
+| `/login` · `/register` | **LoginPage / RegisterPage** | Real auth against `POST /api/user/login` & `/register` with inline errors; registration includes class selection + optional avatar upload and a Return button. Sign-in plays a cinematic **RitualLoading** screen |
 | `/files` | **FileSelector** | Animated ritual circle that uploads & ingests a PDF |
-| `/log` | **StoryLog** | Chronicle reader: grimoire picker, section text, choice buttons, command line, Status HUD, Quest Tracker, Quick Gear |
+| `/log` | **StoryLog** | Three-column Chronicle: **left** section art, **center** terminal feed (log, choices, command line, quick-command chips, docked navigation), **right** QuestTracker + QuickGear; slim cinematic header holds the bound-grimoire title + cover slider |
 | `/profile` | **ProfilePage** | Character avatar + silhouette, FF stat grid (SKILL/STAMINA/LUCK/XP), pack, saved adventures (resume → `/log`), medallions |
+
+## ⌨️ Chronicle Commands
+
+The Chronicle is played by typing intent into the command line (quick chips for `Look`, `Inventory`, `Help`, `Reset`, `Reread` sit beneath it):
+
+| Command | Effect |
+| --- | --- |
+| `GO <n>` (or just `<n>`) | Jump to section **n** and narrate it |
+| `LOOK` | Re-read the current section's opening |
+| `INVENTORY` | Inspect the contents of your pack |
+| `SAVE` | Seal current progress (section + SKILL/STAMINA/LUCK) into the Grimoire on the backend |
+| `RESET` / `RESTART` | Tear the chronicle asunder — rewind to section 1, clear the feed & history, and re-seal the fresh start |
+| `LOGOUT` / `SEVER` | Sever the pact and leave the session (via a parting-ritual **LogoutLoading** screen) |
+| `HELP` | Print this guide in the feed |
 
 ## 🧩 Key Implementation Details
 
-- **API client** (`src/api/client.ts`) — typed `axios` wrapper mirroring the backend DTOs (`SectionDto`, `UserResponse`, `IngestResultDto`, catalog DTOs, …) with a shared `apiError()` helper; includes a response interceptor that clears stale/invalid JWTs.
+- **API client** (`src/api/client.ts`) — typed `axios` wrapper mirroring the backend DTOs (`SectionDto`, `UserResponse`, `IngestResultDto`, catalog DTOs, …) with a shared `apiError()` helper; includes a response interceptor that clears stale/invalid JWTs. Exposes `upsertAdventure` / `getAdventure` so the Chronicle can persist and resume runs.
 - **Session state** (`src/Context/GameContext.tsx`) — `GameProvider` restores the logged-in user from `localStorage` on boot and exposes `login` / `register` / `logout` / `setAvatar`, plus `currentBook`, inventory, and stats. Class-based starting SKILL/STAMINA/LUCK are computed on registration.
-- **Game loop** (`src/hooks/useGameSession.ts`) — fetches book meta + section 1 on load, handles `GO [n]` jumps, and builds the narrated log.
+- **Game loop** (`src/hooks/useGameSession.ts`) — fetches book meta + section 1 on load, resumes a saved run when one exists, handles `GO [n]` jumps, auto-saves after every navigation (best-effort), and powers the `RESET` (rewind + re-seal) and `LOGOUT` (sever) flows.
 - **Theming** — persistent fog overlay, mouse-tracked torchlight, flickering vignette, custom gothic font, and ember/crimson palette via Tailwind.
-- **Routing** — `react-router-dom` with `AnimatePresence` page transitions and a `RitualLoading` screen on login.
+- **Routing** — `react-router-dom` with `AnimatePresence` page transitions, a **RitualLoading** screen on login, and a **LogoutLoading** parting ritual (randomized farewell phrase) on logout.
+- **Resilience** — illustration `<img>`s degrade gracefully (`artFailed` / `failedCovers`) instead of showing broken images.
 - **Branding** — custom Fighting Fantasy–style dragon favicon (`public/favicon.svg`).
 
 ## 🛠️ Tech Stack
@@ -86,8 +102,8 @@ src/
 ├── Context/GameContext.tsx  # Global session / inventory / stats state
 ├── hooks/useGameSession.ts  # Chronicle game loop (meta, sections, commands)
 ├── views/                   # HomePage, LoginPage, RegisterPage, FileSelector, StoryLog, ProfilePage
-├── components/              # FogOverlay, TorchlightEffect, Vignette, RitualCircle, RitualLoading,
-│                            # Navigation, ProtectedRoute, StatusHUD, QuestTracker, QuickGear
+├── components/              # FogOverlay, TorchlightEffect, Vignette, RitualCircle, RitualLoading, LogoutLoading,
+│                            # Navigation (supports `docked`), ProtectedRoute, StatusHUD, QuestTracker, QuickGear
 ├── styles/                  # Tailwind directives and gothic font-face
 ├── types/game.ts            # Game-side types (Item, PlayerStats, User, ...)
 ├── App.tsx                  # Routing & AnimatePresence transitions
@@ -102,7 +118,8 @@ Also: `public/favicon.svg` (custom dragon icon) replaces the default Vite logo i
 - [x] PDF ingestion ritual wired to the ingestion endpoints
 - [x] Avatar upload (registration + profile)
 - [x] Fighting Fantasy SKILL/STAMINA/LUCK + XP on the character sheet
-- [ ] Persist adventure saves to the backend (`/adventures`) from the Chronicle
+- [x] Persist adventure saves to the backend (`/adventures`) from the Chronicle (`SAVE`, auto-save, grimoire switching)
+- [x] Chronicle command language (`GO`, `LOOK`, `INVENTORY`, `SAVE`, `RESET`, `LOGOUT`, `HELP`) + formatted help guide
 - [ ] Inventory grid backed by server-side catalog items
 - [ ] Cast spells from the catalog once requirements are met
 - [ ] LLM-driven narrator
