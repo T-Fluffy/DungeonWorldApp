@@ -44,7 +44,7 @@ function AnimatedRoutes() {
       <TorchlightEffect />
       <FogOverlay />
       
-      {user?.isLoggedIn && <Navigation />}
+      {user?.isLoggedIn && location.pathname !== '/log' && <Navigation />}
 
       <AnimatePresence mode="wait">
         <motion.div

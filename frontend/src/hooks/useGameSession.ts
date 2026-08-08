@@ -18,7 +18,7 @@ const extractError = (err: unknown): string => {
 };
 
 export const useGameSession = (bookTitle: string | null) => {
-  const { user, stats } = useGame();
+  const { user, stats, logout } = useGame();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [meta, setMeta] = useState<BookMetaDto | null>(null);
   const [section, setSection] = useState<SectionDto | null>(null);
@@ -39,13 +39,13 @@ export const useGameSession = (bookTitle: string | null) => {
   }, [createLog]);
 
   // Persist the current section + stats to the backend
-  const save = useCallback(async (complete: boolean = false) => {
+  const save = useCallback(async (complete: boolean = false, sectionNumberOverride?: number) => {
     if (!bookTitle || !user?.isLoggedIn || !section) return;
 
     try {
       await upsertAdventure({
         bookTitle,
-        currentSection: section.sectionNumber,
+        currentSection: sectionNumberOverride ?? section.sectionNumber,
         skill: user.skill ?? stats.might,
         stamina: user.stamina ?? stats.vitality,
         luck: user.luck ?? stats.essence,
@@ -92,6 +92,30 @@ export const useGameSession = (bookTitle: string | null) => {
     setHistory([]);
     setError(null);
   }, []);
+
+  // RESET: tear the chronicle back to section 1, clear the feed + history, and seal section 1.
+  const resetRun = useCallback(async () => {
+    if (!bookTitle || isProcessing) return;
+
+    setIsProcessing(true);
+    setLogs([]);
+    setHistory([]);
+    setError(null);
+    try {
+      const first = await getSection(bookTitle, 1);
+      setSection(first);
+      setHistory([1]);
+      addLog('The chronicle is torn asunder and written anew...', 'system');
+      // Seal the fresh start into the Grimoire (sectionNumberOverride forces section 1).
+      await save(false, 1);
+      addLog(`- Section ${first.sectionNumber} -`, 'system');
+      addLog(first.content, 'narrator');
+    } catch (err) {
+      addLog(extractError(err), 'system');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [bookTitle, isProcessing, addLog, save]);
 
   // Load the book on mount (or when the title changes), resuming a saved run
   useEffect(() => {
@@ -153,6 +177,19 @@ export const useGameSession = (bookTitle: string | null) => {
       return;
     }
 
+    // RESET / RESTART: rewind the chronicle to section 1.
+    if (lower.includes('reset') || lower.includes('restart') || lower.includes('newgame')) {
+      await resetRun();
+      return;
+    }
+
+    // LOGOUT / SEVER: sever the pact immediately.
+    if (lower.includes('logout') || lower.includes('log out') || lower.includes('sever')) {
+      addLog('The pact is severed. Until the shadows call again...', 'system');
+      logout();
+      return;
+    }
+
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -161,7 +198,16 @@ export const useGameSession = (bookTitle: string | null) => {
     if (lower.includes('look')) {
       responseContent = section?.content.slice(0, 120) || 'Shadows veil your sight.';
     } else if (lower.includes('help')) {
-      responseContent = 'Commands: LOOK, GO [section number], INVENTORY, SAVE';
+      responseContent = [
+        'AVAILABLE COMMANDS:',
+        '  LOOK       Re-read the current section.',
+        '  GO <n>     Jump to section <n> (or type the number directly).',
+        '  INVENTORY  Inspect the contents of your pack.',
+        '  SAVE       Seal your progress into the Grimoire.',
+        '  RESET      Tear the chronicle asunder and begin again at section 1.',
+        '  LOGOUT     Sever the pact and leave this session.',
+        '  HELP       Display this guide.',
+      ].join('\n');
       responseType = 'system';
     } else if (lower.includes('save')) {
       await save();
@@ -178,7 +224,7 @@ export const useGameSession = (bookTitle: string | null) => {
 
     addLog(responseContent, responseType);
     setIsProcessing(false);
-  }, [bookTitle, section, addLog, goTo, save, user?.isLoggedIn]);
+  }, [bookTitle, section, addLog, goTo, save, resetRun, logout, user?.isLoggedIn]);
 
   return {
     logs,
@@ -191,5 +237,6 @@ export const useGameSession = (bookTitle: string | null) => {
     goTo,
     processCommand,
     reset,
+    save,
   };
 };

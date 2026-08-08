@@ -74,12 +74,16 @@ public abstract class BaseDungeonWorldParser : IBookParser
                     // Determine which column this line belongs to
                     bool isLeftColumn = line.OriginalX < midpoint;
                     line.Page = (page.Number * 2) - (isLeftColumn ? 1 : 0);
+                    line.PhysicalPage = page.Number;
                 }
             }
             else
             {
                 foreach (var line in pageLines)
+                {
                     line.Page = page.Number;
+                    line.PhysicalPage = page.Number;
+                }
             }
             
             allLines.AddRange(pageLines);
@@ -98,6 +102,7 @@ public abstract class BaseDungeonWorldParser : IBookParser
         int expectedNext = 1;
         int currentSectionNum = 0;
         int currentSectionPage = 0;
+        int currentSectionPhysicalPage = 0;
         StringBuilder contentBuffer = new();
 
         // Calculate baseline for header detection
@@ -116,11 +121,12 @@ public abstract class BaseDungeonWorldParser : IBookParser
                 // Accept if visual header OR sequential match
                 if (isVisualHeader || (sectionNum >= expectedNext && sectionNum <= expectedNext + 5))
                 {
-                    FlushCurrentSection(book, currentSectionNum, contentBuffer, bookSlug, currentSectionPage);
+                    FlushCurrentSection(book, currentSectionNum, contentBuffer, bookSlug, currentSectionPage, currentSectionPhysicalPage);
                     
                     currentSectionNum = sectionNum;
                     expectedNext = sectionNum + 1;
                     currentSectionPage = line.Page;
+                    currentSectionPhysicalPage = line.PhysicalPage;
                     contentBuffer.Clear();
                     continue;
                 }
@@ -140,7 +146,7 @@ public abstract class BaseDungeonWorldParser : IBookParser
             }
         }
 
-        FlushCurrentSection(book, currentSectionNum, contentBuffer, bookSlug, currentSectionPage);
+        FlushCurrentSection(book, currentSectionNum, contentBuffer, bookSlug, currentSectionPage, currentSectionPhysicalPage);
     }
 
     protected virtual List<LineInfo> ExtractLinesFromArea(Page page, double minX, double maxX)
@@ -157,7 +163,8 @@ public abstract class BaseDungeonWorldParser : IBookParser
                 OriginalX = g.Average(w => w.BoundingBox.Left),
                 FontSize = g.Average(w => w.BoundingBox.Height),
                 IsBold = g.Any(w => w.FontName?.Contains("Bold", StringComparison.OrdinalIgnoreCase) == true),
-                Page = page.Number
+                Page = page.Number,
+                PhysicalPage = page.Number
             })
             .ToList();
     }
@@ -184,15 +191,17 @@ public abstract class BaseDungeonWorldParser : IBookParser
         }
     }
 
-    protected virtual void FlushCurrentSection(Book book, int number, StringBuilder content, string slug, int page)
+    protected virtual void FlushCurrentSection(Book book, int number, StringBuilder content, string slug, int page, int physicalPage = 0)
     {
         if (number <= 0 || number > 400) return;
+
+        int imagePage = physicalPage > 0 ? physicalPage : page;
         
         var section = new Section
         {
             SectionNumber = number,
             Content = content.ToString().Trim(),
-            ImagePath = $"/assets/game-art/{slug}/p{page}_i0.png",
+            ImagePath = $"/assets/game-art/{slug}/p{imagePage}_i0.png",
             Choices = ExtractChoices(content.ToString()),
             HasCombat = content.ToString().Contains("SKILL") && content.ToString().Contains("STAMINA")
         };
@@ -268,6 +277,7 @@ public abstract class BaseDungeonWorldParser : IBookParser
     {
         public string Text { get; set; } = "";
         public int Page { get; set; }
+        public int PhysicalPage { get; set; } // The source PDF page (used for image filenames)
         public double Y { get; set; }
         public double OriginalX { get; set; } // For column detection
         public double FontSize { get; set; }

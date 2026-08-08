@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, ChevronRight, RefreshCw, Package, Zap, CheckCircle2, BookOpen } from 'lucide-react';
+import { Terminal, ChevronRight, ChevronLeft, ChevronDown, RefreshCw, Package, Zap, CheckCircle2, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { useGame } from '../Context/useGame';
 import { StatusHUD } from '../components/StatusHUD';
 import { QuestTracker } from '../components/QuestTracker';
 import { QuickGear } from '../components/QuickGear';
+import { Navigation } from '../components/Navigation';
 import { useGameSession } from '../hooks/useGameSession';
-import { listBooks } from '../api/client';
+import { listBooks, getAdventures, getBookMeta } from '../api/client';
+import type { AdventureResponse, BookMetaDto } from '../api/client';
 import type { LogEntry } from '../types/game';
 
 type FeedbackType = 'item' | 'level' | 'success';
@@ -17,11 +19,17 @@ interface FeedbackNotification {
 }
 
 export function StoryLog() {
-  const { addItem, currentBook, setCurrentBook } = useGame();
+  const { user, addItem, currentBook, setCurrentBook } = useGame();
   const [input, setInput] = useState('');
   const [books, setBooks] = useState<string[]>([]);
+  const [adventures, setAdventures] = useState<AdventureResponse[]>([]);
+  const [bookMetas, setBookMetas] = useState<Record<string, BookMetaDto>>({});
   const [booksError, setBooksError] = useState<string | null>(null);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [artFailed, setArtFailed] = useState(false);
+  const [failedCovers, setFailedCovers] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<FeedbackNotification[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -33,6 +41,7 @@ export function StoryLog() {
     isProcessing,
     goTo,
     processCommand,
+    save,
   } = useGameSession(currentBook);
 
   useEffect(() => {
@@ -40,12 +49,15 @@ export function StoryLog() {
   }, [sessionLogs]);
 
   useEffect(() => {
+    setArtFailed(false);
+  }, [section?.sectionNumber]);
+
+  useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [logs, isProcessing]);
 
-  // If no grimoire is bound yet, list the ones the engine already knows
+  // List all known grimoires + the player's saved runs so the switcher can show progress
   useEffect(() => {
-    if (currentBook) return;
     listBooks()
       .then((titles) => {
         setBooks(titles);
@@ -54,7 +66,46 @@ export function StoryLog() {
         }
       })
       .catch(() => setBooksError('The engine could not be reached. Is the backend running?'));
-  }, [currentBook]);
+
+    if (user?.isLoggedIn) {
+      getAdventures()
+        .then(setAdventures)
+        .catch(() => setAdventures([]));
+    }
+  }, [user?.isLoggedIn]);
+
+  // Fetch each book's meta so the left showcase can render cover art
+  useEffect(() => {
+    if (books.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        books.map(async (title) => [title, await getBookMeta(title)] as const)
+      );
+      if (!cancelled) {
+        setBookMetas(Object.fromEntries(entries));
+      }
+    })().catch(() => {});
+    return () => { cancelled = true; };
+  }, [books]);
+
+  const coverArtOf = (title: string): string | null =>
+    bookMetas[title]?.mapPath ?? bookMetas[title]?.adventureSheetPath ?? null;
+
+  const progressOf = (title: string): AdventureResponse | undefined =>
+    adventures.find(a => a.bookTitle === title);
+
+  const switchBook = async (title: string) => {
+    setSwitcherOpen(false);
+    if (title === currentBook) return;
+    // Sealing the current chronicle before switching grimoires
+    await save();
+    setCurrentBook(title);
+  };
+
+  const nudgeSlider = (dir: 1 | -1) => {
+    sliderRef.current?.scrollBy({ left: dir * 120, behavior: 'smooth' });
+  };
 
   const triggerFeedback = (text: string, type: FeedbackType = 'success') => {
     const id = Date.now();
@@ -112,16 +163,30 @@ export function StoryLog() {
             )}
 
             <div className="space-y-3">
-              {books.map((title) => (
-                <button
-                  key={title}
-                  onClick={() => setCurrentBook(title)}
-                  className="w-full flex items-center justify-between p-4 border border-white/10 bg-white/5 hover:border-ember/40 hover:bg-ember/5 transition-all rounded-lg group"
-                >
-                  <span className="text-sm text-gray-300 group-hover:text-white font-serif italic">{title}</span>
-                  <ChevronRight size={16} className="text-ember" />
-                </button>
-              ))}
+              {books.map((title) => {
+                const run = progressOf(title);
+                return (
+                  <button
+                    key={title}
+                    onClick={() => setCurrentBook(title)}
+                    className="w-full flex items-center justify-between p-4 border border-white/10 bg-white/5 hover:border-ember/40 hover:bg-ember/5 transition-all rounded-lg group"
+                  >
+                    <span className="text-sm text-gray-300 group-hover:text-white font-serif italic">{title}</span>
+                    <span className="flex items-center gap-3">
+                      {run && (
+                        <span className={`text-[11px] font-mono uppercase tracking-widest px-2 py-0.5 rounded border ${
+                          run.isComplete
+                            ? 'text-emerald-400 border-emerald-500/30'
+                            : 'text-ember/70 border-ember/20'
+                        }`}>
+                          {run.isComplete ? 'Completed' : `S${run.currentSection}`}
+                        </span>
+                      )}
+                      <ChevronRight size={16} className="text-ember" />
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         </div>
@@ -162,56 +227,172 @@ export function StoryLog() {
         <StatusHUD />
 
         {/* Cinematic Area */}
-        <div className="w-full h-[40vh] min-h-[280px] mb-6 rounded-2xl overflow-hidden border border-white/10 bg-[#050505] relative">
+        <div className="w-full h-28 md:h-32 mb-6 rounded-2xl overflow-hidden border border-white/10 bg-[#050505] relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.05)_0%,_transparent_70%)]" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-            <h2 className="text-3xl md:text-5xl font-gothic text-white tracking-[0.2em] uppercase">
-              {meta?.title || 'The Whispering Catacombs'}
-            </h2>
-            <div className="h-px w-32 bg-ember/30 mt-4" />
-            {meta && (
-              <p className="text-gray-500 text-[10px] uppercase tracking-[0.3em] mt-3">
-                {meta.sectionCount} sections bound
-              </p>
-            )}
+          <div className="absolute inset-0 flex items-center justify-between px-6 md:px-10">
+            <div className="flex flex-col">
+              <p className="text-gray-500 text-[11px] uppercase tracking-[0.3em] mb-1">Bound Grimoire</p>
+              <h2 className="text-xl md:text-3xl font-gothic text-white tracking-[0.2em] uppercase">
+                {meta?.title || 'The Whispering Catacombs'}
+              </h2>
+              {meta && (
+                <p className="text-gray-500 text-[12px] uppercase tracking-[0.3em] mt-1">
+                  {meta.sectionCount} sections bound
+                </p>
+              )}
+            </div>
+            {/* Book slider */}
+            <div className="hidden md:flex items-center gap-2">
+              <button
+                onClick={() => nudgeSlider(-1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-white/10 hover:border-ember/40 text-gray-400 hover:text-ember transition-colors"
+                aria-label="Previous grimoire"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <div ref={sliderRef} className="flex gap-2 overflow-x-auto max-w-[340px] py-1 custom-scrollbar no-scrollbar">
+                {books.map((title) => {
+                  const cover = coverArtOf(title);
+                  const coverFailed = failedCovers.has(title);
+                  const isActive = title === currentBook;
+                  return (
+                    <button
+                      key={title}
+                      onClick={() => switchBook(title)}
+                      title={title}
+                      className={`relative w-11 h-14 shrink-0 rounded-md overflow-hidden border transition-all ${
+                        isActive
+                          ? 'border-ember/70 ring-1 ring-ember/50'
+                          : 'border-white/10 opacity-60 hover:opacity-100 hover:border-ember/40'
+                      }`}
+                    >
+                      {cover && !coverFailed ? (
+                        <img
+                          src={cover}
+                          alt={title}
+                          onError={() => setFailedCovers(prev => new Set(prev).add(title))}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-ember/25 via-black to-black flex items-center justify-center">
+                          <span className="font-gothic text-[8px] text-center leading-tight px-0.5 text-ember/80 line-clamp-3">{title}</span>
+                        </div>
+                      )}
+                      {isActive && <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-ember animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => nudgeSlider(1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-white/10 hover:border-ember/40 text-gray-400 hover:text-ember transition-colors"
+                aria-label="Next grimoire"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Responsive Grid System */}
         <div className="flex flex-col xl:flex-row gap-6 items-start">
-          
-          <div className="w-full xl:w-72 order-2 xl:order-1">
-            <QuestTracker />
+
+          {/* LEFT: Section art fills the whole column */}
+          <div className="w-full xl:w-52 order-1 xl:order-1">
+            {/* Current section art */}
+            <div className="w-full flex flex-col bg-black/40 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-3">
+                <ImageIcon size={16} className="text-ember" />
+                <span className="text-[12px] font-mono text-gray-400 uppercase tracking-[0.2em]">
+                  Section Art{section ? ` · ${section.sectionNumber}` : ''}
+                </span>
+              </div>
+              {section?.imagePath && !artFailed ? (
+                <div className="rounded-lg overflow-hidden border border-white/10">
+                  <img
+                    src={section.imagePath}
+                    alt={`Section ${section.sectionNumber}`}
+                    onError={() => setArtFailed(true)}
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <p className="text-[12px] text-gray-600 italic py-4 text-center">
+                  {section?.imagePath && artFailed
+                    ? 'Illustration unavailable.'
+                    : 'No illustration for this section.'}
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="w-full flex-1 order-1 xl:order-2 flex flex-col max-h-[600px] bg-black/40 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="w-full flex-1 order-2 xl:order-2 flex flex-col md:h-[calc(100vh-300px)] min-h-[420px] max-h-[600px] md:max-h-none bg-black/40 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
             <div className="h-10 bg-white/5 border-b border-white/5 flex items-center px-4 shrink-0 justify-between">
               <div className="flex items-center gap-2">
                 <Terminal size={14} className="text-ember" />
-                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Chronicle_Feed</span>
+                <span className="text-[12px] font-mono text-gray-500 uppercase tracking-widest">Chronicle_Feed</span>
               </div>
-              {currentBook && (
-                <span className="text-[10px] font-mono text-ember/70 uppercase tracking-widest truncate max-w-[50%]">
-                  {currentBook}
-                </span>
-              )}
-            </div>
 
-            {/* Section image, when one was extracted */}
-            {section?.imagePath && (
-              <div className="shrink-0 border-b border-white/5 overflow-hidden max-h-64">
-                <img
-                  src={section.imagePath}
-                  alt={`Section ${section.sectionNumber}`}
-                  className="w-full h-48 object-cover opacity-80"
-                />
+              {/* Grimoire switcher */}
+              <div className="relative">
+                <button
+                  onClick={() => setSwitcherOpen(o => !o)}
+                  className="flex items-center gap-2 text-[12px] font-mono text-ember/70 uppercase tracking-widest border border-white/10 hover:border-ember/40 rounded px-2 py-1 transition-colors"
+                >
+                  <BookOpen size={12} />
+                  <span className="truncate max-w-[160px]">{currentBook}</span>
+                  <ChevronDown size={12} className={`transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {switcherOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-black/95 border border-white/10 rounded-xl shadow-2xl z-50 p-2 space-y-1 max-h-72 overflow-y-auto custom-scrollbar">
+                      <p className="text-[11px] font-mono text-gray-500 uppercase tracking-widest px-2 pt-1 pb-2">
+                        Switch Grimoire
+                      </p>
+                      {books.length === 0 && booksError && (
+                        <p className="text-gray-500 text-[12px] px-2 py-2 italic">{booksError}</p>
+                      )}
+                      {books.map((title) => {
+                        const run = progressOf(title);
+                        const isActive = title === currentBook;
+                        return (
+                          <button
+                            key={title}
+                            onClick={() => switchBook(title)}
+                            disabled={isActive}
+                            className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs border transition-all ${
+                              isActive
+                                ? 'border-ember/40 bg-ember/10 text-ember'
+                                : 'border-white/5 bg-white/[0.02] text-gray-300 hover:bg-white/5 hover:border-ember/30'
+                            } disabled:opacity-60`}
+                          >
+                            <span className="font-serif italic truncate">{title}</span>
+                            <span className="flex items-center gap-2 shrink-0">
+                              {isActive && <span className="text-[11px] font-mono uppercase tracking-widest text-ember">Active</span>}
+                              {!isActive && run && (
+                                <span className={`text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                                  run.isComplete ? 'text-emerald-400 border-emerald-500/30' : 'text-ember/70 border-ember/20'
+                                }`}>
+                                  {run.isComplete ? 'Complete' : `S${run.currentSection}`}
+                                </span>
+                              )}
+                              {!isActive && !run && <span className="text-[11px] font-mono uppercase tracking-widest text-gray-600">New</span>}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
 
             <div ref={scrollRef} className="h-[150px] md:h-auto md:flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
               {logs.map(log => (
                 <div key={log.id} className={`flex flex-col ${log.type === 'player' ? 'items-end' : 'items-start'}`}>
-                  <div className={`p-3 rounded-xl text-xs md:text-sm max-w-[85%] ${
+                  <div className={`p-3 rounded-xl text-xs md:text-sm max-w-[85%] whitespace-pre-line ${
                     log.type === 'player' 
                       ? 'bg-ember/10 border border-ember/20 text-ember/80 font-mono' 
                       : 'bg-white/[0.03] border border-white/5 text-gray-300 font-serif italic'
@@ -220,13 +401,13 @@ export function StoryLog() {
                   </div>
                 </div>
               ))}
-              {isProcessing && <div className="text-ember/30 animate-pulse text-[9px] font-mono ml-2">INTERPRETING...</div>}
+              {isProcessing && <div className="text-ember/30 animate-pulse text-[11px] font-mono ml-2">INTERPRETING...</div>}
             </div>
 
             {/* Choices for the current section */}
             {section && section.choices.length > 0 && (
               <div className="shrink-0 border-t border-white/10 bg-white/[0.02] px-4 py-3 space-y-2">
-                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Your Path</p>
+                <p className="text-[12px] font-mono text-gray-500 uppercase tracking-widest">Your Path</p>
                 {section.choices.map((choice, i) => (
                   <button
                     key={i}
@@ -256,20 +437,28 @@ export function StoryLog() {
               </form>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {['Look', 'Inventory', 'Help'].map(cmd => (
-                  <button key={cmd} onClick={() => handleCommand(undefined, cmd)} disabled={isProcessing} className="px-4 py-1.5 text-[9px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
+                  <button key={cmd} onClick={() => handleCommand(undefined, cmd)} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
                     {cmd}
                   </button>
                 ))}
+                <button onClick={() => handleCommand(undefined, 'Reset')} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
+                  Reset
+                </button>
                 {section && (
-                  <button onClick={() => goTo(section.sectionNumber)} disabled={isProcessing} className="px-4 py-1.5 text-[9px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
+                  <button onClick={() => goTo(section.sectionNumber)} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
                     Reread
                   </button>
                 )}
               </div>
             </div>
+
+            <div className="pt-4 pb-2">
+              <Navigation docked />
+            </div>
           </div>
 
-          <div className="w-full xl:w-72 order-3">
+          <div className="w-full xl:w-64 order-3 xl:order-3 flex flex-col gap-6">
+            <QuestTracker />
             <QuickGear />
           </div>
         </div>
