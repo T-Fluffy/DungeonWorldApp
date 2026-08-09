@@ -9,18 +9,21 @@ namespace DungeonWorld.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin")]
 public class AdminController : ControllerBase
 {
     private readonly IParserFactory _parserFactory; // Changed from IBookParser
     private readonly FileStorageOptions _storageOptions;
+    private readonly ILogger<AdminController> _logger;
 
     public AdminController(
-        IParserFactory parserFactory, 
-        IOptions<FileStorageOptions> storageOptions)
+        IParserFactory parserFactory,
+        IOptions<FileStorageOptions> storageOptions,
+        ILogger<AdminController> logger)
     {
         _parserFactory = parserFactory;
         _storageOptions = storageOptions.Value;
+        _logger = logger;
     }
 
     [HttpPost("upload")]
@@ -28,10 +31,10 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UploadPdf(IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest("No file uploaded.");
+            return BadRequest(new { error = "No file uploaded." });
 
         if (!Path.GetExtension(file.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
-            return BadRequest("Only .pdf files are accepted.");
+            return BadRequest(new { error = "Only .pdf files are accepted." });
 
         try
         {
@@ -48,7 +51,8 @@ public class AdminController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { Error = ex.Message, Stack = ex.StackTrace });
+            _logger.LogError(ex, "Failed to upload PDF {FileName}", file.FileName);
+            return StatusCode(500, new { error = "Failed to save the uploaded file." });
         }
     }
 
@@ -56,29 +60,29 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> IngestBook([FromQuery] string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
-            return BadRequest("FileName is required.");
+            return BadRequest(new { error = "FileName is required." });
 
         try
         {
             // Resolve full path for layout analysis
             string fullPath = Path.Combine(
                 Path.GetFullPath(_storageOptions.PdfUploadPath),
-                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) 
-                    ? fileName 
+                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                    ? fileName
                     : $"{fileName}.pdf");
 
             if (!System.IO.File.Exists(fullPath))
-                return NotFound($"PDF not found: {fullPath}");
+                return NotFound(new { error = $"PDF not found: {fullPath}" });
 
             // Factory selects appropriate parser based on layout
-            var parser = _parserFactory.CreateParser(fullPath, 
+            var parser = _parserFactory.CreateParser(fullPath,
                 Path.GetFileNameWithoutExtension(fileName));
-            
+
             var book = await parser.ParseAsync(fullPath);
 
-            return Ok(new 
-            { 
-                Message = "Ingestion Successful", 
+            return Ok(new
+            {
+                Message = "Ingestion Successful",
                 ParserUsed = parser.ParserId,
                 BookTitle = book.Title,
                 ProcessedFile = $"{book.Title}.json",
@@ -88,28 +92,37 @@ public class AdminController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { Error = ex.Message, Stack = ex.StackTrace });
+            _logger.LogError(ex, "Failed to ingest book {FileName}", fileName);
+            return StatusCode(500, new { error = "Book ingestion failed." });
         }
     }
 
     [HttpPost("analyze-layout")]
     public IActionResult AnalyzeLayout([FromQuery] string fileName)
     {
-        // Diagnostic endpoint to check layout detection
-        string fullPath = Path.Combine(
-            Path.GetFullPath(_storageOptions.PdfUploadPath),
-            fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) 
-                ? fileName 
-                : $"{fileName}.pdf");
+        try
+        {
+            // Diagnostic endpoint to check layout detection
+            string fullPath = Path.Combine(
+                Path.GetFullPath(_storageOptions.PdfUploadPath),
+                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                    ? fileName
+                    : $"{fileName}.pdf");
 
-        var analyzer = new PdfPigLayoutAnalyzer();
-        bool isDouble = analyzer.IsDoublePageLayout(fullPath);
-        
-        return Ok(new 
-        { 
-            File = fileName,
-            DetectedLayout = isDouble ? "DoublePage (2-up)" : "SinglePage",
-            RecommendedParser = isDouble ? "DoublePageParser" : "SinglePageParser"
-        });
+            var analyzer = new PdfPigLayoutAnalyzer();
+            bool isDouble = analyzer.IsDoublePageLayout(fullPath);
+
+            return Ok(new
+            {
+                File = fileName,
+                DetectedLayout = isDouble ? "DoublePage (2-up)" : "SinglePage",
+                RecommendedParser = isDouble ? "DoublePageParser" : "SinglePageParser"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to analyze layout for {FileName}", fileName);
+            return StatusCode(500, new { error = "Layout analysis failed." });
+        }
     }
 }

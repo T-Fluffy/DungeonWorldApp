@@ -125,6 +125,7 @@ public record UserResponse(
     Guid Id,
     string Username,
     string Email,
+    string Role,
     string? DisplayName,
     string? AvatarPath,
     int Skill,

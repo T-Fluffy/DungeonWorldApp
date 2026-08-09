@@ -16,6 +16,7 @@ The backend of **Dungeon World** — a .NET 8 service that turns Fighting Fantas
 | Area | Capability |
 | --- | --- |
 | **PDF Ingestion** | Upload a gamebook PDF and parse it into structured JSON (sections, choices, images, map, front matter) |
+| **Role-Gated Admin** | Ingestion + catalog writes are `[Authorize(Roles = "Admin")]`; the initial admin is seeded from configuration (`Admin:Username` / `Admin:Password`)
 | **Layout Detection** | Automatically detects whether a scan is single-page or double-page (2-up) and picks the right parser |
 | **Game Data API** | Read book metadata, individual sections, choices, and the list of ingested books |
 | **Player Accounts** | Register / login with PBKDF2-hashed passwords, profiles, avatar upload, subscriptions, achievements |
@@ -35,7 +36,7 @@ backend/
 │   ├── Interfaces/                # IBookParser
 │   └── Options/                   # FileStorageOptions (PDF/image/avatar paths)
 ├── DungeonWorld.Infrastructure/   # Implementations
-│   ├── Parsers/                   # SinglePageParser, DoublePageParser, DungeonWorldBookParser, DungeonWorldParserFactory
+│   ├── Parsers/                   # SinglePageParser, DoublePageParser, DungeonWorldParserFactory
 │   ├── Helpers/                   # PdfPigLayoutAnalyzer, PasswordHasher
 │   ├── Interfaces/                # IParserFactory, ILayoutAnalyzer
 │   └── Persistence/               # DungeonWorldDbContext (EF Core / Npgsql)
@@ -53,7 +54,7 @@ backend/
 
 All routes are exposed under `/api`. Swagger UI is available at `/swagger` in Development.
 
-### Admin — ingestion pipeline
+### Admin — ingestion pipeline *(admin role only)*
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/admin/upload` | Upload a PDF (multipart, ≤ 200 MB) |
@@ -90,7 +91,13 @@ All routes are exposed under `/api`. Swagger UI is available at `/swagger` in De
 | `GET` | `/api/catalog/commands` | Chat-box commands the player uses to interact with the game |
 | `GET` | `/api/catalog/adventures` | Adventure books: title, section count, medallion awarded |
 | `GET` | `/api/catalog/adventures/{bookTitle}` | A single adventure's catalog entry |
-| `POST/PUT/DELETE` | `/api/catalog/{items,spells,commands,adventures}[/{id}]` | Admin CRUD for the catalog tables |
+| `POST/PUT/DELETE` | `/api/catalog/{items,spells,commands,adventures}[/{id}]` | Admin CRUD for the catalog tables *(admin role only)* |
+
+## 🔐 Roles
+
+- Every user carries a **Role** (default `"Player"`), stored on the `Users` row and embedded in the JWT as a `ClaimTypes.Role` claim.
+- All write/ingestion endpoints (`/api/admin/*` and catalog `POST/PUT/DELETE`) require `[Authorize(Roles = "Admin")]`; public reads stay `[AllowAnonymous]`.
+- The first admin is bootstrapped at startup from the `Admin` configuration section (`Admin:Username` / `Admin:Email` / `Admin:Password`). In Docker, set them via `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`. If unset, no admin is created.
 
 ## 🗄️ Catalog Seeding
 
@@ -100,7 +107,16 @@ On startup, `CatalogSeeder` populates the game database:
 - **Adventures** — one row per processed book (title, section count, `Medallion of <Title>` reward).
 - **Items & Spells** — `GameContentExtractor` heuristically scans each processed book's prose for item mentions (acquisition phrases, `If you have the X...`, and proper-noun artifacts like *Crossbow of Axillon*), classifies each into a type (`weapon`, `armour`, `consumable`, `quest`, `artifact`) and rarity, and records the section where it appears. Place names and in-world scores (e.g. *Booty*) are filtered out.
 
-> Because the schema is bootstrapped with `EnsureCreated()`, changing an entity requires a full DB wipe (see Docker notes).
+> The schema is managed with **EF Core migrations** (see `DungeonWorld.Infrastructure/Persistence/Migrations`). On startup the API runs `db.Database.Migrate()` before seeding. `EnsureCreated()` is no longer used — migrations are the only way the schema is created or updated.
+
+## 🗄️ Persistence
+
+- EF Core over Npgsql (`DungeonWorldDbContext`), with retry-on-failure enabled for container startup races.
+- Schema is created via `Database.Migrate()` at startup (initial migration: `InitialCreate`).
+- Tables: `Users` (incl. SKILL/STAMINA/LUCK/XP/Role + avatar path), `GameItems`, `Spells`, `Commands`, `Adventures`, `Subscriptions`, `Achievements`, `UserAssets`, `AdventureProgresses`.
+- Passwords are hashed with **PBKDF2** (100k iterations, 16-byte salt), stored as `base64(salt):base64(hash)`.
+- Avatars are saved to `Storage/Avatars` and served statically at `/assets/avatars`.
+- Adding a new migration: `dotnet ef migrations add <Name> --project DungeonWorld.Infrastructure --startup-project DungeonWorld.Infrastructure` (a design-time `DungeonWorldDbContextFactory` avoids needing the API host or a live DB).
 
 ## 🔍 How The Parser Works
 
@@ -140,22 +156,12 @@ docker compose -f backend/docker-compose.yml up -d --build
 
 The suite uses **xUnit** with **FluentAssertions**:
 
-- **Layout detection** — `CanHandle` correctly classifies single vs double-page PDFs.
-- **Parser regression** — Section 50 / victory-terminator patches stay functional after logic changes.
-- **Data validation** — section numbering constraints enforced during ingestion.
+- **Layout detection** — real PDF fixture (`Storage/Uploads/Seas of Blood.pdf`) exercised through the analyzer and both parsers, verifying the single-page classification, plus factory unit tests for parser priority, fallback, and exception tolerance.
 - **Content extraction** — `GameContentExtractorTests` cover normalization, proper-noun artifact detection, item classification, and place-name rejection.
 
 ```bash
 dotnet test DungeonWorldBackend.sln
 ```
-
-## 🗄️ Persistence
-
-- EF Core over Npgsql (`DungeonWorldDbContext`), with retry-on-failure enabled for container startup races.
-- Schema is bootstrapped via `Database.EnsureCreated()` at startup (swap for EF migrations in production).
-- Tables: `Users` (incl. SKILL/STAMINA/LUCK/XP + avatar path), `GameItems`, `Spells`, `Commands`, `Adventures`, `Subscriptions`, `Achievements`, `UserAssets`, `AdventureProgresses`.
-- Passwords are hashed with **PBKDF2** (100k iterations, 16-byte salt), stored as `base64(salt):base64(hash)`.
-- Avatars are saved to `Storage/Avatars` and served statically at `/assets/avatars`.
 
 ## 🧠 ML_Pipeline
 

@@ -52,7 +52,7 @@ public class CatalogController : ControllerBase
 
     // --- Admin management ---
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost("items")]
     public async Task<IActionResult> AddItem(ItemRequest request)
     {
@@ -79,7 +79,7 @@ public class CatalogController : ControllerBase
         return CreatedAtAction(nameof(GetItems), ToDto(item));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost("spells")]
     public async Task<IActionResult> AddSpell(SpellRequest request)
     {
@@ -105,7 +105,7 @@ public class CatalogController : ControllerBase
         return CreatedAtAction(nameof(GetSpells), ToDto(spell));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost("commands")]
     public async Task<IActionResult> AddCommand(GameCommandRequest request)
     {
@@ -126,7 +126,7 @@ public class CatalogController : ControllerBase
         return CreatedAtAction(nameof(GetCommands), ToDto(command));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost("adventures")]
     public async Task<IActionResult> AddAdventure(AdventureCatalogRequest request)
     {
@@ -147,7 +147,7 @@ public class CatalogController : ControllerBase
         return CreatedAtAction(nameof(GetAdventure), new { bookTitle = adventure.BookTitle }, ToDto(adventure));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPut("items/{id:guid}")]
     public async Task<IActionResult> UpdateItem(Guid id, ItemRequest request)
     {
@@ -170,7 +170,7 @@ public class CatalogController : ControllerBase
         return Ok(ToDto(item));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPut("spells/{id:guid}")]
     public async Task<IActionResult> UpdateSpell(Guid id, SpellRequest request)
     {
@@ -192,7 +192,7 @@ public class CatalogController : ControllerBase
         return Ok(ToDto(spell));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPut("commands/{id:guid}")]
     public async Task<IActionResult> UpdateCommand(Guid id, GameCommandRequest request)
     {
@@ -209,7 +209,7 @@ public class CatalogController : ControllerBase
         return Ok(ToDto(command));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPut("adventures/{id:guid}")]
     public async Task<IActionResult> UpdateAdventure(Guid id, AdventureCatalogRequest request)
     {
@@ -226,7 +226,7 @@ public class CatalogController : ControllerBase
         return Ok(ToDto(adventure));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpDelete("items/{id:guid}")]
     public async Task<IActionResult> DeleteItem(Guid id)
     {
@@ -237,7 +237,7 @@ public class CatalogController : ControllerBase
         return NoContent();
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpDelete("spells/{id:guid}")]
     public async Task<IActionResult> DeleteSpell(Guid id)
     {
@@ -248,7 +248,7 @@ public class CatalogController : ControllerBase
         return NoContent();
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpDelete("commands/{id:guid}")]
     public async Task<IActionResult> DeleteCommand(Guid id)
     {
@@ -259,7 +259,7 @@ public class CatalogController : ControllerBase
         return NoContent();
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpDelete("adventures/{id:guid}")]
     public async Task<IActionResult> DeleteAdventure(Guid id)
     {

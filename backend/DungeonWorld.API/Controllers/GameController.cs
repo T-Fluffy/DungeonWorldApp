@@ -12,10 +12,12 @@ public class GameController : ControllerBase
 {
     private readonly FileStorageOptions _storageOptions;
     private readonly string _processedPath;
+    private readonly ILogger<GameController> _logger;
 
-    public GameController(IOptions<FileStorageOptions> storageOptions)
+    public GameController(IOptions<FileStorageOptions> storageOptions, ILogger<GameController> logger)
     {
         _storageOptions = storageOptions.Value;
+        _logger = logger;
         // Combines the root upload path with the "ProcessedBooks" subfolder
         _processedPath = Path.Combine(Path.GetFullPath(_storageOptions.PdfUploadPath), "ProcessedBooks");
     }
@@ -50,7 +52,8 @@ public class GameController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = "Failed to load game data.", details = ex.Message });
+            _logger.LogError(ex, "Failed to load section {SectionNumber} from {BookTitle}", sectionNumber, bookTitle);
+            return StatusCode(500, new { error = "Failed to load game data." });
         }
     }
 
@@ -89,7 +92,8 @@ public class GameController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = "Failed to load game data.", details = ex.Message });
+            _logger.LogError(ex, "Failed to load metadata for {BookTitle}", bookTitle);
+            return StatusCode(500, new { error = "Failed to load game data." });
         }
     }
 

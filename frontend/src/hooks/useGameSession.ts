@@ -75,9 +75,11 @@ export const useGameSession = (bookTitle: string | null) => {
         addLog('The path ends here. (Victory, or a dead end?)', 'system');
       }
 
-      // Auto-save after every navigation (best-effort)
+      // Auto-save after every navigation (best-effort).
+      // Pass the fetched section number explicitly — the `section` state in the
+      // closure is still the *previous* section until the next render.
       const completed = sectionNumber >= 400 || data.choices.length === 0;
-      await save(completed);
+      await save(completed, data.sectionNumber);
     } catch (err) {
       addLog(extractError(err), 'system');
     } finally {

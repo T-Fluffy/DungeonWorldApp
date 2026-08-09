@@ -7,6 +7,7 @@ using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Parsers;
 using DungeonWorld.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
@@ -55,7 +56,6 @@ builder.Services.AddPersistence(connectionString);
 // 3. Parsing services
 builder.Services.AddScoped<IBookParser, SinglePageParser>();
 builder.Services.AddScoped<IBookParser, DoublePageParser>();
-builder.Services.AddScoped<IBookParser, DungeonWorldBookParser>();
 // Register Factory (replaces direct IBookParser injection)
 builder.Services.AddScoped<IParserFactory, DungeonWorldParserFactory>();
 
@@ -92,6 +92,27 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Global exception handler: log the error, never echo stack traces to clients.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exceptionHandler = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GlobalExceptionHandler");
+        if (exceptionHandler?.Error != null)
+        {
+            logger.LogError(exceptionHandler.Error,
+                "Unhandled exception processing {Method} {Path}",
+                context.Request.Method, context.Request.Path);
+        }
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+    });
+});
+
 // 4. Static Files (for Game Art)
 // PULL DIRECTLY FROM CONFIGURATION (Which Docker overrides perfectly!)
 var storageConfig = app.Configuration.GetSection(FileStorageOptions.SectionName).Get<FileStorageOptions>();
@@ -125,11 +146,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// 5. Ensure the database schema exists (dev-friendly; swap for EF migrations in production)
+// 5. Apply migrations and seed the database at startup.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DungeonWorldDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
+    await AdminSeeder.SeedAsync(scope.ServiceProvider);
     await CatalogSeeder.SeedAsync(scope.ServiceProvider);
 }
 

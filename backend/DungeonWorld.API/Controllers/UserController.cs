@@ -178,9 +178,9 @@ public class UserController : ControllerBase
 
             return Ok(new { avatarPath = user.AvatarPath });
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = "Failed to save avatar.", details = ex.Message });
+            return StatusCode(500, new { error = "Failed to save avatar." });
         }
     }
 
@@ -552,6 +552,7 @@ public class UserController : ControllerBase
         u.Id,
         u.Username,
         u.Email,
+        u.Role,
         u.DisplayName,
         u.AvatarPath,
         u.Skill,
