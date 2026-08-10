@@ -29,6 +29,7 @@ export function StoryLog() {
   const [artFailed, setArtFailed] = useState(false);
   const [failedCovers, setFailedCovers] = useState<Set<string>>(new Set());
   const [leftTab, setLeftTab] = useState<LeftTab>('art');
+  const [choicesOpen, setChoicesOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<FeedbackNotification[]>([]);
@@ -499,21 +500,46 @@ export function StoryLog() {
 
             {/* Choices for the current section */}
             {section && section.choices.length > 0 && (
-              <div className="shrink-0 border-t border-white/10 bg-white/[0.02] px-4 py-3 space-y-2">
-                <p className="text-[12px] font-mono text-gray-500 uppercase tracking-widest">Your Path</p>
-                {section.choices.map((choice, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(choice.targetSectionNumber)}
-                    disabled={isProcessing}
-                    className="w-full text-left px-4 py-2.5 text-xs border border-white/10 bg-black/30 hover:border-ember/40 hover:bg-ember/5 rounded-lg text-gray-300 hover:text-white transition-all disabled:opacity-50"
-                  >
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="font-serif italic">{choice.description}</span>
-                      <span className="text-ember font-mono shrink-0">{choice.targetSectionNumber}</span>
+              <div className="shrink-0 border-t border-white/10 bg-white/[0.02]">
+                <button
+                  onClick={() => setChoicesOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-[12px] font-mono text-gray-500 uppercase tracking-widest hover:text-ember/70 transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    Your Path
+                    <span className="px-1.5 py-0.5 rounded border border-ember/20 text-ember/70 text-[10px] leading-none">
+                      {section.choices.length}
                     </span>
-                  </button>
-                ))}
+                  </span>
+                  <ChevronDown size={14} className={`transition-transform ${choicesOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence initial={false}>
+                  {choicesOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-3 space-y-1.5">
+                        {section.choices.map((choice, i) => (
+                          <button
+                            key={i}
+                            onClick={() => goTo(choice.targetSectionNumber)}
+                            disabled={isProcessing}
+                            className="w-full text-left px-3 py-1.5 text-xs border border-white/10 bg-black/30 hover:border-ember/40 hover:bg-ember/5 rounded-md text-gray-300 hover:text-white transition-all disabled:opacity-50"
+                          >
+                            <span className="flex items-center justify-between gap-3">
+                              <span className="font-serif italic">{choice.description}</span>
+                              <span className="text-ember font-mono shrink-0">{choice.targetSectionNumber}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
