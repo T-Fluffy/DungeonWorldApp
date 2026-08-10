@@ -61,7 +61,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // 1. Initialize User State (restored from session)
   const [user, setUser] = useState<User | null>(() => loadSession());
 
-  // The book currently being played (set from the FileSelector ritual)
+  // The book currently being played (chosen from the Chronicle's grimoire picker)
   const [currentBook, setCurrentBook] = useState<string | null>(null);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);

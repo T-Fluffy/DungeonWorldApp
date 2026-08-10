@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Book, User, LogOut } from 'lucide-react';
+import { Book, User, LogOut } from 'lucide-react';
 import { useGame } from '../Context/useGame';
 
 export function Navigation({ docked = false }: { docked?: boolean }) {
@@ -12,7 +12,6 @@ export function Navigation({ docked = false }: { docked?: boolean }) {
   
   const navItems = [
     { path: '/profile', icon: User, label: 'Soul' },
-    { path: '/files', icon: FileText, label: 'Summon' },
     { path: '/log', icon: Book, label: 'Chronicle' },
   ];
 

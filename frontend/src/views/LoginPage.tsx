@@ -21,7 +21,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(charName.trim(), password);
-      navigate('/files');
+      navigate('/log');
     } catch (err) {
       setError(apiError(err));
     } finally {

@@ -64,15 +64,6 @@ export interface BookMetaDto {
   rules: RuleDto[];
 }
 
-export interface IngestResultDto {
-  message: string;
-  parserUsed: string;
-  bookTitle: string;
-  processedFile: string;
-  sections: number;
-  mapFound: boolean;
-}
-
 const api = axios.create({
   baseURL: '/api',
   timeout: 120000, // PDF parsing can take a while
@@ -115,29 +106,6 @@ export const getSection = async (bookTitle: string, sectionNumber: number): Prom
 
 export const getBookMeta = async (bookTitle: string): Promise<BookMetaDto> => {
   const { data } = await api.get<BookMetaDto>(`/game/${encodeURIComponent(bookTitle)}/meta`);
-  return data;
-};
-
-export const uploadPdf = async (file: File): Promise<{ fileName: string }> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const { data } = await api.post<{ fileName: string }>('/admin/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
-
-export const ingestBook = async (fileName: string): Promise<IngestResultDto> => {
-  const { data } = await api.post<IngestResultDto>('/admin/ingest', null, {
-    params: { fileName },
-  });
-  return data;
-};
-
-export const analyzeLayout = async (fileName: string) => {
-  const { data } = await api.post('/admin/analyze-layout', null, {
-    params: { fileName },
-  });
   return data;
 };
 

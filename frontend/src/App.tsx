@@ -16,7 +16,6 @@ import { FogOverlay } from './components/FogOverlay';
 import { HomePage } from './views/HomePage';
 import { LoginPage } from './views/LoginPage';
 import { RegisterPage } from './views/RegisterPage';
-import { FileSelector } from './views/FileSelector';
 import { StoryLog } from './views/StoryLog';
 import { ProfilePage } from './views/ProfilePage';
 
@@ -60,7 +59,6 @@ function AnimatedRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
-            <Route path="/files" element={<ProtectedRoute><FileSelector /></ProtectedRoute>} />
             <Route path="/log" element={<ProtectedRoute><StoryLog /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             

@@ -65,7 +65,7 @@ export function StoryLog() {
       .then((titles) => {
         setBooks(titles);
         if (titles.length === 0) {
-          setBooksError('No grimoires have been ingested. Visit the Summoning circle to bind one.');
+          setBooksError('No grimoires are available yet. Check that a book has been ingested on the backend.');
         }
       })
       .catch(() => setBooksError('The engine could not be reached. Is the backend running?'));

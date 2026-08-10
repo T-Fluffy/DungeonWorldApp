@@ -85,7 +85,7 @@ export function RegisterPage() {
       updateStat('might', currentClassStats!.mgt);
       updateStat('essence', currentClassStats!.ess);
 
-      navigate('/files');
+      navigate('/log');
     } catch (err) {
       setError(apiError(err));
     } finally {
