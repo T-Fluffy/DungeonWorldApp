@@ -1,6 +1,6 @@
 using System.Text.Json;
-using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Options;
+using DungeonWorld.Cleaning.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -11,22 +11,21 @@ namespace DungeonWorld.API.Controllers;
 public class GameController : ControllerBase
 {
     private readonly FileStorageOptions _storageOptions;
-    private readonly string _processedPath;
+    private readonly string _cleanedDataPath;
     private readonly ILogger<GameController> _logger;
 
     public GameController(IOptions<FileStorageOptions> storageOptions, ILogger<GameController> logger)
     {
         _storageOptions = storageOptions.Value;
         _logger = logger;
-        // Combines the root upload path with the "ProcessedBooks" subfolder
-        _processedPath = Path.Combine(Path.GetFullPath(_storageOptions.PdfUploadPath), "ProcessedBooks");
+        // Cleaned data (structured book JSON) lives under the root upload path.
+        _cleanedDataPath = Path.Combine(Path.GetFullPath(_storageOptions.PdfUploadPath), "CleanedData");
     }
 
     [HttpGet("{bookTitle}/{sectionNumber}")]
-    public async Task<ActionResult<Section>> GetSection(string bookTitle, int sectionNumber)
+    public async Task<ActionResult<CleanedSection>> GetSection(string bookTitle, int sectionNumber)
     {
-        // Explicitly use System.IO to avoid CS0119 naming conflict
-        string filePath = Path.Combine(_processedPath, $"{bookTitle}.json");
+        string filePath = Path.Combine(_cleanedDataPath, $"{bookTitle}.json");
 
         if (!System.IO.File.Exists(filePath))
         {
@@ -36,12 +35,12 @@ public class GameController : ControllerBase
         try
         {
             var jsonString = await System.IO.File.ReadAllTextAsync(filePath);
-            var book = JsonSerializer.Deserialize<Book>(jsonString, new JsonSerializerOptions 
-            { 
-                PropertyNameCaseInsensitive = true 
+            var book = JsonSerializer.Deserialize<CleanedBook>(jsonString, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
             });
 
-            var section = book?.Sections.FirstOrDefault(s => s.SectionNumber == sectionNumber);
+            var section = book?.Sections.FirstOrDefault(s => s.Number == sectionNumber);
 
             if (section == null)
             {
@@ -60,7 +59,7 @@ public class GameController : ControllerBase
     [HttpGet("{bookTitle}/meta")]
     public IActionResult GetBookMeta(string bookTitle)
     {
-        string filePath = Path.Combine(_processedPath, $"{bookTitle}.json");
+        string filePath = Path.Combine(_cleanedDataPath, $"{bookTitle}.json");
 
         if (!System.IO.File.Exists(filePath))
         {
@@ -70,7 +69,7 @@ public class GameController : ControllerBase
         try
         {
             var jsonString = System.IO.File.ReadAllText(filePath);
-            var book = JsonSerializer.Deserialize<Book>(jsonString, new JsonSerializerOptions
+            var book = JsonSerializer.Deserialize<CleanedBook>(jsonString, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -82,12 +81,17 @@ public class GameController : ControllerBase
 
             return Ok(new
             {
-                Title = book.Title,
-                Introduction = book.Introduction,
-                MapPath = book.MapPath,
-                AdventureSheetPath = book.AdventureSheetPath,
-                SectionCount = book.Sections.Count,
-                HasCombatSections = book.Sections.Count(s => s.HasCombat)
+                Title = book.Meta.Title,
+                Author = book.Meta.Author,
+                Introduction = book.Meta.Introduction,
+                MapPath = book.Meta.MapPath,
+                AdventureSheetPath = book.Meta.AdventureSheetPath,
+                SectionCount = book.Meta.SectionCount,
+                PresentSectionCount = book.Meta.PresentSectionCount,
+                MissingSectionCount = book.Meta.MissingSectionCount,
+                CombatSectionCount = book.Meta.CombatSectionCount,
+                EnemyCount = book.Meta.EnemyCount,
+                Rules = book.Rules
             });
         }
         catch (Exception ex)
@@ -100,10 +104,10 @@ public class GameController : ControllerBase
     [HttpGet("list-books")]
     public IActionResult ListAvailableBooks()
     {
-        if (!Directory.Exists(_processedPath))
+        if (!Directory.Exists(_cleanedDataPath))
             return Ok(new string[] { });
 
-        var books = Directory.GetFiles(_processedPath, "*.json")
+        var books = Directory.GetFiles(_cleanedDataPath, "*.json")
                              .Select(Path.GetFileNameWithoutExtension)
                              .ToList();
 

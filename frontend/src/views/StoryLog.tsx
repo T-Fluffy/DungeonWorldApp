@@ -53,7 +53,7 @@ export function StoryLog() {
 
   useEffect(() => {
     setArtFailed(false);
-  }, [section?.sectionNumber]);
+  }, [section?.number]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -310,7 +310,7 @@ export function StoryLog() {
               <div className="flex items-center gap-2">
                 <ImageIcon size={16} className="text-ember" />
                 <span className="text-[12px] font-mono text-gray-400 uppercase tracking-[0.2em]">
-                  The Left Page{section ? ` · ${section.sectionNumber}` : ''}
+                  The Left Page{section ? ` · ${section.number}` : ''}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -340,7 +340,7 @@ export function StoryLog() {
                 section?.imagePath && !artFailed ? (
                   <img
                     src={section.imagePath}
-                    alt={`Section ${section.sectionNumber}`}
+                    alt={`Section ${section.number}`}
                     onError={() => setArtFailed(true)}
                     className="w-full h-full object-contain"
                   />
@@ -526,13 +526,13 @@ export function StoryLog() {
                         {section.choices.map((choice, i) => (
                           <button
                             key={i}
-                            onClick={() => goTo(choice.targetSectionNumber)}
+                            onClick={() => goTo(choice.target)}
                             disabled={isProcessing}
                             className="w-full text-left px-3 py-1.5 text-xs border border-white/10 bg-black/30 hover:border-ember/40 hover:bg-ember/5 rounded-md text-gray-300 hover:text-white transition-all disabled:opacity-50"
                           >
                             <span className="flex items-center justify-between gap-3">
-                              <span className="font-serif italic">{choice.description}</span>
-                              <span className="text-ember font-mono shrink-0">{choice.targetSectionNumber}</span>
+                              <span className="font-serif italic">{choice.label ?? choice.text}</span>
+                              <span className="text-ember font-mono shrink-0">{choice.target}</span>
                             </span>
                           </button>
                         ))}
@@ -568,7 +568,7 @@ export function StoryLog() {
                   Reset
                 </button>
                 {section && (
-                  <button onClick={() => goTo(section.sectionNumber)} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
+                  <button onClick={() => goTo(section.number)} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
                     Reread
                   </button>
                 )}

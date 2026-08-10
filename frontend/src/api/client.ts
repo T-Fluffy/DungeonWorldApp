@@ -1,27 +1,67 @@
 import axios from 'axios';
 
 // --- DTOs mirroring the .NET API ---
+export interface EnemyDto {
+  name: string;
+  skill: number;
+  stamina: number;
+  crew: boolean;
+  hasStats: boolean;
+}
+
 export interface ChoiceDto {
-  description: string;
-  targetSectionNumber: number;
+  kind: string;
+  label: string | null;
+  target: number;
+  text: string | null;
   isDiceRoll: boolean;
 }
 
-export interface SectionDto {
-  sectionNumber: number;
-  content: string;
-  imagePath: string | null;
-  choices: ChoiceDto[];
+export interface SectionFeaturesDto {
+  missingText: boolean;
   hasCombat: boolean;
+  largeScaleCombat: boolean;
+  enemies: EnemyDto[];
+  combatNote: string | null;
+  isEnd: boolean;
+  deathEnd: boolean;
+  victoryEnd: boolean;
+  hasLuckTest: boolean;
+  logDays: number | null;
+  statChanges: string[];
+  booty: string[];
+  diceInstructions: string[];
+  itemMentions: string[];
+}
+
+export interface SectionDto {
+  number: number;
+  imagePath: string | null;
+  raw: string;
+  clean: string;
+  choices: ChoiceDto[];
+  references: number[];
+  features: SectionFeaturesDto;
+}
+
+export interface RuleDto {
+  stat: string;
+  formula: string;
+  description: string | null;
 }
 
 export interface BookMetaDto {
   title: string;
+  author: string | null;
   introduction: string;
   mapPath: string | null;
   adventureSheetPath: string | null;
   sectionCount: number;
-  hasCombatSections: number;
+  presentSectionCount: number;
+  missingSectionCount: number;
+  combatSectionCount: number;
+  enemyCount: number;
+  rules: RuleDto[];
 }
 
 export interface IngestResultDto {

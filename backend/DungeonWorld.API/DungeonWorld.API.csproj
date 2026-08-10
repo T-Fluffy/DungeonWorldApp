@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DungeonWorld.Infrastructure\DungeonWorld.Infrastructure.csproj" />
+    <ProjectReference Include="..\DungeonWorld.Cleaning\DungeonWorld.Cleaning.csproj" />
   </ItemGroup>
 
 </Project>

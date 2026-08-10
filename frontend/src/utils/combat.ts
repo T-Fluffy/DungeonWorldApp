@@ -58,7 +58,7 @@ export function formatDiceResult(expr: string, res: DiceResult): string {
   return `You roll ${expr}: ${res.rolls.join(' + ')} = ${res.total}`;
 }
 
-function detectSpecialHit(content: string): Enemy['specialHit'] {
+export function detectSpecialHit(content: string): Enemy['specialHit'] {
   const low = content.toLowerCase();
   const hasRoll = /roll[^.!?]{0,80}(die|dice)/.test(low);
   const hasSkill = low.includes('skill');

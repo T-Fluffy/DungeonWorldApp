@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using DungeonWorld.DataCleaner.Model;
+using DungeonWorld.Cleaning.Model;
 
-namespace DungeonWorld.DataCleaner.Cleaner;
+namespace DungeonWorld.Cleaning.Cleaner;
 
 public static class RulesExtractor
 {

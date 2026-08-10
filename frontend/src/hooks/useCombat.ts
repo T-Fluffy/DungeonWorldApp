@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { SectionDto } from '../api/client';
-import { parseEncounters, resolveRound, type Enemy } from '../utils/combat';
+import { parseEncounters, resolveRound, detectSpecialHit, type Enemy } from '../utils/combat';
 
 export interface CombatStats {
   skill: number;
@@ -18,6 +18,22 @@ interface UseCombatOptions {
 
 const DEATH_DELAY_MS = 2500;
 
+// Prefer the enemy box parsed by the cleaner; fall back to prose heuristics.
+function buildEnemies(section: SectionDto): Enemy[] {
+  const content = section.clean || section.raw || '';
+  const parsed = section.features?.enemies ?? [];
+  if (parsed.length > 0) {
+    return parsed.map((e) => ({
+      name: e.name,
+      skill: e.skill,
+      stamina: e.stamina,
+      staminaMax: e.stamina,
+      specialHit: detectSpecialHit(content),
+    }));
+  }
+  return parseEncounters(content);
+}
+
 export function useCombat({ section, stats, onPlayerStatsChange, onLog, onDeath }: UseCombatOptions) {
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [enemyIndex, setEnemyIndex] = useState(0);
@@ -31,10 +47,10 @@ export function useCombat({ section, stats, onPlayerStatsChange, onLog, onDeath 
   const [activeSection, setActiveSection] = useState<SectionDto | null>(section);
   if (activeSection !== section) {
     setActiveSection(section);
-    const found = section ? parseEncounters(section.content) : [];
+    const found = section ? buildEnemies(section) : [];
     setEnemies(found);
     setEnemyIndex(0);
-    setInCombat(section ? section.hasCombat && found.length > 0 : false);
+    setInCombat(section ? section.features.hasCombat && found.length > 0 : false);
   }
 
   // Mirror authoritative (context) stats so combat works even when unsigned-in.
@@ -143,7 +159,7 @@ export function useCombat({ section, stats, onPlayerStatsChange, onLog, onDeath 
       onLog('There is no foe before you.', 'system');
       return;
     }
-    const text = (section?.content ?? '').toLowerCase();
+    const text = (section?.clean ?? section?.raw ?? '').toLowerCase();
     if (/(can try to escape|attempt to escape|may escape|escape if|try to flee|try to escape)/.test(text)) {
       onLog('You break off the fight and flee! The foe loses interest.', 'system');
       setInCombat(false);

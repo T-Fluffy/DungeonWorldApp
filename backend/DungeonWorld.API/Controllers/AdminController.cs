@@ -1,4 +1,5 @@
 using DungeonWorld.Core.Options;
+using DungeonWorld.Cleaning;
 using DungeonWorld.Infrastructure.Helpers;
 using DungeonWorld.Infrastructure.Parsers;
 using Microsoft.AspNetCore.Authorization;
@@ -80,12 +81,19 @@ public class AdminController : ControllerBase
 
             var book = await parser.ParseAsync(fullPath);
 
+            // Generate the structured cleaned book (the game API's primary source).
+            var cleaned = BookCleaner.Clean(book, $"{book.Title}.json");
+            var cleanedDataDir = Path.Combine(
+                Path.GetFullPath(_storageOptions.PdfUploadPath), "CleanedData");
+            BookCleaner.WriteCleanedBook(cleaned, cleanedDataDir);
+
             return Ok(new
             {
                 Message = "Ingestion Successful",
                 ParserUsed = parser.ParserId,
                 BookTitle = book.Title,
                 ProcessedFile = $"{book.Title}.json",
+                CleanedFile = $"{book.Title}.json",
                 Sections = book.Sections.Count,
                 MapFound = book.MapPath != null
             });

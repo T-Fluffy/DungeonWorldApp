@@ -47,7 +47,7 @@ export const useGameSession = (bookTitle: string | null) => {
     try {
       await upsertAdventure({
         bookTitle,
-        currentSection: sectionNumberOverride ?? section.sectionNumber,
+        currentSection: sectionNumberOverride ?? section.number,
         skill: user.skill ?? stats.might,
         stamina: user.stamina ?? stats.vitality,
         luck: user.luck ?? stats.essence,
@@ -68,9 +68,9 @@ export const useGameSession = (bookTitle: string | null) => {
       const data = await getSection(bookTitle, sectionNumber);
       setSection(data);
       setHistory((prev) => [...prev, sectionNumber]);
-      addLog(`- Section ${data.sectionNumber} -`, 'system');
-      addLog(data.content, 'narrator');
-      if (data.hasCombat) {
+      addLog(`- Section ${data.number} -`, 'system');
+      addLog(data.clean || data.raw, 'narrator');
+      if (data.features.hasCombat) {
         addLog('A fight erupts! Steel meets shadow.', 'system');
       }
       if (data.choices.length === 0) {
@@ -81,7 +81,7 @@ export const useGameSession = (bookTitle: string | null) => {
       // Pass the fetched section number explicitly — the `section` state in the
       // closure is still the *previous* section until the next render.
       const completed = sectionNumber >= 400 || data.choices.length === 0;
-      await save(completed, data.sectionNumber);
+      await save(completed, data.number);
     } catch (err) {
       addLog(extractError(err), 'system');
     } finally {
@@ -112,8 +112,8 @@ export const useGameSession = (bookTitle: string | null) => {
       addLog('The chronicle is torn asunder and written anew...', 'system');
       // Seal the fresh start into the Grimoire (sectionNumberOverride forces section 1).
       await save(false, 1);
-      addLog(`- Section ${first.sectionNumber} -`, 'system');
-      addLog(first.content, 'narrator');
+      addLog(`- Section ${first.number} -`, 'system');
+      addLog(first.clean || first.raw, 'narrator');
     } catch (err) {
       addLog(extractError(err), 'system');
     } finally {
@@ -172,8 +172,8 @@ export const useGameSession = (bookTitle: string | null) => {
         if (cancelled) return;
         setSection(first);
         setHistory([startSection]);
-        addLog(`- Section ${first.sectionNumber} -`, 'system');
-        addLog(first.content, 'narrator');
+        addLog(`- Section ${first.number} -`, 'system');
+        addLog(first.clean || first.raw, 'narrator');
       } catch (err) {
         if (!cancelled) setError(extractError(err));
       } finally {
@@ -220,7 +220,7 @@ export const useGameSession = (bookTitle: string | null) => {
     let responseContent: string | null = '';
     let responseType: LogType = 'narrator';
     if (lower.includes('look')) {
-      responseContent = section?.content.slice(0, 120) || 'Shadows veil your sight.';
+      responseContent = section?.clean.slice(0, 120) || 'Shadows veil your sight.';
     } else if (lower.includes('help')) {
       responseContent = [
         'AVAILABLE COMMANDS:',
@@ -237,7 +237,7 @@ export const useGameSession = (bookTitle: string | null) => {
       ].join('\n');
       responseType = 'system';
     } else if (/^(battle|fight|attack|strike)\b/i.test(lower)) {
-      if (!section?.hasCombat) {
+      if (!section?.features.hasCombat) {
         responseContent = 'There is no foe to fight. Steel stays sheathed.';
       } else if (isCombatActive) {
         combatAttack();

@@ -7,6 +7,7 @@ COPY ["DungeonWorldBackend.sln", "./"]
 COPY ["DungeonWorld.API/DungeonWorld.API.csproj", "DungeonWorld.API/"]
 COPY ["DungeonWorld.Core/DungeonWorld.Core.csproj", "DungeonWorld.Core/"]
 COPY ["DungeonWorld.Infrastructure/DungeonWorld.Infrastructure.csproj", "DungeonWorld.Infrastructure/"]
+COPY ["DungeonWorld.Cleaning/DungeonWorld.Cleaning.csproj", "DungeonWorld.Cleaning/"]
 COPY ["DungeonWorld.Tests/DungeonWorld.Tests.csproj", "DungeonWorld.Tests/"]
 RUN dotnet restore
 
@@ -28,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Create storage structure
-RUN mkdir -p /app/Storage/Uploads /app/Storage/GameArt /app/Storage/ProcessedBooks
+RUN mkdir -p /app/Storage/Uploads /app/Storage/GameArt /app/Storage/ProcessedBooks /app/Storage/CleanedData
 RUN chmod -R 777 /app/Storage
 
 ENTRYPOINT ["dotnet", "DungeonWorld.API.dll"]

@@ -1,4 +1,4 @@
-namespace DungeonWorld.DataCleaner.Model;
+namespace DungeonWorld.Cleaning.Model;
 
 public sealed class CleanedBook
 {
