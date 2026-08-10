@@ -43,13 +43,32 @@ public static class BookCleaner
         return cleaned;
     }
 
-    /// <summary>Writes the cleaned book as <c>{Title}.json</c> into <paramref name="outputDir"/>.</summary>
+    /// <summary>
+    /// Writes the cleaned book as <c>{Title}.json</c> into <paramref name="outputDir"/>.
+    /// Never overwrites an existing file; a " (n)" suffix is used instead so earlier
+    /// extractions stay available for comparison.
+    /// </summary>
     public static string WriteCleanedBook(CleanedBook cleaned, string outputDir)
     {
         Directory.CreateDirectory(outputDir);
-        var outPath = Path.Combine(outputDir, $"{cleaned.Meta.Title}.json");
+        var outPath = UniquePath(Path.Combine(outputDir, $"{cleaned.Meta.Title}.json"));
         var json = JsonSerializer.Serialize(cleaned, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(outPath, json);
         return outPath;
+    }
+
+    private static string UniquePath(string desiredPath)
+    {
+        if (!File.Exists(desiredPath)) return desiredPath;
+
+        string dir = Path.GetDirectoryName(desiredPath)!;
+        string name = Path.GetFileNameWithoutExtension(desiredPath);
+        string ext = Path.GetExtension(desiredPath);
+
+        for (int i = 1; ; i++)
+        {
+            var candidate = Path.Combine(dir, $"{name} ({i}){ext}");
+            if (!File.Exists(candidate)) return candidate;
+        }
     }
 }

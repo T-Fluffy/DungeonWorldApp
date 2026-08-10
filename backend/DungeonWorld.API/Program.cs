@@ -3,8 +3,9 @@ using DungeonWorld.API;
 using DungeonWorld.API.Auth;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
-using DungeonWorld.Infrastructure.Helpers;
-using DungeonWorld.Infrastructure.Parsers;
+using DungeonWorld.Infrastructure.Ai;
+using DungeonWorld.Infrastructure.Interfaces;
+using DungeonWorld.Infrastructure.Parsing;
 using DungeonWorld.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -55,12 +56,25 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddPersistence(connectionString);
 
 // 3. Parsing services
-builder.Services.AddScoped<IBookParser, SinglePageParser>();
-builder.Services.AddScoped<IBookParser, DoublePageParser>();
-// Register Factory (replaces direct IBookParser injection)
+builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptions.SectionName));
+
+// LLM-assisted parser pipeline
+builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+builder.Services.AddHttpClient<ILlmClient, OpenAiCompatibleLlmClient>(client =>
+{
+    // BaseAddress is derived from LlmOptions per call; client is reused for connection pooling.
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+builder.Services.AddScoped<AiDungeonWorldParser>();
+builder.Services.AddScoped<IBookParser, AiDungeonWorldParser>();
+
+// Block-based rule parser pipeline: per-book specializations plus a universal fallback.
+builder.Services.AddScoped<IBookParser, SeasOfBloodParser>();
+builder.Services.AddScoped<IBookParser, DefaultDungeonWorldParser>();
+// Factory: specific parser -> AI (if configured) -> default rule-based parser
 builder.Services.AddScoped<IParserFactory, DungeonWorldParserFactory>();
 
-// Optional: Layout analyzer for pre-checks
+// Layout analyzer for pre-check diagnostics
 builder.Services.AddSingleton<ILayoutAnalyzer, PdfPigLayoutAnalyzer>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

@@ -1,7 +1,6 @@
 using DungeonWorld.Core.Options;
 using DungeonWorld.Cleaning;
-using DungeonWorld.Infrastructure.Helpers;
-using DungeonWorld.Infrastructure.Parsers;
+using DungeonWorld.Infrastructure.Parsing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -124,7 +123,8 @@ public class AdminController : ControllerBase
             {
                 File = fileName,
                 DetectedLayout = isDouble ? "DoublePage (2-up)" : "SinglePage",
-                RecommendedParser = isDouble ? "DoublePageParser" : "SinglePageParser"
+                // The block-based pipeline auto-splits 2-up scans; one parser covers both.
+                RecommendedParser = "DefaultDungeonWorldParser"
             });
         }
         catch (Exception ex)

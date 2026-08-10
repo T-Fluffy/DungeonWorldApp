@@ -1,8 +1,8 @@
 // File: DungeonWorld.Tests/LayoutDetectionTests.cs
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
-using DungeonWorld.Infrastructure.Helpers;
-using DungeonWorld.Infrastructure.Parsers;
+using DungeonWorld.Infrastructure.Parsing;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace DungeonWorld.Tests;
@@ -21,20 +21,33 @@ public class LayoutDetectionTests
             AvatarPath = "Storage/Avatars"
         });
 
-    // A parser whose layout claim is controlled by the test, so we can exercise
-    // factory ordering without manufacturing a real 2-up PDF.
-    private sealed class StubDoublePageParser : DoublePageParser
+    private static IOptions<LlmOptions> UnconfiguredLlm() =>
+        Options.Create(new LlmOptions { ApiKey = "", Endpoint = "https://api.openai.com/v1" });
+
+    // Layout-agnostic stub so parser construction needs no real PDF extraction.
+    private sealed class FakeTextExtractor : IPdfTextExtractor
     {
-        public StubDoublePageParser(bool claims) : base(StorageOptions()) => Claims = claims;
-        public bool Claims { get; }
-        public override bool CanHandle(string filePath, string bookTitle) => Claims;
+        public List<TextBlock> Extract(string filePath) => new();
     }
 
-    private sealed class StubSinglePageParser : SinglePageParser
+    // A parser whose CanHandle claim is controlled by the test, so we can exercise
+    // factory ordering without manufacturing real books.
+    private sealed class StubParser : IBookParser
     {
-        public StubSinglePageParser(bool claims) : base(StorageOptions()) => Claims = claims;
+        public StubParser(bool claims) => Claims = claims;
         public bool Claims { get; }
-        public override bool CanHandle(string filePath, string bookTitle) => Claims;
+        public string ParserId => "Stub";
+        public bool CanHandle(string filePath, string bookTitle) => Claims;
+        public Task<DungeonWorld.Core.Entities.Book> ParseAsync(string filePath) =>
+            throw new NotImplementedException();
+    }
+
+    private static DungeonWorldParserFactory Factory(params IBookParser[] parsers)
+    {
+        var defaultParser = new DefaultDungeonWorldParser(new FakeTextExtractor(), StorageOptions());
+        return new DungeonWorldParserFactory(
+            parsers, aiParser: null, defaultParser, UnconfiguredLlm(),
+            NullLogger<DungeonWorldParserFactory>.Instance);
     }
 
     // --- Real-fixture tests: the bundled "Seas of Blood" is a single-page scan ---
@@ -51,60 +64,56 @@ public class LayoutDetectionTests
     }
 
     [Fact]
-    public void SinglePageParser_CanHandle_ClaimsSeasOfBloodScan()
+    public void SeasOfBloodParser_CanHandle_ClaimsSeasOfBloodScan()
     {
-        var parser = new SinglePageParser(StorageOptions());
+        var parser = new SeasOfBloodParser(new FakeTextExtractor(), StorageOptions());
 
         Assert.True(parser.CanHandle(FixturePath, "Seas of Blood"));
-        Assert.Equal("SinglePage", parser.ParserId);
+        Assert.Equal("SeasOfBlood", parser.ParserId);
     }
 
     [Fact]
-    public void DoublePageParser_CanHandle_RejectsSeasOfBloodScan()
+    public void DefaultParser_CanHandle_AnyBook()
     {
-        var parser = new DoublePageParser(StorageOptions());
+        var parser = new DefaultDungeonWorldParser(new FakeTextExtractor(), StorageOptions());
 
-        Assert.False(parser.CanHandle(FixturePath, "Seas of Blood"));
-        Assert.Equal("DoublePage", parser.ParserId);
+        Assert.True(parser.CanHandle("anything.pdf", "Some Other Book"));
+        Assert.Equal("RuleBased", parser.ParserId);
     }
 
     [Fact]
-    public void Factory_SelectsSinglePage_ForSeasOfBloodScan()
+    public void Factory_SelectsSeasOfBlood_ForSeasOfBloodScan()
     {
-        IBookParser single = new SinglePageParser(StorageOptions());
-        IBookParser doublePage = new DoublePageParser(StorageOptions());
-        var factory = new DungeonWorldParserFactory(new[] { single, doublePage });
+        var seas = new SeasOfBloodParser(new FakeTextExtractor(), StorageOptions());
+        var factory = Factory(seas);
 
         var parser = factory.CreateParser(FixturePath, "Seas of Blood");
 
-        Assert.Same(single, parser);
+        Assert.Same(seas, parser);
     }
 
     // --- Factory ordering unit tests ---
 
     [Fact]
-    public void Factory_PrefersDoublePage_WhenBothClaimTheFile()
+    public void Factory_PrefersSpecificParser_OverDefault()
     {
-        IBookParser single = new StubSinglePageParser(claims: true);
-        IBookParser doublePage = new StubDoublePageParser(claims: true);
-        var factory = new DungeonWorldParserFactory(new[] { single, doublePage });
+        IBookParser specific = new StubParser(claims: true);
+        var factory = Factory(specific);
 
         var parser = factory.CreateParser("any.pdf", "Any Book");
 
-        Assert.Same(doublePage, parser);
+        Assert.Same(specific, parser);
     }
 
     [Fact]
-    public void Factory_FallsBackToDoublePage_WhenNothingMatches()
+    public void Factory_FallsBackToDefault_WhenNothingMatches()
     {
-        IBookParser single = new StubSinglePageParser(claims: false);
-        IBookParser doublePage = new StubDoublePageParser(claims: false);
-        var factory = new DungeonWorldParserFactory(new[] { single, doublePage });
+        IBookParser claiming = new StubParser(claims: false);
+        var factory = Factory(claiming);
 
-        // No parser claims the file, so the documented FF default kicks in.
         var parser = factory.CreateParser("any.pdf", "Any Book");
 
-        Assert.Same(doublePage, parser);
+        Assert.IsType<DefaultDungeonWorldParser>(parser);
     }
 
     [Fact]
@@ -112,12 +121,12 @@ public class LayoutDetectionTests
     {
         // A parser that blows up during CanHandle must not mask the other parsers.
         IBookParser exploding = new ExplodingParser();
-        IBookParser single = new StubSinglePageParser(claims: true);
-        var factory = new DungeonWorldParserFactory(new[] { exploding, single });
+        IBookParser claiming = new StubParser(claims: true);
+        var factory = Factory(exploding, claiming);
 
         var parser = factory.CreateParser("any.pdf", "Any Book");
 
-        Assert.Same(single, parser);
+        Assert.Same(claiming, parser);
     }
 
     private sealed class ExplodingParser : IBookParser
