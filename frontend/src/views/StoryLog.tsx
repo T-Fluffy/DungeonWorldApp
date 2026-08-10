@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, ChevronRight, ChevronLeft, ChevronDown, RefreshCw, Package, Zap, CheckCircle2, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { Terminal, ChevronRight, ChevronLeft, ChevronDown, RefreshCw, Package, Zap, CheckCircle2, BookOpen, Image as ImageIcon, Map as MapIcon, ScrollText, Sparkles } from 'lucide-react';
 import { useGame } from '../Context/useGame';
 import { StatusHUD } from '../components/StatusHUD';
-import { QuestTracker } from '../components/QuestTracker';
-import { QuickGear } from '../components/QuickGear';
 import { Navigation } from '../components/Navigation';
 import { useGameSession } from '../hooks/useGameSession';
 import { listBooks, getAdventures, getBookMeta } from '../api/client';
@@ -18,6 +16,8 @@ interface FeedbackNotification {
   type: FeedbackType;
 }
 
+type LeftTab = 'art' | 'map' | 'sheet';
+
 export function StoryLog() {
   const { user, addItem, currentBook, setCurrentBook } = useGame();
   const [input, setInput] = useState('');
@@ -28,6 +28,7 @@ export function StoryLog() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [artFailed, setArtFailed] = useState(false);
   const [failedCovers, setFailedCovers] = useState<Set<string>>(new Set());
+  const [leftTab, setLeftTab] = useState<LeftTab>('art');
   const scrollRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<FeedbackNotification[]>([]);
@@ -39,6 +40,7 @@ export function StoryLog() {
     section,
     isLoading,
     isProcessing,
+    combat,
     goTo,
     processCommand,
     save,
@@ -223,11 +225,11 @@ export function StoryLog() {
       </div>
 
       {/* MAIN CONTENT AREA */}
-      <div className="relative z-20 w-full max-w-[1400px] mx-auto p-4 md:p-8 pb-32">
+      <div className="relative z-20 w-full max-w-[1500px] mx-auto p-4 md:p-8 pb-32">
         <StatusHUD />
 
-        {/* Cinematic Area */}
-        <div className="w-full h-28 md:h-32 mb-6 rounded-2xl overflow-hidden border border-white/10 bg-[#050505] relative">
+        {/* Book header — title plate + grimoire slider */}
+        <div className="w-full h-20 md:h-24 mb-6 rounded-2xl overflow-hidden border border-white/10 bg-[#050505] relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.05)_0%,_transparent_70%)]" />
           <div className="absolute inset-0 flex items-center justify-between px-6 md:px-10">
             <div className="flex flex-col">
@@ -294,39 +296,108 @@ export function StoryLog() {
           </div>
         </div>
 
-        {/* Responsive Grid System */}
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
+        {/* OPEN BOOK — two facing pages */}
+        <div className="relative flex flex-col lg:flex-row items-stretch gap-3 lg:gap-0">
 
-          {/* LEFT: Section art fills the whole column */}
-          <div className="w-full xl:w-52 order-1 xl:order-1">
-            {/* Current section art */}
-            <div className="w-full flex flex-col bg-black/40 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
-              <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-3">
+          {/* LEFT PAGE — imagery, maps, animations */}
+          <div className="w-full lg:w-1/2 relative flex flex-col bg-gradient-to-br from-[#15100b] via-[#0e0a06] to-[#0a0705] border border-white/10 rounded-2xl lg:rounded-r-none lg:rounded-l-2xl p-5 lg:h-[calc(100vh-300px)] min-h-[380px] overflow-hidden shadow-2xl">
+            {/* page fold highlight */}
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/50 to-transparent lg:hidden" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-black/40 to-transparent hidden lg:block" />
+
+            <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+              <div className="flex items-center gap-2">
                 <ImageIcon size={16} className="text-ember" />
                 <span className="text-[12px] font-mono text-gray-400 uppercase tracking-[0.2em]">
-                  Section Art{section ? ` · ${section.sectionNumber}` : ''}
+                  The Left Page{section ? ` · ${section.sectionNumber}` : ''}
                 </span>
               </div>
-              {section?.imagePath && !artFailed ? (
-                <div className="rounded-lg overflow-hidden border border-white/10">
+              <div className="flex items-center gap-1">
+                {([
+                  ['art', ImageIcon],
+                  ['map', MapIcon],
+                  ['sheet', ScrollText],
+                ] as [LeftTab, typeof ImageIcon][]).map(([tab, Icon]) => (
+                  <button
+                    key={tab}
+                    onClick={() => setLeftTab(tab)}
+                    className={`w-7 h-7 flex items-center justify-center rounded border transition-colors ${
+                      leftTab === tab
+                        ? 'border-ember/50 text-ember bg-ember/10'
+                        : 'border-white/10 text-gray-500 hover:text-ember/70 hover:border-ember/30'
+                    }`}
+                    title={tab === 'art' ? 'Section art' : tab === 'map' ? 'Grimoire map' : 'Adventure sheet'}
+                  >
+                    <Icon size={14} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+              {leftTab === 'art' && (
+                section?.imagePath && !artFailed ? (
                   <img
                     src={section.imagePath}
                     alt={`Section ${section.sectionNumber}`}
                     onError={() => setArtFailed(true)}
-                    className="w-full h-auto object-contain"
+                    className="w-full h-full object-contain"
                   />
-                </div>
-              ) : (
-                <p className="text-[12px] text-gray-600 italic py-4 text-center">
-                  {section?.imagePath && artFailed
-                    ? 'Illustration unavailable.'
-                    : 'No illustration for this section.'}
-                </p>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
+                    <ImageIcon size={28} className="text-ember/40 mb-3" />
+                    <p className="text-[12px] text-gray-600 italic">
+                      {section?.imagePath && artFailed
+                        ? 'Illustration unavailable.'
+                        : 'No illustration for this section.'}
+                    </p>
+                  </div>
+                )
               )}
+
+              {leftTab === 'map' && (
+                meta?.mapPath ? (
+                  <img src={meta.mapPath} alt="Grimoire map" className="w-full h-full object-contain" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
+                    <MapIcon size={28} className="text-ember/40 mb-3" />
+                    <p className="text-[12px] text-gray-600 italic">No map is bound to this grimoire.</p>
+                  </div>
+                )
+              )}
+
+              {leftTab === 'sheet' && (
+                meta?.adventureSheetPath ? (
+                  <img src={meta.adventureSheetPath} alt="Adventure sheet" className="w-full h-full object-contain" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
+                    <ScrollText size={28} className="text-ember/40 mb-3" />
+                    <p className="text-[12px] text-gray-600 italic">No adventure sheet is bound to this grimoire.</p>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* future animations / flavour placeholder */}
+            <div className="mt-4 flex items-center gap-2 text-[11px] font-mono text-gray-600 uppercase tracking-widest">
+              <Sparkles size={12} className="text-ember/40" />
+              <span>Animated scenes will unfold upon this page.</span>
             </div>
           </div>
 
-          <div className="w-full flex-1 order-2 xl:order-2 flex flex-col md:h-[calc(100vh-300px)] min-h-[420px] max-h-[600px] md:max-h-none bg-black/40 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          {/* BOOK SPINE / GUTTER */}
+          <div className="shrink-0 relative hidden lg:flex lg:w-12 items-stretch">
+            <div className="w-3 mx-auto my-2 bg-gradient-to-b from-transparent via-[#2a1f14] to-transparent rounded-full shadow-[0_0_12px_rgba(0,0,0,0.9)]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-px h-full bg-white/5" />
+            </div>
+          </div>
+
+          {/* RIGHT PAGE — the chronicle terminal */}
+          <div className="w-full lg:w-1/2 relative flex flex-col bg-gradient-to-br from-[#15100b] via-[#0e0a06] to-[#0a0705] border border-white/10 rounded-2xl lg:rounded-l-none lg:rounded-r-2xl overflow-hidden shadow-2xl lg:h-[calc(100vh-300px)] min-h-[560px]">
+            {/* page fold highlight */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/40 to-transparent hidden lg:block" />
+
             <div className="h-10 bg-white/5 border-b border-white/5 flex items-center px-4 shrink-0 justify-between">
               <div className="flex items-center gap-2">
                 <Terminal size={14} className="text-ember" />
@@ -389,7 +460,29 @@ export function StoryLog() {
               </div>
             </div>
 
-            <div ref={scrollRef} className="h-[150px] md:h-auto md:flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {/* Combat HUD: shown while a fight is active */}
+            {combat.inCombat && combat.currentEnemy && (
+              <div className="shrink-0 border-b border-ember/20 bg-ember/[0.03] px-4 py-2 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Zap size={13} className="text-ember shrink-0" />
+                  <span className="text-[11px] font-mono text-ember uppercase tracking-widest truncate">
+                    {combat.currentEnemy.name}
+                  </span>
+                  <span className="text-[11px] font-mono text-gray-400 shrink-0">
+                    STAMINA {Math.max(0, combat.currentEnemy.stamina)}/{combat.currentEnemy.staminaMax}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-gray-400 shrink-0">
+                  <span>SKILL {combat.playerSkill}</span>
+                  <span className={combat.playerStamina <= 0 ? 'text-crimson' : 'text-red-400'}>
+                    STAMINA {Math.max(0, combat.playerStamina)}
+                  </span>
+                  <span>LUCK {combat.playerLuck}</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 custom-scrollbar">
               {logs.map(log => (
                 <div key={log.id} className={`flex flex-col ${log.type === 'player' ? 'items-end' : 'items-start'}`}>
                   <div className={`p-3 rounded-xl text-xs md:text-sm max-w-[85%] whitespace-pre-line ${
@@ -424,7 +517,7 @@ export function StoryLog() {
               </div>
             )}
 
-            <div className="bg-black/80 border-t border-white/10 p-4">
+            <div className="shrink-0 bg-black/60 border-t border-white/10 p-4">
               <form onSubmit={handleCommand} className="flex items-center gap-3 px-1 mb-3">
                 <ChevronRight size={18} className="text-ember" />
                 <input 
@@ -436,8 +529,12 @@ export function StoryLog() {
                 />
               </form>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {['Look', 'Inventory', 'Help'].map(cmd => (
-                  <button key={cmd} onClick={() => handleCommand(undefined, cmd)} disabled={isProcessing} className="px-4 py-1.5 text-[11px] font-mono border border-white/10 rounded hover:border-ember/40 text-gray-500 uppercase transition-colors whitespace-nowrap disabled:opacity-50">
+                {['Look', 'Inventory', 'Help', ...(combat.inCombat ? ['Battle', 'Flee'] : []), 'Roll'].map(cmd => (
+                  <button key={cmd} onClick={() => handleCommand(undefined, cmd)} disabled={isProcessing} className={`px-4 py-1.5 text-[11px] font-mono border rounded transition-colors whitespace-nowrap disabled:opacity-50 ${
+                    cmd === 'Battle' || cmd === 'Flee'
+                      ? 'border-ember/40 hover:bg-ember/10 text-ember'
+                      : 'border-white/10 hover:border-ember/40 text-gray-500 uppercase'
+                  }`}>
                     {cmd}
                   </button>
                 ))}
@@ -452,14 +549,9 @@ export function StoryLog() {
               </div>
             </div>
 
-            <div className="pt-4 pb-2">
+            <div className="shrink-0 pt-2 pb-1 bg-black/40">
               <Navigation docked />
             </div>
-          </div>
-
-          <div className="w-full xl:w-64 order-3 xl:order-3 flex flex-col gap-6">
-            <QuestTracker />
-            <QuickGear />
           </div>
         </div>
       </div>
