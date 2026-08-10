@@ -93,6 +93,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updatePlayerStats = useCallback((patch: Partial<Pick<User, 'skill' | 'stamina' | 'luck'>>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const login = useCallback(async (usernameOrEmail: string, password: string): Promise<User> => {
     const resp = await apiLogin({ usernameOrEmail, password });
     setToken(resp.token);
@@ -161,6 +170,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       addItem,
       removeItem,
       updateStat,
+      updatePlayerStats,
       setCurrentBook,
       login,
       register,

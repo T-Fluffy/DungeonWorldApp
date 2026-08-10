@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getSection, getBookMeta, upsertAdventure, getAdventure } from '../api/client';
 import { useGame } from '../Context/useGame';
+import { useCombat } from './useCombat';
+import { parseDiceExpr, rollDice, formatDiceResult } from '../utils/combat';
 import type { SectionDto, BookMetaDto } from '../api/client';
 
 export type LogType = 'narrator' | 'player' | 'system';
@@ -18,7 +20,7 @@ const extractError = (err: unknown): string => {
 };
 
 export const useGameSession = (bookTitle: string | null) => {
-  const { user, stats, logout } = useGame();
+  const { user, stats, logout, updatePlayerStats } = useGame();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [meta, setMeta] = useState<BookMetaDto | null>(null);
   const [section, setSection] = useState<SectionDto | null>(null);
@@ -119,6 +121,26 @@ export const useGameSession = (bookTitle: string | null) => {
     }
   }, [bookTitle, isProcessing, addLog, save]);
 
+  // Combat: mirror the authoritative stats (fall back to the decorative HUD bars)
+  const combatStats = {
+    skill: user?.skill ?? stats.might,
+    stamina: user?.stamina ?? stats.vitality,
+    luck: user?.luck ?? stats.essence,
+  };
+
+  const combat = useCombat({
+    section,
+    stats: combatStats,
+    onPlayerStatsChange: updatePlayerStats,
+    onLog: addLog,
+    onDeath: () => {
+      void resetRun();
+    },
+  });
+  const combatAttack = combat.attack;
+  const combatFlee = combat.flee;
+  const isCombatActive = combat.inCombat;
+
   // Load the book on mount (or when the title changes), resuming a saved run
   useEffect(() => {
     if (!bookTitle) return;
@@ -195,7 +217,7 @@ export const useGameSession = (bookTitle: string | null) => {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    let responseContent = '';
+    let responseContent: string | null = '';
     let responseType: LogType = 'narrator';
     if (lower.includes('look')) {
       responseContent = section?.content.slice(0, 120) || 'Shadows veil your sight.';
@@ -204,12 +226,40 @@ export const useGameSession = (bookTitle: string | null) => {
         'AVAILABLE COMMANDS:',
         '  LOOK       Re-read the current section.',
         '  GO <n>     Jump to section <n> (or type the number directly).',
+        '  BATTLE     Strike one combat round against the current foe.',
+        '  ROLL DICE  Roll 2d6 (or ROLL <n>d<m>) for the book\'s dice checks.',
+        '  FLEE       Try to escape from combat.',
         '  INVENTORY  Inspect the contents of your pack.',
         '  SAVE       Seal your progress into the Grimoire.',
         '  RESET      Tear the chronicle asunder and begin again at section 1.',
         '  LOGOUT     Sever the pact and leave this session.',
         '  HELP       Display this guide.',
       ].join('\n');
+      responseType = 'system';
+    } else if (/^(battle|fight|attack|strike)\b/i.test(lower)) {
+      if (!section?.hasCombat) {
+        responseContent = 'There is no foe to fight. Steel stays sheathed.';
+      } else if (isCombatActive) {
+        combatAttack();
+        responseContent = null;
+      } else {
+        responseContent = 'A foe stands before you, but the encounter box is unreadable. Use ROLL DICE and resolve the fight by hand.';
+      }
+      responseType = 'system';
+    } else if (/^(flee|escape|run)\b/i.test(lower)) {
+      combatFlee();
+      responseContent = null;
+      responseType = 'system';
+    } else if (/^(roll|dice)\b/i.test(lower)) {
+      const diceMatch = command.toLowerCase().match(/(\d+\s*d\s*\d+|\d+)/);
+      const expr = diceMatch ? diceMatch[1].replace(/\s+/g, '') : '2d6';
+      const parsed = parseDiceExpr(expr);
+      const result = rollDice(parsed.count, parsed.sides);
+      const luck = user?.luck ?? stats.essence;
+      responseContent = formatDiceResult(expr, result);
+      if (parsed.count === 2 && parsed.sides === 6) {
+        responseContent += `\n(Test your Luck? You are Lucky on ${luck} or less — testing costs 1 LUCK.)`;
+      }
       responseType = 'system';
     } else if (lower.includes('save')) {
       await save();
@@ -221,12 +271,14 @@ export const useGameSession = (bookTitle: string | null) => {
       responseContent = 'Your pack feels light. Perhaps fate will provide.';
       responseType = 'system';
     } else {
-      responseContent = 'The shadows shift, but nothing happens. Try LOOK, GO [number], or INVENTORY.';
+      responseContent = 'The shadows shift, but nothing happens. Try LOOK, GO [number], BATTLE, ROLL DICE, or INVENTORY.';
     }
 
-    addLog(responseContent, responseType);
+    if (responseContent) {
+      addLog(responseContent, responseType);
+    }
     setIsProcessing(false);
-  }, [bookTitle, section, addLog, goTo, save, resetRun, logout, user?.isLoggedIn]);
+  }, [bookTitle, section, addLog, goTo, save, resetRun, logout, user?.isLoggedIn, user?.luck, stats, combatAttack, combatFlee, isCombatActive]);
 
   return {
     logs,
@@ -236,6 +288,7 @@ export const useGameSession = (bookTitle: string | null) => {
     isLoading,
     isProcessing,
     error,
+    combat,
     goTo,
     processCommand,
     reset,

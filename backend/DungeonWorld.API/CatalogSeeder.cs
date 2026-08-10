@@ -132,6 +132,7 @@ public static class CatalogSeeder
             new GameCommand { Name = "CAST", Aliases = new[] { "SPELL", "CHANNEL" }, Usage = "CAST <spell>", Category = "combat", Description = "Cast a spell you have learned." },
             new GameCommand { Name = "FIGHT", Aliases = new[] { "ATTACK", "STRIKE", "BATTLE" }, Usage = "FIGHT <monster>", Category = "combat", Description = "Engage an enemy in combat." },
             new GameCommand { Name = "FLEE", Aliases = new[] { "RUN", "ESCAPE", "FLEE!" }, Usage = "FLEE", Category = "combat", Description = "Try to escape from combat." },
+            new GameCommand { Name = "ROLL", Aliases = new[] { "DICE", "ROLLDICE", "ROLL DICE" }, Usage = "ROLL <n>d<m>", Category = "combat", Description = "Roll dice for the adventure's checks (defaults to 2d6)." },
             new GameCommand { Name = "SAVE", Aliases = new[] { "SAVEGAME", "SNAPSHOT" }, Usage = "SAVE", Category = "system", Description = "Save your current progress." },
             new GameCommand { Name = "HELP", Aliases = new[] { "?", "COMMANDS", "HINT" }, Usage = "HELP", Category = "system", Description = "List all available commands." },
             new GameCommand { Name = "RESTART", Aliases = new[] { "RESET", "NEWGAME" }, Usage = "RESTART", Category = "system", Description = "Restart the adventure from the beginning." },

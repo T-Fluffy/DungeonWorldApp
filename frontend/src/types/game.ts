@@ -42,6 +42,7 @@ export interface GameState {
   addItem: (item: Item) => void;
   removeItem: (id: string) => void;
   updateStat: (stat: StatType, value: number) => void;
+  updatePlayerStats: (patch: Partial<Pick<User, 'skill' | 'stamina' | 'luck'>>) => void;
   setCurrentBook: (book: string | null) => void;
   login: (usernameOrEmail: string, password: string) => Promise<User>;
   register: (req: { username: string; email: string; password: string; className: CharacterClass }) => Promise<User>;
