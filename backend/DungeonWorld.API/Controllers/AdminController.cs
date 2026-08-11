@@ -38,11 +38,11 @@ public class AdminController : ControllerBase
 
         try
         {
-            var uploadsPath = Path.GetFullPath(_storageOptions.PdfUploadPath);
-            Directory.CreateDirectory(uploadsPath);
+            var booksPath = Path.GetFullPath(_storageOptions.PdfUploadPath);
+            Directory.CreateDirectory(booksPath);
 
             var safeName = Path.GetFileName(file.FileName);
-            var fullPath = Path.Combine(uploadsPath, safeName);
+            var fullPath = Path.Combine(booksPath, safeName);
 
             await using var stream = System.IO.File.Create(fullPath);
             await file.CopyToAsync(stream);

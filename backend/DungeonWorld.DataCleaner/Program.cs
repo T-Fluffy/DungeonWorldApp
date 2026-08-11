@@ -2,7 +2,7 @@ using System.Text.Json;
 using DungeonWorld.Core.Entities;
 using DungeonWorld.Cleaning;
 
-// Reads every processed book under Storage/Uploads/ProcessedBooks and writes the
+// Reads every processed book under Storage/Books/ProcessedBooks and writes the
 // structured CleanedData/<Title>.json used by the game API. Run after ingesting a new
 // book, or to repair existing output:
 //   dotnet run --project backend/DungeonWorld.DataCleaner
@@ -10,12 +10,12 @@ using DungeonWorld.Cleaning;
 var dirs = LocateDirs();
 if (dirs == null)
 {
-    Console.Error.WriteLine("Storage/Uploads directory not found. Run from the repo root or pass --dir <uploads>.");
+    Console.Error.WriteLine("Storage/Books directory not found. Run from the repo root or pass --dir <books>.");
     return 1;
 }
 
-var (uploadsDir, processedDir) = dirs.Value;
-var cleanedDir = Path.Combine(uploadsDir, "CleanedData");
+var (booksDir, processedDir) = dirs.Value;
+var cleanedDir = Path.Combine(booksDir, "CleanedData");
 Directory.CreateDirectory(cleanedDir);
 
 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -60,11 +60,11 @@ foreach (var file in files)
 
 return 0;
 
-// Locates Storage/Uploads, walking up from the current directory.
-static (string Uploads, string Processed)? LocateDirs()
+// Locates Storage/Books, walking up from the current directory.
+static (string Books, string Processed)? LocateDirs()
 {
     var root = Directory.GetCurrentDirectory();
-    var probes = new[] { Path.Combine(root, "backend", "Storage", "Uploads"), Path.Combine(root, "Storage", "Uploads") };
+    var probes = new[] { Path.Combine(root, "backend", "Storage", "Books"), Path.Combine(root, "Storage", "Books") };
     foreach (var probe in probes)
     {
         if (Directory.Exists(Path.Combine(probe, "ProcessedBooks"))) return (probe, Path.Combine(probe, "ProcessedBooks"));

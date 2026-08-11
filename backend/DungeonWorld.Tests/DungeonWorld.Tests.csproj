@@ -30,10 +30,10 @@
     <ProjectReference Include="..\DungeonWorld.Cleaning\DungeonWorld.Cleaning.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Storage\Uploads\Seas of Blood.pdf">
+    <None Update="Storage\Books\Seas of Blood.pdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Storage\Uploads\Seas of Blood.json">
+    <None Update="Storage\Books\Seas of Blood.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

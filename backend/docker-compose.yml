@@ -31,7 +31,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      FileStorage__PdfUploadPath: /app/Storage/Uploads
+      FileStorage__PdfUploadPath: /app/Storage/Books
       FileStorage__ImageOutputPath: /app/Storage/GameArt
       Cors__Origins: http://localhost:5173
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=dungeonworld;Username=dw_user;Password=dw_password

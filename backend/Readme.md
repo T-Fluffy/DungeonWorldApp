@@ -125,10 +125,10 @@ On startup, `CatalogSeeder` populates the game database:
 3. **Geometric parsing** — `BaseDungeonWorldParser` locates section headers by centered X/Y coordinates (ignoring page-top navigation numbers), extracts body text, choices (`Turn to N` / `If you have...`), and embedded illustrations.
 4. **Physical page tracking** — each text line records the **physical PDF page** it came from (`LineInfo.PhysicalPage`). When a section is flushed, its illustration path is derived from that physical page (`p{physicalPage}_i0.png`) rather than a sequential index — critical for double-page books, where the section's logical position and its source page diverge. This guarantees `/assets/game-art/...` links match the extracted PNGs.
 5. **Patches** — hard-coded rules fix known layout quirks (e.g. a section that is printed without its number) and the *Victory Terminator* stops ingestion once the story's "You have won" signature appears, keeping publisher back-matter out of the data.
-6. **Output** — each book is written as `<Title>.json` under `Storage/Uploads/ProcessedBooks`, with extracted images under `Storage/GameArt`, served statically at `/assets/game-art`.
+6. **Output** — each book is written as `<Title>.json` under `Storage/Books/ProcessedBooks`, with extracted images under `Storage/GameArt`, served statically at `/assets/game-art`.
 7. **Optional structure pass** — `dotnet run --project DungeonWorld.DataCleaner` reads every `<Title>.json` and writes a sidecar `<Title>.cleaned.json` (raw content always preserved). It extracts rule formulas (SKILL/STAMINA/LUCK/CREW/Booty/LOG) from the intro, labels each section's `Turn to N` choices, parses individual and large-scale (STRIKE/STRENGTH) combat enemies, flags dice/Luck tests, stat & Booty/LOG changes, and builds a section graph (outgoing/incoming, dead ends, terminal ends, unreachable, orphan links).
 
-> **Existing books:** the physical-page change was also applied in place to already-ingested books — `Seas of Blood` had 345 illustration paths remapped and 48 nulled (kept under `Storage/Uploads/ProcessedBooks/Seas of Blood.json.bak`). New ingestions get correct paths automatically from the parser.
+> **Existing books:** the physical-page change was also applied in place to already-ingested books — `Seas of Blood` had 345 illustration paths remapped and 48 nulled (kept under `Storage/Books/ProcessedBooks/Seas of Blood.json.bak`). New ingestions get correct paths automatically from the parser.
 
 ## 🛠️ Local Setup (without Docker)
 
@@ -157,7 +157,7 @@ docker compose -f backend/docker-compose.yml up -d --build
 
 The suite uses **xUnit** with **FluentAssertions**:
 
-- **Layout detection** — real PDF fixture (`Storage/Uploads/Seas of Blood.pdf`) exercised through the analyzer and both parsers, verifying the single-page classification, plus factory unit tests for parser priority, fallback, and exception tolerance.
+- **Layout detection** — real PDF fixture (`Storage/Books/Seas of Blood.pdf`) exercised through the analyzer and both parsers, verifying the single-page classification, plus factory unit tests for parser priority, fallback, and exception tolerance.
 - **Content extraction** — `GameContentExtractorTests` cover normalization, proper-noun artifact detection, item classification, and place-name rejection.
 
 ```bash

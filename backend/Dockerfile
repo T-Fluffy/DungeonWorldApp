@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Create storage structure
-RUN mkdir -p /app/Storage/Uploads /app/Storage/GameArt /app/Storage/ProcessedBooks /app/Storage/CleanedData
+RUN mkdir -p /app/Storage/Books /app/Storage/GameArt /app/Storage/ProcessedBooks /app/Storage/CleanedData
 RUN chmod -R 777 /app/Storage
 
 ENTRYPOINT ["dotnet", "DungeonWorld.API.dll"]
