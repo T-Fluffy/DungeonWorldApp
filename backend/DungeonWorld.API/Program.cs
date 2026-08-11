@@ -3,7 +3,6 @@ using DungeonWorld.API;
 using DungeonWorld.API.Auth;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
-using DungeonWorld.Infrastructure.Ai;
 using DungeonWorld.Infrastructure.Interfaces;
 using DungeonWorld.Infrastructure.Parsing;
 using DungeonWorld.Infrastructure.Persistence;
@@ -56,22 +55,12 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddPersistence(connectionString);
 
 // 3. Parsing services
-builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptions.SectionName));
-
-// LLM-assisted parser pipeline
 builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
-builder.Services.AddHttpClient<ILlmClient, OpenAiCompatibleLlmClient>(client =>
-{
-    // BaseAddress is derived from LlmOptions per call; client is reused for connection pooling.
-    client.Timeout = TimeSpan.FromMinutes(5);
-});
-builder.Services.AddScoped<AiDungeonWorldParser>();
-builder.Services.AddScoped<IBookParser, AiDungeonWorldParser>();
 
 // Block-based rule parser pipeline: per-book specializations plus a universal fallback.
 builder.Services.AddScoped<IBookParser, SeasOfBloodParser>();
 builder.Services.AddScoped<IBookParser, DefaultDungeonWorldParser>();
-// Factory: specific parser -> AI (if configured) -> default rule-based parser
+// Factory: specific parser -> default rule-based parser
 builder.Services.AddScoped<IParserFactory, DungeonWorldParserFactory>();
 
 // Layout analyzer for pre-check diagnostics
@@ -137,12 +126,12 @@ var storageConfig = app.Configuration.GetSection(FileStorageOptions.SectionName)
 
 // Fallback just in case, but usually these won't be null
 string imagePath = Path.GetFullPath(storageConfig?.ImageOutputPath ?? "Storage/GameArt");
-string uploadPath = Path.GetFullPath(storageConfig?.PdfUploadPath ?? "Storage/Uploads");
+string booksPath = Path.GetFullPath(storageConfig?.PdfUploadPath ?? "Storage/Books");
 string avatarPath = Path.GetFullPath(storageConfig?.AvatarPath ?? "Storage/Avatars");
 
 // Ensure directories exist
 Directory.CreateDirectory(imagePath);
-Directory.CreateDirectory(uploadPath);
+Directory.CreateDirectory(booksPath);
 Directory.CreateDirectory(avatarPath);
 
 app.UseStaticFiles();

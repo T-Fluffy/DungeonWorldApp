@@ -11,18 +11,15 @@ public class LayoutDetectionTests
 {
     // The fixture PDF is copied to the test output directory (see .csproj).
     private static string FixturePath =>
-        Path.Combine(AppContext.BaseDirectory, "Storage", "Uploads", "Seas of Blood.pdf");
+        Path.Combine(AppContext.BaseDirectory, "Storage", "Books", "Seas of Blood.pdf");
 
     private static IOptions<FileStorageOptions> StorageOptions() =>
         Options.Create(new FileStorageOptions
         {
-            PdfUploadPath = "Storage/Uploads",
+            PdfUploadPath = "Storage/Books",
             ImageOutputPath = "Storage/GameArt",
             AvatarPath = "Storage/Avatars"
         });
-
-    private static IOptions<LlmOptions> UnconfiguredLlm() =>
-        Options.Create(new LlmOptions { ApiKey = "", Endpoint = "https://api.openai.com/v1" });
 
     // Layout-agnostic stub so parser construction needs no real PDF extraction.
     private sealed class FakeTextExtractor : IPdfTextExtractor
@@ -46,7 +43,7 @@ public class LayoutDetectionTests
     {
         var defaultParser = new DefaultDungeonWorldParser(new FakeTextExtractor(), StorageOptions());
         return new DungeonWorldParserFactory(
-            parsers, aiParser: null, defaultParser, UnconfiguredLlm(),
+            parsers, defaultParser,
             NullLogger<DungeonWorldParserFactory>.Instance);
     }
 
