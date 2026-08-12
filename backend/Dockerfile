@@ -9,6 +9,7 @@ COPY ["DungeonWorld.Core/DungeonWorld.Core.csproj", "DungeonWorld.Core/"]
 COPY ["DungeonWorld.Infrastructure/DungeonWorld.Infrastructure.csproj", "DungeonWorld.Infrastructure/"]
 COPY ["DungeonWorld.Cleaning/DungeonWorld.Cleaning.csproj", "DungeonWorld.Cleaning/"]
 COPY ["DungeonWorld.Tests/DungeonWorld.Tests.csproj", "DungeonWorld.Tests/"]
+COPY ["DungeonWorld.Ingestor/DungeonWorld.Ingestor.csproj", "DungeonWorld.Ingestor/"]
 RUN dotnet restore
 
 # Copy all source code

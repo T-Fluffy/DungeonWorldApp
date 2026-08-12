@@ -30,6 +30,10 @@ public static class CatalogSeeder
         var itemCount = await db.Items.CountAsync();
         var spellCount = await db.Spells.CountAsync();
 
+        // Multiple processed files may share a title (e.g. "(1)"/"(2)" split copies);
+        // only one Adventure row may exist per title, so track what we've queued.
+        var queuedTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var file in Directory.GetFiles(processedPath, "*.json"))
         {
             var bookTitle = Path.GetFileNameWithoutExtension(file);
@@ -44,7 +48,7 @@ public static class CatalogSeeder
                     continue;
 
                 var existing = await db.Adventures.FirstOrDefaultAsync(a => a.BookTitle == book.Title);
-                if (existing == null)
+                if (existing == null && queuedTitles.Add(book.Title))
                 {
                     db.Adventures.Add(new Adventure
                     {
@@ -54,7 +58,7 @@ public static class CatalogSeeder
                         MedallionDescription = $"Awarded for conquering the adventure of {book.Title}."
                     });
                 }
-                else
+                else if (existing != null)
                 {
                     existing.SectionCount = book.Sections.Count;
                 }
