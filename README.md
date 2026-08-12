@@ -2,6 +2,8 @@
 
 > *"Where steel meets shadow, and legends are forged in the ink of the abyss."*
 
+![Dungeon World](social-preview.png)
+
 **Dungeon World** is a full-stack web application that digitizes Fighting Fantasy-style gamebook PDFs and lets you play them in a dark-fantasy, atmospheric UI — with real accounts, saved adventures, an inventory, and a growing command language.
 
 It is a single monorepo composed of two applications that talk over HTTP:
