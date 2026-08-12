@@ -25,6 +25,14 @@ public abstract class DungeonWorldBookParserBase : IBookParser
         @"^\W*(\d{1,4})\W*$",
         RegexOptions.Compiled);
 
+    /// <summary>
+    /// A resync candidate must be a clean number (optionally followed by a period),
+    /// never a garbled line like "240)?" that HeaderRegex would still match.
+    /// </summary>
+    protected static readonly Regex CleanSectionNumberRegex = new(
+        @"^\d{1,4}\.?\s*$",
+        RegexOptions.Compiled);
+
     private readonly IPdfTextExtractor _textExtractor;
 
     protected readonly FileStorageOptions _storageOptions;
@@ -56,6 +64,15 @@ public abstract class DungeonWorldBookParserBase : IBookParser
         return HeaderRegex.IsMatch(block.Text.Trim());
     }
 
+    /// <summary>
+    /// Maximum section-number gap accepted for a resync. Scaled by the number of
+    /// physical pages since the last accepted header (Fighting Fantasy fits well
+    /// under a dozen sections per page), so a garbled far-ahead line cannot jump
+    /// the sequence while a genuinely degraded scan can still recover.
+    /// </summary>
+    protected virtual int ResyncMaxJump(TextBlock block, int lastAcceptedPage) =>
+        Math.Max(16, (block.PhysicalPage - lastAcceptedPage + 1) * 12);
+
     /// <summary>Extracts navigation choices from a section's body text.</summary>
     protected virtual List<Choice> BuildChoices(string text)
     {
@@ -72,8 +89,22 @@ public abstract class DungeonWorldBookParserBase : IBookParser
             .ToList();
     }
 
-    /// <summary>Optional per-book introduction/rule text placed before section 1.</summary>
-    protected virtual string BuildIntroduction(IReadOnlyList<TextBlock> blocks) => "";
+    /// <summary>
+    /// Optional per-book introduction/rule text placed before section 1. The default
+    /// captures every block before the first detected section header, so front-matter
+    /// (story hook, rule explanations) flows into the cleaned book and the rules extractor.
+    /// </summary>
+    protected virtual string BuildIntroduction(IReadOnlyList<TextBlock> blocks)
+    {
+        var sb = new StringBuilder();
+        foreach (var block in blocks)
+        {
+            if (block.TopFraction > PageNumberBand) continue;
+            if (TryParseSectionNumber(block.Text).HasValue) break;
+            sb.Append(block.Text).Append("\n\n");
+        }
+        return sb.ToString().Trim();
+    }
 
     // ---- IBookParser --------------------------------------------------------
 
@@ -95,7 +126,7 @@ public abstract class DungeonWorldBookParserBase : IBookParser
 
         var blocks = _textExtractor.Extract(fullPdfPath);
         var body = blocks
-            .Where(b => !IsHeaderOrFooter(b))
+            .Where(b => !IsHeaderOrFooter(b) && !IsPageNumber(b))
             .OrderBy(b => b.LogicalPage)
             .ThenBy(b => b.TopFraction)
             .ToList();
@@ -111,10 +142,13 @@ public abstract class DungeonWorldBookParserBase : IBookParser
         int currentNumber = 0;
         int currentPhysicalPage = 1;
         int expectedNext = 1;
+        int lastAcceptedNumber = 0;
 
         void FlushSection()
         {
             if (currentNumber <= 0 || currentNumber > MaxSectionNumber) return;
+            // A header that is matched a second time must not duplicate a section.
+            if (book.Sections.Any(s => s.SectionNumber == currentNumber)) return;
 
             string content = buffer.ToString().Trim();
             book.Sections.Add(new Section
@@ -137,11 +171,26 @@ public abstract class DungeonWorldBookParserBase : IBookParser
                                   headerNumber.Value <= expectedNext + 5;
                 bool visual = MatchSectionHeader(block, averageFontSize);
 
-                if (sequential || visual)
+                // Once inside the adventure, a mid-page standalone number that keeps the
+                // sequence ascending is a section header. The tight sequential window
+                // above can permanently desync when a run of headers is garbled or
+                // missing in a degraded scan, so accept increasing numbers as a resync.
+                // Guarded against false positives:
+                //   - only a clean number (rejects garbled lines like "240)?")
+                //   - jump bounded by how many pages could physically fit between the
+                //     last accepted header and this one (<= ~12 sections per page)
+                //   - front-matter tables are still rejected: currentNumber == 0
+                bool resync = currentNumber > 0 &&
+                              headerNumber.Value > lastAcceptedNumber &&
+                              headerNumber.Value - lastAcceptedNumber <= ResyncMaxJump(block, currentPhysicalPage) &&
+                              CleanSectionNumberRegex.IsMatch(block.Text.Trim());
+
+                if (sequential || visual || resync)
                 {
                     FlushSection();
                     currentNumber = headerNumber.Value;
                     expectedNext = headerNumber.Value + 1;
+                    lastAcceptedNumber = headerNumber.Value;
                     currentPhysicalPage = block.PhysicalPage;
                     buffer.Clear();
                     continue;
@@ -171,6 +220,12 @@ public abstract class DungeonWorldBookParserBase : IBookParser
         if (number <= 0 || number > MaxSectionNumber) return null;
         return number;
     }
+
+    /// <summary>Fraction of the page height at/below which a standalone number is page furniture.</summary>
+    protected virtual double PageNumberBand => 0.9;
+
+    private bool IsPageNumber(TextBlock block) =>
+        block.TopFraction > PageNumberBand && TryParseSectionNumber(block.Text).HasValue;
 
     private bool IsHeaderOrFooter(TextBlock block) =>
         block.TopFraction < HeaderFooterBand || block.TopFraction > 1 - HeaderFooterBand;

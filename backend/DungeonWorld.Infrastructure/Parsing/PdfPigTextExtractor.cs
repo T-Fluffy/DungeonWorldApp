@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
@@ -22,6 +23,11 @@ public sealed class PdfPigTextExtractor : IPdfTextExtractor
 {
     // A landscape page with this width/height ratio is treated as a 2-up scan.
     private const double DoublePageAspectThreshold = 1.15;
+
+    // A line that is just a number (a page number or a section header). Kept as its
+    // own paragraph so header detection can see it instead of it merging into text.
+    private static readonly Regex NumberOnlyLine = new(
+        @"^\W*\d{1,4}\W*$", RegexOptions.Compiled);
 
     public List<TextBlock> Extract(string filePath)
     {
@@ -153,6 +159,17 @@ public sealed class PdfPigTextExtractor : IPdfTextExtractor
             }
             if (line.Words.Any(w => w.FontName?.Contains("Bold", StringComparison.OrdinalIgnoreCase) == true))
                 bold = true;
+
+            // A standalone number line is its own paragraph (page number or section
+            // header); do not fold it into the surrounding text.
+            if (NumberOnlyLine.IsMatch(lineText.Trim()))
+            {
+                Flush();
+                firstTop = line.Top;
+                sb.Append(lineText);
+                Flush();
+                continue;
+            }
 
             if (i > 0)
             {

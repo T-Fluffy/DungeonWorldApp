@@ -10,7 +10,12 @@ public static class GraphAnalyzer
         var present = sections.Select(s => s.Number).ToHashSet();
         var range = Enumerable.Range(1, book.Meta.SectionCount).ToHashSet();
 
-        var outgoing = sections.ToDictionary(s => s.Number, s => s.References.Distinct().OrderBy(x => x).ToList());
+        // Tolerate duplicate section numbers (bad parses) rather than crashing:
+        // references from all duplicates are merged.
+        var outgoing = sections
+            .GroupBy(s => s.Number)
+            .ToDictionary(g => g.Key,
+                g => g.SelectMany(s => s.References).Distinct().OrderBy(x => x).ToList());
         var incoming = range.ToDictionary(n => n, _ => new List<int>());
         foreach (var (from, targets) in outgoing)
         {
