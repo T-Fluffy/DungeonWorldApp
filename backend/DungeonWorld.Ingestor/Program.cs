@@ -21,12 +21,15 @@ using DungeonWorld.Ingestor;
 
 const string Placeholder = "[Text missing or unreadable in PDF]";
 const int MaxSection = 400;
+const int MergeThreshold = 400;
+var mergeDpis = new[] { 200, 250, 300, 400 };
 
 var protectedTitles = new[] { "Seas of Blood" };
 
 string? dirArg = null;
 var excludes = new List<string>();
 var noImages = false;
+int ocrDpi = 250;
 
 for (int i = 0; i < args.Length; i++)
 {
@@ -37,6 +40,9 @@ for (int i = 0; i < args.Length; i++)
             break;
         case "--no-images":
             noImages = true;
+            break;
+        case "--dpi":
+            if (i + 1 < args.Length) ocrDpi = int.Parse(args[++i]);
             break;
         case "--exclude":
             if (i + 1 < args.Length) excludes.Add(args[++i]);
@@ -127,9 +133,23 @@ if (args.Length >= 2 && args[0] == "--ocr-test")
     using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);
     engine.SetVariable("preserve_interword_spaces", "1");
     using var img = Pix.LoadFromFile(testPng);
-    using var page = engine.Process(img);
-    Console.WriteLine(page.GetText());
-    Console.WriteLine($"... mean confidence {page.GetMeanConfidence():F2}");
+    using (var page = engine.Process(img))
+    {
+        Console.WriteLine(page.GetText());
+        Console.WriteLine($"... mean confidence {page.GetMeanConfidence():F2}");
+    }
+    if (args.Length >= 3 && args[2] == "--psm-sparse")
+    {
+        using var sparse = engine.Process(img, PageSegMode.SparseText);
+        Console.WriteLine($"--- SPARSE TEXT (mean confidence {sparse.GetMeanConfidence():F2}) ---");
+        Console.WriteLine(sparse.GetText());
+    }
+    if (args.Length >= 3 && args[2] == "--psm-line")
+    {
+        using var line = engine.Process(img, PageSegMode.SingleLine);
+        Console.WriteLine($"--- SINGLE LINE (mean confidence {line.GetMeanConfidence():F2}) ---");
+        Console.WriteLine(line.GetText());
+    }
     return 0;
 }
 
@@ -188,7 +208,11 @@ Directory.CreateDirectory(cleanedDir);
 var extractor = new PdfPigTextExtractor();
 var defaultParser = new DefaultDungeonWorldParser(extractor, storageOptions);
 var factory = new DungeonWorldParserFactory(
-    new IBookParser[] { new SeasOfBloodParser(extractor, storageOptions) },
+    new IBookParser[]
+    {
+        new SeasOfBloodParser(extractor, storageOptions),
+        new WarlockOfFiretopMountainParser(extractor, storageOptions),
+    },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
 
@@ -227,27 +251,40 @@ foreach (var pdf in pdfs)
         var parser = factory.CreateParser(pdf, title);
         var book = await parser.ParseAsync(pdf);
 
+        DungeonWorldBookParserBase CreateOcrParser(IPdfTextExtractor ext) =>
+            title.Contains("Warlock of Firetop Mountain", StringComparison.OrdinalIgnoreCase)
+                ? new WarlockOfFiretopMountainParser(ext, storageOptions)
+                : new DefaultDungeonWorldParser(ext, storageOptions);
+
         var present = book.Sections.Count(s => s.Content != Placeholder);
-        if (present < 350)
+        var candidates = new List<Book> { book };
+        if (present < MergeThreshold)
         {
-            Book best = book;
-            var flatBook = await new DefaultDungeonWorldParser(
-                new OcrPdfTextExtractor(twoUpMode: TwoUpMode.Flat, workers: 10), storageOptions).ParseAsync(pdf);
-            int flatPresent = flatBook.Sections.Count(s => s.Content != Placeholder);
-            Console.WriteLine($"  [OCR] embedded={present}, flat={flatPresent}");
-            if (flatPresent > present) best = flatBook;
+            DungeonWorldBookParserBase RunOcr(IPdfTextExtractor ext) => CreateOcrParser(ext);
 
-            var splitBook = await new DefaultDungeonWorldParser(
-                new OcrPdfTextExtractor(twoUpMode: TwoUpMode.RegionSplit, workers: 10), storageOptions).ParseAsync(pdf);
-            int splitPresent = splitBook.Sections.Count(s => s.Content != Placeholder);
-            Console.WriteLine($"  [OCR] split={splitPresent}");
+            async Task<Book> RunOcrPass(TwoUpMode mode, int dpi) =>
+                await RunOcr(new OcrPdfTextExtractor(twoUpMode: mode, workers: 10, dpi: dpi)).ParseAsync(pdf);
 
-            if (splitPresent > best.Sections.Count(s => s.Content != Placeholder))
-                best = splitBook;
+            int CountPresent(Book b) => b.Sections.Count(s => s.Content != Placeholder);
 
-            var bestPresent = best.Sections.Count(s => s.Content != Placeholder);
-            Console.WriteLine($"  [OCR] keeping {(bestPresent == present ? "embedded" : bestPresent == flatPresent ? "flat" : "split")} (present {bestPresent})");
-            book = best;
+            var flatBook = await RunOcrPass(TwoUpMode.Flat, ocrDpi);
+            var splitBook = await RunOcrPass(TwoUpMode.RegionSplit, ocrDpi);
+            Console.WriteLine($"  [OCR] dpi={ocrDpi} embedded={present}, flat={CountPresent(flatBook)}, split={CountPresent(splitBook)}");
+            candidates.Add(CountPresent(splitBook) > CountPresent(flatBook) ? splitBook : flatBook);
+
+            if (CountPresent(candidates[^1]) < MergeThreshold)
+            {
+                foreach (var dpi in mergeDpis.Where(d => d != ocrDpi))
+                {
+                    var flat = await RunOcrPass(TwoUpMode.Flat, dpi);
+                    var split = await RunOcrPass(TwoUpMode.RegionSplit, dpi);
+                    Console.WriteLine($"  [OCR] dpi={dpi} flat={CountPresent(flat)}, split={CountPresent(split)}");
+                    candidates.Add(CountPresent(split) > CountPresent(flat) ? split : flat);
+                }
+            }
+
+            book = MergeBooks(candidates, MaxSection);
+            Console.WriteLine($"  [MERGE] {CountPresent(book)}/{book.Sections.Count} present across {candidates.Count} passes");
         }
 
         var cleaned = BookCleaner.Clean(book, $"{title}.json");
@@ -339,4 +376,46 @@ static bool PrintReport(string title, string parserId, Book book, CleanedBook cl
     Console.WriteLine($"  -> {outPath}");
     Console.WriteLine($"  {(check ? "[CHECK]" : "[OK]")}");
     return check;
+}
+
+static Book MergeBooks(IEnumerable<Book> candidates, int maxSection)
+{
+    var byNumber = new Dictionary<int, List<Section>>();
+    foreach (var b in candidates)
+        foreach (var s in b.Sections)
+        {
+            if (!byNumber.TryGetValue(s.SectionNumber, out var list))
+                byNumber[s.SectionNumber] = list = new List<Section>();
+            list.Add(s);
+        }
+
+    var merged = new List<Section>();
+    for (int n = 1; n <= maxSection; n++)
+    {
+        Section? best = null;
+        if (byNumber.TryGetValue(n, out var list))
+        {
+            foreach (var s in list)
+            {
+                if (best == null) { best = s; continue; }
+                bool sReal = s.Content != Placeholder;
+                bool bReal = best.Content != Placeholder;
+                if (sReal && !bReal) { best = s; continue; }
+                if (!sReal && bReal) continue;
+                if (s.Content.Length > best.Content.Length) best = s;
+            }
+        }
+        merged.Add(best ?? new Section { SectionNumber = n, Content = Placeholder });
+    }
+
+    var src = candidates.OrderByDescending(b => b.Sections.Count(s => s.Content != Placeholder)).First();
+    return new Book
+    {
+        Title = src.Title,
+        Introduction = src.Introduction,
+        AdventureSheetPath = src.AdventureSheetPath,
+        MapPath = src.MapPath,
+        Author = src.Author,
+        Sections = merged,
+    };
 }

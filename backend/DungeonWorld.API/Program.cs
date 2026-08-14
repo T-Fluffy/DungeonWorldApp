@@ -59,6 +59,7 @@ builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
 
 // Block-based rule parser pipeline: per-book specializations plus a universal fallback.
 builder.Services.AddScoped<IBookParser, SeasOfBloodParser>();
+builder.Services.AddScoped<IBookParser, WarlockOfFiretopMountainParser>();
 builder.Services.AddScoped<IBookParser, DefaultDungeonWorldParser>();
 // The factory also injects the fallback by its concrete type.
 builder.Services.AddScoped<DefaultDungeonWorldParser>();

@@ -156,8 +156,10 @@ public sealed class OcrPdfTextExtractor : IPdfTextExtractor
                     : 0;
 
                 // Page number / folio lines are dropped here; header/footer bands and
-                // page numbers are filtered again by the parser.
-                if (NumberOnlyLine.IsMatch(line) && (topFraction > 0.88 || topFraction < 0.04))
+                // page numbers are filtered again by the parser. Keep number-only lines
+                // down to the very bottom edge: section headers can sit low on a page
+                // (e.g. 0.88-0.9) and must not be mistaken for page numbers.
+                if (NumberOnlyLine.IsMatch(line) && (topFraction > 0.95 || topFraction < 0.04))
                     continue;
 
                 int logicalPage = pageNum;
@@ -210,7 +212,7 @@ public sealed class OcrPdfTextExtractor : IPdfTextExtractor
                     ? Math.Clamp((double)rect.Y1 / imageHeight, 0, 1)
                     : 0;
 
-                if (NumberOnlyLine.IsMatch(line) && (topFraction > 0.88 || topFraction < 0.04))
+                if (NumberOnlyLine.IsMatch(line) && (topFraction > 0.95 || topFraction < 0.04))
                     continue;
 
                 result.Add(new TextBlock

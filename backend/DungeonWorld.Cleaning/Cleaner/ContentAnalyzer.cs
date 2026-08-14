@@ -14,9 +14,13 @@ public static class ContentAnalyzer
         @"\bgo\s+to\s+(?:the\s+)?(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    // A choice line ends with "Turn to N" (optionally prefixed by a label).
+    // A choice line ends with "Turn to N" (optionally prefixed by a label). The label
+    // and "turn to N" must sit on the same physical line: allowing whitespace between
+    // them to cross newlines would swallow a narrative line that happens to precede a
+    // standalone "Turn to N" footer (e.g. "...You stop and listen but can-\n\nnot hear
+    // anything.\n\nTurn to 85." -> the "not hear anything" line would be stripped).
     private static readonly Regex ChoiceLineRe = new(
-        @"^\s*(?<label>.+?)\s*\bturn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
+        @"^\s*(?<label>.+?)[ \t]*\bturn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static readonly Regex LuckTestRe = new(
@@ -91,6 +95,7 @@ public static class ContentAnalyzer
         {
             if (!int.TryParse(m.Groups["n"].Value, out var target)) continue;
             var label = m.Groups["label"].Value.Trim();
+            if (label.Length > 0 && IsContinuationLine(raw, m.Groups["label"].Index)) continue;
             clean.Choices.Add(new CleanedChoice
             {
                 Kind = "choice",
@@ -294,7 +299,71 @@ public static class ContentAnalyzer
 
     private static string StripChoiceLines(string raw)
     {
-        return Normalize(ChoiceLineRe.Replace(raw, ""));
+        var lines = raw.Split('\n');
+        var kept = new List<string>();
+        int offset = 0;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var m = ChoiceLineRe.Match(lines[i]);
+            if (m.Success)
+            {
+                // A continuation tail (a single-choice footer whose label starts
+                // lowercase and follows an unpunctuated line) is part of the narrative
+                // sentence, not an option: keep the fragment and drop only the
+                // redundant "turn to N" tail.
+                if (m.Groups["label"].Value.Length > 0 && IsContinuationLine(raw, offset + m.Groups["label"].Index))
+                    kept.Add(m.Groups["label"].Value);
+            }
+            else
+            {
+                kept.Add(lines[i]);
+            }
+            offset += lines[i].Length + 1;
+        }
+        return Normalize(string.Join("\n", kept));
+    }
+
+    /// <summary>
+    /// True when the matched choice line is really the tail of a narrative sentence
+    /// that OCR pushed onto its own line, rather than a wrapped option label. Requires
+    /// the section to contain exactly ONE "Turn to N" target and exactly one choice
+    /// line, the label to start lowercase and not end with a comma/semicolon/question
+    /// mark (conditional options such as "To the door," / "If you are Unlucky,"
+    /// / "only on stars?" stay choices), the line to be preceded by a blank line (the
+    /// previous line holds no content, robust to \n and \r\n), and the previous
+    /// non-blank line to not end a sentence.
+    /// </summary>
+    private static bool IsContinuationLine(string raw, int labelStart)
+    {
+        int lineStart = labelStart > 0 ? raw.LastIndexOf('\n', labelStart) + 1 : 0;
+        int lineEnd = raw.IndexOf('\n', labelStart);
+        if (lineEnd < lineStart) lineEnd = raw.Length;
+
+        var line = raw[lineStart..lineEnd];
+        var m = ChoiceLineRe.Match(line);
+        if (!m.Success) return false;
+        var label = m.Groups["label"].Value;
+        if (label.Length == 0 || !char.IsLower(label[0])) return false;
+        if (label[^1] is ',' or ';' or '?') return false;
+
+        if (TurnToRe.Matches(raw).Count != 1) return false;
+        if (ChoiceLineRe.Matches(raw).Count != 1) return false;
+
+        if (lineStart == 0) return false;
+        int prevEnd = lineStart - 1;
+        int prevStart = raw.LastIndexOf('\n', prevEnd - 1);
+        if (prevStart + 1 > prevEnd) return false;
+        string prevLine = raw[(prevStart + 1)..prevEnd];
+        if (prevLine.Trim().Length > 0) return false;
+
+        string before = raw[..lineStart];
+        var prevLines = before.Split('\n')
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .ToList();
+        if (prevLines.Count == 0) return false;
+        char last = prevLines[^1][^1];
+        return last is not ('.' or '!' or '?' or ':' or ';' or ')' or ']' or '"' or '”' or '’' or '»');
     }
 
     public static string Normalize(string s)
