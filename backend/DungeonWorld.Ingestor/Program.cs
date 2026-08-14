@@ -465,12 +465,36 @@ static int ReconstructApply(string dumpDir, string overridesPath, string outFile
 
 static List<string> TrimContent(List<string> raw)
 {
-    var list = raw
-        .Where(l => l.Trim().Length > 0)
-        .Where(l => !IsNoiseLine(l))
-        .ToList();
+    var list = new List<string>();
+    foreach (var line in raw)
+    {
+        string t = line.Trim();
+        if (t.Length == 0) continue;
+        if (list.Count > 0 && DanglingTurnTo(list[^1]) && IsTurnTargetLine(t))
+        {
+            list[^1] = list[^1].TrimEnd() + " " + t;
+            continue;
+        }
+        if (IsNoiseLine(t)) continue;
+        list.Add(t);
+    }
     while (list.Count > 0 && IsHeaderLine(list[^1])) list.RemoveAt(list.Count - 1);
     return list;
+}
+
+static bool DanglingTurnTo(string line)
+{
+    // A line ending in a bare/empty turn instruction whose target sits on the
+    // next (short) line, e.g. "…Turn to" + "256."  or  "…(turn to" + "44."
+    return Regex.IsMatch(line.TrimEnd(),
+        @"[\(\{\[]?\s*(?:[tfb]u(?:r|m)n?)(?:\s+[tfko]o?)?\s*$",
+        RegexOptions.IgnoreCase);
+}
+
+static bool IsTurnTargetLine(string line)
+{
+    // Short all-digit target like "256." / "44," / "o 130." / "z7"
+    return Regex.IsMatch(line.Trim(), @"^(?:[a-z]\s*)?\d{1,3}[.,;:]?$", RegexOptions.IgnoreCase);
 }
 
 static bool IsNoiseLine(string line)
