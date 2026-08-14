@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DungeonWorld.Core.Entities;
@@ -172,6 +173,63 @@ if (args.Length >= 2 && args[0] == "--probe")
     return 0;
 }
 
+// --reconstruct <pdf> --out <dir> [--dpi 300] [--pages 1,2,3 | --start N [--end M]]
+// Renders every page, OCRs the content half, and dumps a line-numbered transcript per page
+// (pages/PageNNN.txt + .json). Used to rebuild a scan-heavy book section by section.
+if (args.Length >= 2 && args[0] == "--reconstruct")
+{
+    string pdf = Path.GetFullPath(args[1]);
+    string? outDir = null;
+    int dpi = 300;
+    var pages = new List<int>();
+    int startPage = -1, endPage = -1;
+    for (int i = 2; i < args.Length; i++)
+    {
+        switch (args[i])
+        {
+            case "--out":
+                if (i + 1 < args.Length) outDir = Path.GetFullPath(args[++i]);
+                break;
+            case "--dpi":
+                if (i + 1 < args.Length) dpi = int.Parse(args[++i]);
+                break;
+            case "--pages":
+                if (i + 1 < args.Length) pages = args[++i].Split(',').Select(int.Parse).ToList();
+                break;
+            case "--start":
+                if (i + 1 < args.Length) startPage = int.Parse(args[++i]);
+                break;
+            case "--end":
+                if (i + 1 < args.Length) endPage = int.Parse(args[++i]);
+                break;
+            default:
+                Console.WriteLine($"Ignoring unknown option: {args[i]}");
+                break;
+        }
+    }
+    if (outDir == null) { Console.Error.WriteLine("--out <dir> required"); return 1; }
+    Directory.CreateDirectory(Path.Combine(outDir, "pages"));
+    ReconstructPdf(pdf, outDir, dpi, pages, startPage, endPage);
+    return 0;
+}
+
+// --reconstruct-apply <dumpDir> <overrides.json> --out <sections.json>
+// Assembles the 400 sections from the per-page transcripts using an ordered manifest of
+// {n, page, side, line} body-start points produced by reviewing the transcripts.
+if (args.Length >= 3 && args[0] == "--reconstruct-apply")
+{
+    string dumpDir = Path.GetFullPath(args[1]);
+    string overridesPath = Path.GetFullPath(args[2]);
+    string? outFile = null;
+    for (int i = 3; i < args.Length; i++)
+    {
+        if (args[i] == "--out" && i + 1 < args.Length) outFile = Path.GetFullPath(args[++i]);
+        else Console.WriteLine($"Ignoring unknown option: {args[i]}");
+    }
+    if (outFile == null) { Console.Error.WriteLine("--out <sections.json> required"); return 1; }
+    return ReconstructApply(dumpDir, overridesPath, outFile);
+}
+
 var storageRoot = FindStorageRoot();
 if (storageRoot == null)
 {
@@ -306,6 +364,235 @@ foreach (var (title, check) in results)
     Console.WriteLine($"  {(check ? "[CHECK]" : "[OK]   ")} {title}");
 
 return 0;
+
+static int ReconstructApply(string dumpDir, string overridesPath, string outFile)
+{
+    var pagesDir = Path.Combine(dumpDir, "pages");
+    var lineStream = new List<(int page, int n, string side, string text)>();
+    foreach (var jf in Directory.GetFiles(pagesDir, "Page*.json")
+        .OrderBy(f => int.Parse(new Regex(@"Page(\d+)\.json").Match(Path.GetFileName(f)).Groups[1].Value)))
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(jf));
+        int page = doc.RootElement.GetProperty("page").GetInt32();
+        foreach (var l in doc.RootElement.GetProperty("lines").EnumerateArray())
+        {
+            lineStream.Add((page, l.GetProperty("n").GetInt32(), l.GetProperty("side").GetString()!,
+                l.GetProperty("text").GetString()!));
+        }
+    }
+    lineStream = lineStream.OrderBy(x => x.page).ThenBy(x => x.n).ToList();
+
+    using var doc2 = JsonDocument.Parse(File.ReadAllText(overridesPath));
+    var entries = new List<(int number, int page, string side, int line, int? endLine)>();
+    foreach (var e in doc2.RootElement.GetProperty("entries").EnumerateArray())
+        entries.Add((e.GetProperty("n").GetInt32(), e.GetProperty("page").GetInt32(),
+            e.GetProperty("side").GetString()!, e.GetProperty("line").GetInt32(),
+            e.TryGetProperty("end", out var en) && en.ValueKind == JsonValueKind.Number ? en.GetInt32() : null));
+    entries = entries.OrderBy(e => e.number).ToList();
+
+    // Pure-illustration halves carry only garbled captions (few wordy lines);
+    // a spanning section flows from the previous R half to the next text half,
+    // so drop lines only from halves with no section starts AND little real text.
+    var textHalves = entries.Select(e => (e.page, e.side)).ToHashSet();
+    var wordyCount = lineStream
+        .GroupBy(l => (l.page, l.side))
+        .ToDictionary(g => g.Key, g => g.Count(l => {
+            var words = l.text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Where(w => w.Length >= 4 && w.Any(char.IsLetter));
+            return words.Count() >= 3;
+        }));
+    lineStream = lineStream.Where(l =>
+        textHalves.Contains((l.page, l.side)) ||
+        wordyCount.GetValueOrDefault((l.page, l.side)) >= 5).ToList();
+    var lineIndex = lineStream
+        .Select((l, i) => (Key: (l.page, l.n), Idx: i))
+        .ToDictionary(x => x.Key, x => x.Idx);
+
+    var missing = new List<int>();
+    int expected = entries[0].number;
+    foreach (var e in entries)
+    {
+        if (e.number > expected)
+            for (int g = expected; g < e.number; g++) missing.Add(g);
+        if (e.number >= expected) expected = e.number + 1;
+    }
+    var sections = new List<Section>();
+    for (int i = 0; i < entries.Count; i++)
+    {
+        var e = entries[i];
+        if (!lineIndex.TryGetValue((e.page, e.line), out int startIdx))
+        {
+            Console.Error.WriteLine($"entry n={e.number} at p{e.page} L{e.side} line {e.line} NOT FOUND");
+            continue;
+        }
+        int endIdx;
+        if (e.endLine.HasValue)
+        {
+            if (!lineIndex.TryGetValue((e.page, e.endLine.Value), out int ei)) ei = startIdx;
+            endIdx = ei + 1;
+        }
+        else if (i + 1 < entries.Count &&
+                 lineIndex.TryGetValue((entries[i + 1].page, entries[i + 1].line), out int ni))
+        {
+            endIdx = ni;
+        }
+        else
+        {
+            endIdx = lineStream.Count;
+        }
+        var raw = lineStream.GetRange(startIdx, Math.Max(0, endIdx - startIdx)).Select(l => l.text).ToList();
+        var content = TrimContent(raw);
+        sections.Add(new Section
+        {
+            SectionNumber = e.number,
+            Content = string.Join("\n", content),
+            ImagePath = $"p{e.page}",
+        });
+    }
+
+    Console.WriteLine($"entries {entries.Count}, lines {lineStream.Count}, sections {sections.Count}");
+    if (missing.Count > 0) Console.WriteLine($"  MISSING numbering: {string.Join(",", missing)}");
+    foreach (var s in sections)
+        if (s.Content.Trim().Length == 0) Console.WriteLine($"  EMPTY section {s.SectionNumber}");
+    foreach (var s in sections.Take(4))
+        Console.WriteLine($"  sec {s.SectionNumber} [{s.Content.Length}] {s.Content.Split('\n')[0].Trim()}");
+
+    Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+    File.WriteAllText(outFile, JsonSerializer.Serialize(sections, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"-> {outFile}");
+    return 0;
+}
+
+static List<string> TrimContent(List<string> raw)
+{
+    var list = raw
+        .Where(l => l.Trim().Length > 0)
+        .Where(l => !IsNoiseLine(l))
+        .ToList();
+    while (list.Count > 0 && IsHeaderLine(list[^1])) list.RemoveAt(list.Count - 1);
+    return list;
+}
+
+static bool IsNoiseLine(string line)
+{
+    string t = line.Trim();
+    if (t.Length == 0) return true;
+    if (t.Length <= 6) return true;                        // headers, folios, tiny glyph noise
+    if (t.Contains(' ') == false && t.Any(char.IsDigit)) return true; // folio ranges ("Jo-32", "T0-12")
+    if (t.Length <= 12 && t.All(char.IsLetter) && t == t.ToUpperInvariant()) return true; // garbled all-caps folios ("FEFTIET")
+    int letters = t.Count(char.IsLetter);
+    if (letters / (double)t.Length < 0.4) return true;     // mostly symbols
+    return false;
+}
+
+static bool IsHeaderLine(string line)
+{
+    string t = line.Trim();
+    if (t.Length == 0 || t.Length > 6) return false;
+    if (t.Contains(' ')) return false;
+    return true;
+}
+
+static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pages, int startPage, int endPage)
+{
+    string workDir = Path.Combine(Path.GetTempPath(), "dw-reconstruct", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(workDir);
+
+    var pngs = RenderAllPages(pdfPath, workDir, dpi);
+    var index = new List<object>();
+    int pageNum = 0;
+
+    Parallel.ForEach(pngs, new ParallelOptions { MaxDegreeOfParallelism = 6 }, png =>
+    {
+        var pp = int.Parse(new Regex(@"-(\d+)\.png$").Match(Path.GetFileName(png)).Groups[1].Value);
+        var lines = OcrPageLines(png);
+        lock (index)
+        {
+            index.Add(new { page = pp, lines = lines.Count, file = $"pages/Page{pp:D3}.json" });
+            var json = new { page = pp, lineCount = lines.Count, lines = lines.Select(l => new { n = l.n, side = l.side, top = l.top, text = l.text }) };
+            File.WriteAllText(Path.Combine(outDir, "pages", $"Page{pp:D3}.json"),
+                JsonSerializer.Serialize(json, new JsonSerializerOptions { WriteIndented = true }));
+            var sb = new StringBuilder();
+            sb.AppendLine($"PAGE {pp}  ({lines.Count} lines)");
+            foreach (var l in lines) sb.AppendLine($"{l.n,3} {l.side} {l.top,6:F3}  {l.text}");
+            File.WriteAllText(Path.Combine(outDir, "pages", $"Page{pp:D3}.txt"), sb.ToString());
+        }
+        pageNum = Math.Max(pageNum, pp);
+    });
+
+    try { Directory.Delete(workDir, recursive: true); } catch { }
+
+    var wanted = pages.Count > 0
+        ? pages
+        : startPage > 0
+            ? Enumerable.Range(startPage, (endPage > 0 ? endPage : pageNum) - startPage + 1).ToList()
+            : Enumerable.Range(1, pageNum).ToList();
+    var kept = index.Cast<dynamic>().Where(x => wanted.Contains((int)x.page)).OrderBy(x => (int)x.page).ToList();
+    File.WriteAllText(Path.Combine(outDir, "index.json"),
+        JsonSerializer.Serialize(kept, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"Reconstruct dump: {kept.Count} pages -> {outDir} (max page {pageNum})");
+}
+
+static List<string> RenderAllPages(string pdfPath, string workDir, int dpi)
+{
+    var psi = new System.Diagnostics.ProcessStartInfo(
+        (string?)typeof(OcrPdfTextExtractor).GetMethod(
+            "FindTool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .Invoke(null, new object[] { "pdftoppm" })!)
+    {
+        Arguments = $"-png -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
+        UseShellExecute = false,
+        CreateNoWindow = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+    };
+    using (var proc = System.Diagnostics.Process.Start(psi)) proc?.WaitForExit(300_000);
+    return Directory.GetFiles(workDir, "p-*.png")
+        .Select(f => (Full: f, N: int.Parse(new Regex(@"-(\d+)\.png$").Match(Path.GetFileName(f)).Groups[1].Value)))
+        .OrderBy(x => x.N)
+        .Select(x => x.Full)
+        .ToList();
+}
+
+static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath)
+{
+    string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    var result = new List<(int, string, double, string)>();
+    using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);
+    engine.SetVariable("debug_file", "NUL");
+    using var pix = Pix.LoadFromFile(pngPath);
+    int w = pix.Width, h = pix.Height;
+    bool wide = w >= h * 1.15;
+    if (!wide)
+    {
+        CollectRegion(engine, pix, new Rect(0, 0, w, h), "M", h, result);
+    }
+    else
+    {
+        CollectRegion(engine, pix, new Rect(0, 0, w / 2, h), "L", h, result);
+        CollectRegion(engine, pix, new Rect(w / 2, 0, w - w / 2, h), "R", h, result);
+    }
+    return result.OrderBy(l => l.Item2).ThenBy(l => l.Item3).Select((l, i) => (i, l.Item2, l.Item3, l.Item4)).ToList();
+}
+
+static void CollectRegion(
+    TesseractEngine engine, Pix pix, Rect region, string side, int imageHeight,
+    List<(int, string, double, string)> result)
+{
+    using var page = engine.Process(pix, region, PageSegMode.Auto);
+    using var iter = page.GetIterator();
+    iter.Begin();
+    do
+    {
+        string line = (iter.GetText(PageIteratorLevel.TextLine) ?? "").Trim();
+        if (line.Length == 0) continue;
+        if (iter.TryGetBoundingBox(PageIteratorLevel.TextLine, out var r))
+        {
+            double top = imageHeight > 0 ? Math.Clamp((double)r.Y1 / imageHeight, 0, 1) : 0;
+            result.Add((0, side, top, line));
+        }
+    } while (iter.Next(PageIteratorLevel.TextLine));
+}
 
 static string? FindStorageRoot()
 {
