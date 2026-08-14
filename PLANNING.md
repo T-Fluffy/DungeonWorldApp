@@ -12,10 +12,12 @@ after recovery attempts.
 | FF02 Citadel of Chaos | **400/400 — complete** |
 | FF03 Forest of Doom | 400/400 — complete |
 | FF04 Starship Traveller | **343/343 — complete** (physical ceiling: no sections 344–400 exist) |
+| FF05 City of Thieves | **400/400 — complete** |
 | FF16 Seas of Blood | **400/400 — complete** (reference book) |
 
 FF02 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff02test\FF02 Citadel of Chaos.pdf`
 FF04 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\pw2up\FF04 Starship Traveller.pdf` (also `testsingle`)
+FF05 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff05reconstruct\` (300 dpi dump; also `backend\Storage\Books\tmp\FF05 City of Thieves.pdf`)
 FF16: `backend\Storage\Books\Seas of Blood.pdf` (protected: CleanPreviousOutput skips it)
 
 ## Task 1 — FF02 Citadel of Chaos: DONE (400/400)
@@ -67,9 +69,18 @@ Details:
   intro 4412 chars. Sparse graph (unreachable-heavy) is the same pipeline artifact as
   FF01/02/03 — OCR-garbled "furn/burn/tum to" defeats the reference regexes.
 
-## Task 4 — continue the loop
+## Task 4 — FF05 City of Thieves: DONE (400/400)
 
-- Continue FF05…FF15, FF17…FF63 one book at a time.
+Rebuilt from a fresh 300 dpi dump (with the wide-page fix in `Program.cs`: `bool wide = w >= h * 1.05` — pages 19/20/24 now split into clean L/R columns) and a complete 400-entry overrides manifest replicating the FF02 manual-spec workflow. All 400 printed sections are present (1→400 continuous, no gaps); per-page section counts sum to 400. Details:
+- **Duplicate page 23 ≈ 24**: page 23 re-prints page 24's content. Section 23 carries `"end": 42` (last line of p22R) so the duplicate page is excluded; sec 24 starts at p24L n=3.
+- **Page 64 resolution**: the stray "202" header at p64R n=27 is OCR-mispositioned; the monster-encounter table (p64R n=28–38) belongs to sec 201 (ends "If you win, turn to 138"), and sec 202 = the guard/Nicodemus escort section starting mid-column at p64R n=39. Verified via cross-refs: sec 138 routes Ape Man→312 / others→283, and sec 175 → "furn to zo4" = the goblet/scorpion section (sec 204).
+- **Mid-column starts are normal** (no visible header): e.g., sec 150 spans 52R→53L, sec 201 spans 63R→64R, sec 239 spans 72→73, sec 267 spans 78→79, sec 325/326 span 90→91, sec 329 spans 92→93, sec 367 spans 102, sec 372 spans 103→104. Page 60 is a single M page (sec 182–184).
+- Win section 337 ("Congratulations…") → turn to 400; sec 400 = the ending at p110L.
+- Final `ProcessedBooks/FF05 City of Thieves.json`: 400 sections, avgLen 380, full ImagePaths (`/assets/game-art/ff05_city_of_thieves/p{page}_i0.png`), Introduction from the back-cover blurb (p2). CleanedData regenerated: 400 present, 0 missing, 0 out-of-range refs (109 parsed choices), 28 combat sections, orphanLinks 0. Sparse graph (unreachable-heavy) is the same pipeline artifact as FF01/02/03/04 — OCR-garbled "furn/burn/tum/qoo to" defeats the reference regexes.
+
+## Task 5 — continue the loop
+
+- Continue FF06…FF15, FF17…FF63 one book at a time.
 
 ## Tools / pipeline notes
 

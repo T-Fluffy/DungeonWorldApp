@@ -586,7 +586,7 @@ static List<(int n, string side, double top, string text)> OcrPageLines(string p
     engine.SetVariable("debug_file", "NUL");
     using var pix = Pix.LoadFromFile(pngPath);
     int w = pix.Width, h = pix.Height;
-    bool wide = w >= h * 1.15;
+    bool wide = w >= h * 1.05;
     if (!wide)
     {
         CollectRegion(engine, pix, new Rect(0, 0, w, h), "M", h, result);
