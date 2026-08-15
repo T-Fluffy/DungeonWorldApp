@@ -36,6 +36,8 @@ After the reorganization, the parser files live in
 | `ManifestDungeonWorldParser.cs` | Abstract parser for books rebuilt from a manual reconstruction manifest |
 | `PdfPigTextExtractor.cs` | Extracts text blocks from a PDF's embedded text layer |
 | `PdfPigLayoutAnalyzer.cs` | Diagnostic layout detector (single vs 2-up page) |
+| `MediaArtParser.cs` | Art-only extraction: crops full-page scans, exports embedded art |
+| `ArtRegionDetector.cs` | Locates dense ink illustration blocks in a full-page scan |
 | `TextBlock.cs` | Text-paragraph DTO with layout metadata |
 | `Books/SeasOfBloodParser.cs` | Legacy rule-based parser for *Seas of Blood* |
 | `Books/WarlockOfFiretopMountainParser.cs` | Rule-based parser for FF01 |
@@ -173,3 +175,46 @@ The Ingestor has several debug flags used during reconstruction:
   per-page line transcripts a manifest is written against.
 - `--reconstruct-apply <dumpDir> <overrides.json> --out <sections.json>` — assemble
   sections from a manifest (the same logic `ReconstructionService.ApplyManifest` uses).
+
+## 6. Media-art extraction
+
+`GameArt` holds whatever the base parser's `ExtractImages` pulled out of a PDF —
+for scanned books that is a full-page image per page (text and art mixed). When we
+only want the illustrations, the **MediaArt CLI** (`backend/DungeonWorld.MediaArt`)
+reads the same PDFs and writes **art-only** crops to `Storage/GameArtArt/<slug>/`:
+
+| File | Role |
+| --- | --- |
+| `Parsing/MediaArtParser.cs` | Per page: full-page scan → crop art regions; embedded image → export as-is |
+| `Parsing/ArtRegionDetector.cs` | Finds the illustration block(s) inside a full-page scan |
+
+Two source kinds are classified by **page coverage** (`image.Bounds` area ÷ page area):
+
+- `coverage ≥ 0.85` — a full-page scan (FF01–FF05). `ArtRegionDetector` locates the
+  dense ink blocks and `MediaArtParser.Crop` extracts them; text-only pages yield
+  nothing.
+- otherwise — an embedded standalone illustration (digital PDFs such as FF16). The
+  image is exported whole, re-encoded as a real PNG.
+
+### ArtRegionDetector heuristic
+
+`MediaArtParser.Extract` decodes each image (via `RawBytes` — `TryGetPng`/`TryGetBytes`
+are unreliable in the custom PdfPig build) and runs the detector on a downscaled copy
+(`AnalysisWidth = 160`) for speed:
+
+1. Per-band ink density: the page is split into `BandHeight = 2`-row bands; a pixel
+   counts as dark when luminance `< 100`. Text rows sit at ~1–6% per band while
+   illustration blocks run 20–90%.
+2. A band is *dense* when density `≥ DenseBandThreshold (0.10)`; adjacent dense bands
+   (gaps `≤ MaxGapBands = 2`) merge into vertical runs.
+3. A run is art only if it spans `≥ MinArtHeightFraction (0.07)` of the page height
+   **and** contains a band `≥ StrongBandThreshold (0.18)` — this rejects bold
+   headings and short decorative marks. (These thresholds were tuned against FF01:
+   a text page never exceeds ~6% per band, while real illustrations keep long
+   contiguous dense runs.)
+4. Horizontal extent: within the run, columns with density `≥ ColumnDensityThreshold
+   (0.10)` bound the crop; a `MarginPx = 4` frame is added.
+
+The result is `IReadOnlyList<Rectangle>` in source coordinates; crops are drawn into
+a fresh 32bpp bitmap (GDI+ `Clone` throws `OutOfMemoryException` on grayscale/ICC
+JPEGs) and saved as PNG.

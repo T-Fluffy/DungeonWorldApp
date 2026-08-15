@@ -35,7 +35,9 @@ backend/Storage/
 │   ├── ProcessedBooks/      raw Book JSON per title (parser output)
 │   └── CleanedData/         CleanedBook JSON per title (what the game reads)
 ├── GameArt/
-│   └── <slug>/p<page>_i<n>.png   extracted illustrations
+│   └── <slug>/p<page>_i<n>.png   extracted illustrations (full-page scans, text + art)
+├── GameArtArt/
+│   └── <slug>/p<page>.png        art-only crops (see MediaArt tool below)
 ├── Avatars/
 └── Uploads/
 ```
@@ -86,6 +88,24 @@ Run after ingesting a new book or to repair existing output.
 4. Wrap into a `ProcessedBooks` file (see the per-book manifest parsers) and run the
    DataCleaner.
 
+### Extract art-only illustrations (MediaArt CLI)
+
+```bash
+dotnet run --project backend/DungeonWorld.MediaArt \
+  [--dir <folder>] [--out <dir>] [--book <prefix>...] [--stats] [--page N]
+```
+
+Default scope is the six processed books (FF01–FF05, FF16); output lands in
+`Storage/GameArtArt/<slug>/` and never touches `Storage/GameArt`.
+
+- **Full-page scans** (FF01–FF05) are cropped to their dense-ink blocks — the
+  illustrations — by `ArtRegionDetector`; text-only pages produce no file.
+- **Digital PDFs** (FF16) export each embedded art image as-is.
+- `--stats` prints a per-page coverage table instead of writing files; `--page N`
+  limits `--stats` to one page. See
+  [`backend/parsing-pipeline.md`](backend/parsing-pipeline.md) for the detection
+  heuristics and thresholds.
+
 ## Tests
 
 ```bash
@@ -93,7 +113,9 @@ dotnet build backend/DungeonWorldBackend.sln -c Release
 dotnet test backend/DungeonWorld.Tests/DungeonWorld.Tests.csproj -c Release --no-build
 ```
 
-Covers layout detection, parser factory selection, and PdfPig text extraction.
+Covers layout detection, parser factory selection, PdfPig text extraction, art-region
+detection (synthetic text-only vs illustrated pages), and MediaArt extraction on the
+fixture PDF.
 
 ## ML tooling
 
