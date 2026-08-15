@@ -181,7 +181,7 @@ The Ingestor has several debug flags used during reconstruction:
 `GameArt` holds whatever the base parser's `ExtractImages` pulled out of a PDF —
 for scanned books that is a full-page image per page (text and art mixed). When we
 only want the illustrations, the **MediaArt CLI** (`backend/DungeonWorld.MediaArt`)
-reads the same PDFs and writes **art-only** crops to `Storage/GameArtArt/<slug>/`:
+reads the same PDFs and writes **art-only** crops to `Storage/FFArt/<slug>/`:
 
 | File | Role |
 | --- | --- |

@@ -36,7 +36,7 @@ backend/Storage/
 │   └── CleanedData/         CleanedBook JSON per title (what the game reads)
 ├── GameArt/
 │   └── <slug>/p<page>_i<n>.png   extracted illustrations (full-page scans, text + art)
-├── GameArtArt/
+├── FFArt/
 │   └── <slug>/p<page>.png        art-only crops (see MediaArt tool below)
 ├── Avatars/
 └── Uploads/
@@ -96,7 +96,7 @@ dotnet run --project backend/DungeonWorld.MediaArt \
 ```
 
 Default scope is the six processed books (FF01–FF05, FF16); output lands in
-`Storage/GameArtArt/<slug>/` and never touches `Storage/GameArt`.
+`Storage/FFArt/<slug>/` and never touches `Storage/GameArt`.
 
 - **Full-page scans** (FF01–FF05) are cropped to their dense-ink blocks — the
   illustrations — by `ArtRegionDetector`; text-only pages produce no file.

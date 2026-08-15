@@ -8,7 +8,7 @@ using DungeonWorld.Infrastructure.Parsing;
 //               [--out <dir>] [--stats] [--page N]
 //
 // Default scope is the six processed books (FF01-05, FF16). Output lands in
-// Storage/GameArtArt/<slug>/ and never touches the existing GameArt folder.
+// Storage/FFArt/<slug>/ and never touches the existing GameArt folder.
 
 string? dirArg = null;
 string? outArg = null;
@@ -60,7 +60,7 @@ string sourceDir = dirArg != null
     : Path.Combine(storageRoot, "Books", "tmp");
 string outputDir = outArg != null
     ? Path.GetFullPath(outArg)
-    : Path.Combine(storageRoot, "GameArtArt");
+    : Path.Combine(storageRoot, "FFArt");
 
 var pdfs = Directory.GetFiles(sourceDir, "*.pdf")
     .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
