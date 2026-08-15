@@ -1,4 +1,3 @@
-using DungeonWorld.Infrastructure.Interfaces;
 using UglyToad.PdfPig;
 
 namespace DungeonWorld.Infrastructure.Parsing;
@@ -7,7 +6,7 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// Layout detector for diagnostics. Uses the same landscape aspect-ratio heuristic
 /// as <see cref="PdfPigTextExtractor"/> so the report matches what the parser will do.
 /// </summary>
-public class PdfPigLayoutAnalyzer : ILayoutAnalyzer
+public class PdfPigLayoutAnalyzer
 {
     // Keep in sync with PdfPigTextExtractor.DoublePageAspectThreshold.
     private const double DoublePageAspectThreshold = 1.15;

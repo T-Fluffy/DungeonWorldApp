@@ -270,6 +270,10 @@ var factory = new DungeonWorldParserFactory(
     {
         new SeasOfBloodParser(extractor, storageOptions),
         new WarlockOfFiretopMountainParser(extractor, storageOptions),
+        new CitadelOfChaosParser(storageOptions),
+        new ForestOfDoomParser(storageOptions),
+        new StarshipTravellerParser(storageOptions),
+        new CityOfThievesParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
@@ -316,7 +320,8 @@ foreach (var pdf in pdfs)
 
         var present = book.Sections.Count(s => s.Content != Placeholder);
         var candidates = new List<Book> { book };
-        if (present < MergeThreshold)
+        // Manifest parsers are authoritative reconstructions: never fall through to the OCR merge.
+        if (present < MergeThreshold && parser is not ManifestDungeonWorldParser)
         {
             DungeonWorldBookParserBase RunOcr(IPdfTextExtractor ext) => CreateOcrParser(ext);
 
@@ -522,7 +527,12 @@ static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pag
     string workDir = Path.Combine(Path.GetTempPath(), "dw-reconstruct", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(workDir);
 
-    var pngs = RenderAllPages(pdfPath, workDir, dpi);
+    var wanted = pages.Count > 0
+        ? pages
+        : startPage > 0
+            ? Enumerable.Range(startPage, (endPage > 0 ? endPage : -1) - startPage + 1).ToList()
+            : Enumerable.Empty<int>().ToList();
+    var pngs = RenderAllPages(pdfPath, workDir, dpi, wanted);
     var index = new List<object>();
     int pageNum = 0;
 
@@ -546,25 +556,25 @@ static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pag
 
     try { Directory.Delete(workDir, recursive: true); } catch { }
 
-    var wanted = pages.Count > 0
-        ? pages
-        : startPage > 0
-            ? Enumerable.Range(startPage, (endPage > 0 ? endPage : pageNum) - startPage + 1).ToList()
-            : Enumerable.Range(1, pageNum).ToList();
+    if (wanted.Count == 0) wanted = Enumerable.Range(1, pageNum).ToList();
     var kept = index.Cast<dynamic>().Where(x => wanted.Contains((int)x.page)).OrderBy(x => (int)x.page).ToList();
     File.WriteAllText(Path.Combine(outDir, "index.json"),
         JsonSerializer.Serialize(kept, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"Reconstruct dump: {kept.Count} pages -> {outDir} (max page {pageNum})");
 }
 
-static List<string> RenderAllPages(string pdfPath, string workDir, int dpi)
+static List<string> RenderAllPages(string pdfPath, string workDir, int dpi, List<int> only)
 {
+    int first = only.Count > 0 ? only.Min() : 1;
+    int last = only.Count > 0 ? only.Max() : -1;
     var psi = new System.Diagnostics.ProcessStartInfo(
         (string?)typeof(OcrPdfTextExtractor).GetMethod(
             "FindTool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
             .Invoke(null, new object[] { "pdftoppm" })!)
     {
-        Arguments = $"-png -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
+        Arguments = only.Count > 0
+            ? $"-png -r {dpi} -f {first} -l {last} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\""
+            : $"-png -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
         UseShellExecute = false,
         CreateNoWindow = true,
         RedirectStandardOutput = true,

@@ -3,7 +3,6 @@ using DungeonWorld.API;
 using DungeonWorld.API.Auth;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
-using DungeonWorld.Infrastructure.Interfaces;
 using DungeonWorld.Infrastructure.Parsing;
 using DungeonWorld.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -61,13 +60,16 @@ builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
 builder.Services.AddScoped<IBookParser, SeasOfBloodParser>();
 builder.Services.AddScoped<IBookParser, WarlockOfFiretopMountainParser>();
 builder.Services.AddScoped<IBookParser, DefaultDungeonWorldParser>();
+// Manual-reconstruction (manifest OCR) parsers for the FF02-05 rebuilds.
+builder.Services.AddScoped<IBookParser, CitadelOfChaosParser>();
+builder.Services.AddScoped<IBookParser, ForestOfDoomParser>();
+builder.Services.AddScoped<IBookParser, StarshipTravellerParser>();
+builder.Services.AddScoped<IBookParser, CityOfThievesParser>();
 // The factory also injects the fallback by its concrete type.
 builder.Services.AddScoped<DefaultDungeonWorldParser>();
 // Factory: specific parser -> default rule-based parser
 builder.Services.AddScoped<IParserFactory, DungeonWorldParserFactory>();
 
-// Layout analyzer for pre-check diagnostics
-builder.Services.AddSingleton<ILayoutAnalyzer, PdfPigLayoutAnalyzer>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
