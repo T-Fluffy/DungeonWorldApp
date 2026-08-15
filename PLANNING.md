@@ -10,13 +10,14 @@ after recovery attempts.
 |------|--------|
 | FF01 The Warlock of Firetop Mountain | **400/400 — complete (manual reconstruction)** |
 | FF02 Citadel of Chaos | **400/400 — complete** |
-| FF03 Forest of Doom | 400/400 — complete |
+| FF03 Forest of Doom | **400/400 — complete (manual reconstruction)** |
 | FF04 Starship Traveller | **343/343 — complete** (physical ceiling: no sections 344–400 exist) |
 | FF05 City of Thieves | **400/400 — complete** |
 | FF16 Seas of Blood | **400/400 — complete** (reference book) |
 
 FF02 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff02test\FF02 Citadel of Chaos.pdf`
 FF01 sources: `backend\Storage\Books\tmp\FF01 The Warlock of Firetop Mountain.pdf`; dump/overrides in `C:\Users\Halloul\AppData\Local\Temp\opencode\ff01reconstruct\`
+FF03 sources: `backend\Storage\Books\tmp\FF03 Forest of Doom.pdf`; dump in `C:\Users\Halloul\AppData\Local\Temp\opencode\ff03reconstruct\` (105 pages)
 FF04 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\pw2up\FF04 Starship Traveller.pdf` (also `testsingle`)
 FF05 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff05reconstruct\` (300 dpi dump; also `backend\Storage\Books\tmp\FF05 City of Thieves.pdf`)
 FF16: `backend\Storage\Books\Seas of Blood.pdf` (protected: CleanPreviousOutput skips it)
@@ -34,6 +35,46 @@ sections 1–400; `--reconstruct-apply` merged pages + overrides into a 400-sect
   targets (318, 335, 340, …) — deferred to the text-quality language module.
 - FF02 Graph "unreachable 399" is a known artifact — section 1 is a rules page with
   no outgoing refs. Same for FF01/FF03. Not a merge regression.
+
+## Task 7 — FF03 Forest of Doom: DONE (400/400 manual reconstruction)
+
+Rebuilt from a fresh `--reconstruct` dump (105 pages at 300 dpi) plus a complete 400-entry
+overrides manifest replicating the FF02/FF01 manual-spec workflow, then `--reconstruct-apply`
+→ wrapped into `ProcessedBooks/FF03 Forest of Doom.json` → DataCleaner. Details:
+- **Two-column book** (L/R half pages, like FF04/05): within each page all L lines carry
+  n=0..k then all R lines continue, so overrides use side `"L"`/`"R"` with the global
+  per-page line number. Caption pages carry a pull-quote on the L half (e.g. p18 "15 You see
+  the shiny tip…", p43 "130 A creature…") that is NOT a section start — captions live on
+  p15,18,21,23,25,27,30,34,36,41,43,46,49,52,55,58,60,62,66,70,77,79,81,86,90,92,102.
+  p72 has no sections (Yaztromo's price list continues sec 261); p1–14 are front matter.
+- **Folio misOCR corrections**: 3334→33-34 (p22L), 3537→35-37 (p22R), 20-32→29-32 (p21R),
+  53754→53-54 (p26R), 71=73→71-73 (p31L), 7779→77-79 (p32L), 8486→84-86 (p33L),
+  155158→155-158 (p48R), 152~154→152-154 (p48L), 165—~167→165-167 (p51L), 189—192 (p57L),
+  & 6"9→6-9 (p16R), 303304→303-304 (p83R), 334335→334-335 (p89L), 349351→349-351 (p92R),
+  355-358 (p93R), 385→385-387 (p100L), 399-400 (p103L). Folio ranges run 1→400 continuous.
+- **Garbled/missing headers (manual dict)**: sec 5 (no header, p16L23), 39 ("3"), 59 (no
+  header, folio "59—62" doubles), 64 ("W04"), 69 (no header), 75 (no header), 78/79 (no
+  header), 80 ("Bo"), 82 ("8z"), 89 (no header), 91 ("9L"), 92 ("g2"), 97 (no header),
+  99 ("29"), 114 (no header), 117 ("Lo"), 144 (no header), 158 ("153"), 166/167 (no
+  header), 188 ("158"), 189 ("18¢"), 196 ("106"), 219 ("2"), 301 ("311"), 302 (no header),
+  314 (no header), 322 ("32z"), 324 ("34"), 336 ("336 /"), 356 ("356 -"), 371 (no header).
+- **Sec 400 cap**: the last entry flowed into back-matter (ABOUT THE AUTHOR, adverts on
+  p104-105); the overrides entry 400 carries `"end": 57` (last real line on p103) so it
+  ends "…you are now wealthy beyond your wildest dreams."
+- **OCR turn-to normalization**: 43 sections had merged/typo'd "Turnto261"/"tum to"/"furn
+  to" etc. that defeated the reference regexes (sec 1's "Turnto261"/"Turnto 54" left the
+  entry with no choices and 399/400 unreachable). Normalized to "turn to N" in the raw
+  sections; unreachable dropped to 66, section 1 now routes 54/261. Sec 193's "turn to
+  1710" (OCR merge of 171) corrected → orphanLinks 0. Sec 45 ("Lose 2 sSTAMIN A points.
+  If you are still alive, turn to 165.") is stripped to empty Clean by the cleaner's
+  single-line choice matcher — same pre-existing edge as FF16 sec 244; the frontend falls
+  back to Raw (`clean || raw`), so no gameplay break.
+- Final `ProcessedBooks/FF03 Forest of Doom.json`: 400 sections, full ImagePaths
+  (`/assets/game-art/ff03_forest_of_doom/p{page}_i0.png`), MapPath p1, Introduction from
+  cover/title + BACKGROUND mission narrative (pp1-3, 12-14). CleanedData: 400/400,
+  0 missing, 0 orphan links, 39 combat sections / 42 enemies, unreachable 66, maxDepth 27.
+  Empty-enemy combat sections (34, 43, 79, 117, 118, 186, 265, 285, 298…) are OCR stat
+  garbling (e.g. "STAMINA �"), the same known DataCleaner limit as FF01.
 
 ## Task 2 — FF16 (Seas of Blood): DONE (400/400)
 
