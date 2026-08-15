@@ -22,7 +22,7 @@ FF04 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\pw2up\FF04 Starship 
 FF05 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff05reconstruct\` (300 dpi dump; also `backend\Storage\Books\tmp\FF05 City of Thieves.pdf`)
 FF16: `backend\Storage\Books\Seas of Blood.pdf` (protected: CleanPreviousOutput skips it)
 
-## Task 1 — FF02 Citadel of Chaos: DONE (400/400)
+## Task 1 — FF02 Citadel of Chaos: DONE (400/400), tails enriched 2026-08-15
 
 Reconstructed all sections via the per-book manual spec (`ff02reconstruct` work dir):
 explicit page/side/line boundaries mapped every physical folio header (200–400 dpi) to
@@ -35,6 +35,30 @@ sections 1–400; `--reconstruct-apply` merged pages + overrides into a 400-sect
   targets (318, 335, 340, …) — deferred to the text-quality language module.
 - FF02 Graph "unreachable 399" is a known artifact — section 1 is a rules page with
   no outgoing refs. Same for FF01/FF03. Not a merge regression.
+
+### FF02 tail enrichment (2026-08-15): 15 truncated section tails verified & fixed
+
+15 sections (40, 41, 50, 74, 95, 100, 102, 177, 192, 205, 219, 223, 229, 330, 354) were
+cut off mid-line by the split-line trimmer. Each tail was recovered from the printed book
+(600 dpi crops) plus internet walkthroughs (projektkeller/spikesnlead/etc.) and the
+printed turn-target confirmed. The clean book text replaced each shared garbled OCR
+fragment (e.g. sec 40 `right lork (turn",` → `right lork (turn to 41)",`); OCR-only
+garbles well inside a section (e.g. sec 100's `(luen 1o 7o)`, sec 205's `3009`) were left
+as-is. Verified tails:
+- 40 → `(turn to 41)`; 41 → `Turn to 257.`; 50 → `Turn to 164.` (one-line bridge);
+- 74 → `Turn to 377.`; 95 → `Turn to 367.`; 100 → `turn to 276.`; 102 → `turn to 270.`;
+- 177 → `(turn to 344)?`; 192 → `Turn to 29.`; 205 → `turn to 368.`; 219 → `Turn to 220.`;
+- 223 → `Turn to 138.`; 229 → `(turn to 230).`; 330 → `turn to 120.`; 354 → `Turn to 188.`
+- sec 354's `355` was a misparse: the parser dropped the real tail line `to 188,` as
+  line-noise (2/7 letters < 0.4) and swallowed the printed "355" folio header from the
+  next line.
+- Enriched `ProcessedBooks/FF02 Citadel of Chaos.json` is the source of truth; the
+  parser now reproduces it byte-for-byte: `CitadelOfChaosParser.ApplySectionFixes`
+  (replaces the garbled fragments in raw OCR) is invoked from a new virtual
+  `ManifestDungeonWorldParser.PostProcessSection` hook (defaults to
+  `PostProcessContent`, so FF01/03/04/05/16 behavior is unchanged). `--dump` verifies
+  **400 same, 0 diff**. Full pipeline run: FF02 400/400, FF03 400/400, FF04 343/343,
+  FF05 400/400, 0 missing/extra; tests 21/21.
 
 ## Task 7 — FF03 Forest of Doom: DONE (400/400 manual reconstruction)
 
@@ -123,6 +147,14 @@ Rebuilt from a fresh 300 dpi dump (with the wide-page fix in `Program.cs`: `bool
 ## Task 5 — continue the loop
 
 - Continue FF06…FF15, FF17…FF63 one book at a time.
+
+## Housekeeping 2026-08-15 — CleanedData deduplication
+
+`CleanedData` had per-book `(1)`–`(5)` variant files (25 total) left over from earlier
+cleaner runs. Verified semantically identical to the canonical base (same sections, same
+content MD5; FF01/02/16 byte-identical, FF04/05 differ by a stray byte) and deleted all
+25. `FF16 Seas of Blood.json.pre-cleaner-fix.bak` kept (pre-fix older content). FF03 had
+no variants.
 
 ## Task 6 — FF01 The Warlock of Firetop Mountain: DONE (400/400 manual reconstruction)
 
