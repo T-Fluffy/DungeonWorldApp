@@ -4,11 +4,11 @@ Strict rule agreed with the user: **complete each book to 400/400 (all data extr
 before moving to the next.** Only document a ceiling when a page is genuinely unreadable
 after recovery attempts.
 
-## Current state (as of 2026-08-14)
+## Current state (as of 2026-08-15)
 
 | Book | Status |
 |------|--------|
-| FF01 The Warlock of Firetop Mountain | 400/400 — complete |
+| FF01 The Warlock of Firetop Mountain | **400/400 — complete (manual reconstruction)** |
 | FF02 Citadel of Chaos | **400/400 — complete** |
 | FF03 Forest of Doom | 400/400 — complete |
 | FF04 Starship Traveller | **343/343 — complete** (physical ceiling: no sections 344–400 exist) |
@@ -16,6 +16,7 @@ after recovery attempts.
 | FF16 Seas of Blood | **400/400 — complete** (reference book) |
 
 FF02 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff02test\FF02 Citadel of Chaos.pdf`
+FF01 sources: `backend\Storage\Books\tmp\FF01 The Warlock of Firetop Mountain.pdf`; dump/overrides in `C:\Users\Halloul\AppData\Local\Temp\opencode\ff01reconstruct\`
 FF04 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\pw2up\FF04 Starship Traveller.pdf` (also `testsingle`)
 FF05 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff05reconstruct\` (300 dpi dump; also `backend\Storage\Books\tmp\FF05 City of Thieves.pdf`)
 FF16: `backend\Storage\Books\Seas of Blood.pdf` (protected: CleanPreviousOutput skips it)
@@ -81,6 +82,33 @@ Rebuilt from a fresh 300 dpi dump (with the wide-page fix in `Program.cs`: `bool
 ## Task 5 — continue the loop
 
 - Continue FF06…FF15, FF17…FF63 one book at a time.
+
+## Task 6 — FF01 The Warlock of Firetop Mountain: DONE (400/400 manual reconstruction)
+
+FF01 was previously "400/400" only as section-presence from the old batch OCR. Rebuilt from
+a fresh `--reconstruct` dump (189 pages) plus a complete 400-entry overrides manifest
+replicating the FF02 manual-spec workflow, then `--reconstruct-apply` → wrapped into
+`ProcessedBooks/FF01 The Warlock of Firetop Mountain.json` → DataCleaner. Details:
+- **Canonical structure**: printed book has exactly 400 sections, 1–400 continuous
+  (section 401 = the rules intro, not in-book). Verified against the Gamebookuino
+  transcription (400 first-lines cross-checked with a fuzzy word-overlap score).
+- **Duplicate-27**: not a real quirk — p32's folio "27" is a continuation marker; sec 26
+  (Di Maggio's book + Dragon encounter) spans 31→32, sec 27 = enchanted sword at p32L21.
+- **Duplicate-296**: sec 296 (leather-bound book) starts p141L20 and continues onto p142
+  (folio "296" = continuation only). **Duplicate-311**: p149 is a fragment page (<5 wordy
+  lines) → dropped; sec 311 starts p150L2.
+- **MisOCR'd folios corrected**: 18→18-20 (p29), 3399→53-55 (p41), 144145→144-145 (p79),
+  157→157-159 (p85), 160--161→160-161 (p86), 283285→283-285 (p136), 297298→297-298 (p143),
+  §35-338→335-338 (p160), 344345→344-345 (p163), 391393→391-393 (p182).
+- **Manual body-line fixes**: sec 13 (garbled duplicate header at p27L24 → real at L9),
+  sec 95 (was pointing at sec 94's tail on p56 → L5), sec 140 (folio "140" misparsed as
+  header → body at p76L8 "The Skeletons advance…").
+- Final `ProcessedBooks/FF01 …json`: 400 sections, avgLen 403, full ImagePaths
+  (`/assets/game-art/ff01_the_warlock_of_firetop_mountain/p{page}_i0.png`), MapPath p1,
+  Introduction from cover/title/RUMOURS front matter (pp1-3, 19-20). CleanedData: 400/400,
+  0 missing, 0 orphan links, 39 combat sections / 50 enemies, 0 placeholder sections.
+  Sparse graph (unreachable 69) is the same pipeline artifact as other books — OCR-garbled
+  "furn/turn to" defeats the reference regexes.
 
 ## Tools / pipeline notes
 
