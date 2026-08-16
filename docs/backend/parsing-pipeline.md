@@ -199,21 +199,27 @@ Two source kinds are classified by **page coverage** (`image.Bounds` area ÷ pag
 ### ArtRegionDetector heuristic
 
 `MediaArtParser.Extract` decodes each image (via `RawBytes` — `TryGetPng`/`TryGetBytes`
-are unreliable in the custom PdfPig build) and runs the detector on a downscaled copy
-(`AnalysisWidth = 160`) for speed:
+are unreliable in the custom PdfPig build) and runs the detector at **full resolution**
+for both accuracy and speed (a `LockBits` dark mask, no per-pixel GDI+ calls):
 
-1. Per-band ink density: the page is split into `BandHeight = 2`-row bands; a pixel
+1. Per-band ink density: the page is split into `BandHeight = 8`-row bands; a pixel
    counts as dark when luminance `< 100`. Text rows sit at ~1–6% per band while
    illustration blocks run 20–90%.
-2. A band is *dense* when density `≥ DenseBandThreshold (0.10)`; adjacent dense bands
-   (gaps `≤ MaxGapBands = 2`) merge into vertical runs.
-3. A run is art only if it spans `≥ MinArtHeightFraction (0.07)` of the page height
-   **and** contains a band `≥ StrongBandThreshold (0.18)` — this rejects bold
-   headings and short decorative marks. (These thresholds were tuned against FF01:
-   a text page never exceeds ~6% per band, while real illustrations keep long
-   contiguous dense runs.)
+2. A band is *dense* when density `≥ DenseBandThreshold (0.08)`; adjacent dense bands
+   (gaps `≤ MaxGapBands = 1`) merge into vertical runs.
+3. A run is art only if it spans `≥ MinArtRunPx (96px)` **and** contains a band
+   `≥ StrongBandThreshold (0.15)` — this rejects bold headings and short decorative
+   marks. The page is gated on a gap-free run first (maxGap 0), then regions are
+   located with the small-gap run so internal whitespace does not split one drawing.
+   (These thresholds were tuned against FF01–FF05 ground truth: a text page's longest
+   dense run stays ≤ ~48px, while real illustrations keep contiguous dense runs
+   ≥ 96px — 173/173 art pages found across all five scanned books, 0 false alarms.)
 4. Horizontal extent: within the run, columns with density `≥ ColumnDensityThreshold
-   (0.10)` bound the crop; a `MarginPx = 4` frame is added.
+   (0.05)` bound the crop.
+5. Edge grow: the crop bounds are grown to the surrounding light-ink extent (down to
+   ~3% row density, `EdgeGrowMaxGap = 3` bands) so light pen strokes at the art's
+   edges are not cut off; a `MarginPx = 6` frame is added; overlapping crops that
+   belong to the same illustration are merged.
 
 The result is `IReadOnlyList<Rectangle>` in source coordinates; crops are drawn into
 a fresh 32bpp bitmap (GDI+ `Clone` throws `OutOfMemoryException` on grayscale/ICC

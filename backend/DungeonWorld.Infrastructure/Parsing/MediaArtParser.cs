@@ -23,7 +23,7 @@ public class MediaArtParser
     /// <summary>A page image whose bounds cover at least this fraction of the page is a full-page scan.</summary>
     public const double FullPageScanCoverage = 0.85;
 
-    /// <summary>Ignore tiny images below this size — they are noise, not artwork.</summary>
+    /// <summary>Ignore embedded images below this size — they are noise, not artwork. Not applied to full-page scans.</summary>
     public const int MinArtDimension = 100;
 
     private readonly ArtRegionDetector _detector;
@@ -59,8 +59,6 @@ public class MediaArtParser
 
             foreach (var image in page.GetImages())
             {
-                if (image.WidthInSamples < MinArtDimension || image.HeightInSamples < MinArtDimension)
-                    continue;
                 if (image.IsImageMask)
                     continue;
 
@@ -70,7 +68,8 @@ public class MediaArtParser
 
                 if (coverage >= FullPageScanCoverage)
                 {
-                    // Full-page scan: detect + crop the illustration region inside it.
+                    // Full-page scan: the page itself is art or mixes text with art, so its
+                    // size is whatever the scan is; do not apply the tiny-noise filter.
                     if (!TryDecode(image, out var bitmap))
                         continue;
 
@@ -92,7 +91,10 @@ public class MediaArtParser
                 }
                 else
                 {
-                    // Embedded standalone art: export whole as a re-encoded PNG.
+                    // Embedded standalone art: ignore tiny noise images, export the rest whole.
+                    if (image.WidthInSamples < MinArtDimension || image.HeightInSamples < MinArtDimension)
+                        continue;
+
                     embedded = true;
                     if (!TryDecode(image, out var bitmap))
                         continue;
