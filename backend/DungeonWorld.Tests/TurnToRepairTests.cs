@@ -142,4 +142,29 @@ public class ChoicesParityTests
 
         cleaned.Choices.Select(c => c.Target).Should().Equal(5);
     }
+
+    [Theory]
+    [InlineData("Your adventure is over.")]
+    [InlineData("Your adventure is at an end.")]
+    [InlineData("This is the end of your adventure.")]
+    [InlineData("bringing your adventure to a gory and untimely end.")]
+    [InlineData("Shipwrecked, you cannot continue your adventure.")]
+    public void DeathPhrasingVariants_FlagDeathEnd(string ending)
+    {
+        var cleaned = ContentAnalyzer.Analyze(Sec(1, "The wheel crushes you. " + ending));
+
+        cleaned.Features.IsEnd.Should().BeTrue();
+        cleaned.Features.DeathEnd.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TrailingPageRangeFooter_StrippedFromClean()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(309, "If you fight on and defeat the warship, turn to 135. 310-311"));
+
+        cleaned.References.Should().Equal(135);
+        cleaned.Clean.Should().NotContain("310-311");
+        cleaned.Clean.Should().EndWith("turn to 135.");
+    }
 }

@@ -35,6 +35,13 @@ public static class ContentAnalyzer
         @"\(?\b(?:turn|go)\s+to\s+(?:the\s+)?\d{1,4}\)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // Printed page footers ("310-311") leak into section tails during parsing.
+    // A trailing bare page range is never narrative; refs are extracted before
+    // this runs, so no navigation data is affected.
+    private static readonly Regex PageRangeFooterRe = new(
+        @"\s*\d{1,3}\s*[-–]\s*\d{1,3}\s*$",
+        RegexOptions.Compiled);
+
     private static readonly Regex LuckTestRe = new(
         @"\btest\s+your\s+luck\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -68,7 +75,7 @@ public static class ContentAnalyzer
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex DeathEndRe = new(
-        @"(?i)(your\s+(?:adventure|story)\s+ends|you\s+(?:have\s+)?died|your\s+life\s+(?:is\s+)?over|meet\s+your\s+(?:untimely\s+)?end|perish|you\s+are\s+dead\s*[.!]?$|killed\s+you\s*[.!]?$)",
+        @"(?i)(your\s+(?:adventure|story)\s+ends|you\s+(?:have\s+)?died|your\s+life\s+(?:is\s+)?over|meet\s+your\s+(?:untimely\s+)?end|perish|you\s+are\s+dead\s*[.!]?$|killed\s+you\s*[.!]?$|your\s+adventure\s+is\s+(over|at\s+an\s+end)|(this\s+is\s+)?the\s+end\s+of\s+your\s+adventure|bringing\s+your\s+adventure\s+to\s+[^.!?]{0,40}\bend\b|cannot\s+continue\s+your\s+adventure)",
         RegexOptions.Compiled);
 
     private static readonly Regex VictoryEndRe = new(
@@ -150,7 +157,7 @@ public static class ContentAnalyzer
         var note = CombatNoteRe.Match(text);
         if (note.Success) features.CombatNote = Normalize(note.Value);
 
-        clean.Clean = StripChoiceLines(text);
+        clean.Clean = PageRangeFooterRe.Replace(StripChoiceLines(text), "");
         return clean;
     }
 
