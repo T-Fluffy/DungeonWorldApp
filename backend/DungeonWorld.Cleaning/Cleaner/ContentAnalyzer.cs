@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DungeonWorld.Core.Entities;
+using DungeonWorld.Core.Text;
 using DungeonWorld.Cleaning.Model;
 
 namespace DungeonWorld.Cleaning.Cleaner;
@@ -22,6 +23,17 @@ public static class ContentAnalyzer
     private static readonly Regex ChoiceLineRe = new(
         @"^\s*(?<label>.+?)[ \t]*\bturn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // A bare "Turn to N" footer with no label (single-exit sections). ChoiceLineRe
+    // requires a label, so these never became choices despite feeding References.
+    private static readonly Regex BareExitRe = new(
+        @"^\s*turn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // Parenthesised fragments inside mid-line choice pairs, stripped from labels.
+    private static readonly Regex InlineRefRe = new(
+        @"\(?\b(?:turn|go)\s+to\s+(?:the\s+)?\d{1,4}\)?",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex LuckTestRe = new(
         @"\btest\s+your\s+luck\b",
@@ -67,9 +79,12 @@ public static class ContentAnalyzer
         @"(?i)(whenever[^.!?\n]{0,160}\.)|(score\s+a\s+hit[^.!?\n]{0,120}\.)|(hits\s+you\s+during\s+the\s+battle[^.!?\n]{0,120}\.)|(roll\s+one\s+die[^.!?\n]{0,120}\.)",
         RegexOptions.Compiled);
 
-    public static CleanedSection Analyze(Section section)
+    public static CleanedSection Analyze(Section section, int maxSection = 400)
     {
         var raw = section.Content ?? "";
+        // Repair OCR-garbled turn references once; Raw stays verbatim while
+        // references, choices and the displayed Clean text derive from this copy.
+        var text = TurnToRepair.RepairContent(raw, maxSection);
         var clean = new CleanedSection
         {
             Number = section.SectionNumber,
@@ -81,58 +96,46 @@ public static class ContentAnalyzer
         features.MissingText = MissingTextRe.IsMatch(raw);
 
         var refs = new SortedSet<int>();
-        foreach (Match m in TurnToRe.Matches(raw))
+        foreach (Match m in TurnToRe.Matches(text))
         {
             if (int.TryParse(m.Groups[1].Value, out var n)) refs.Add(n);
         }
-        foreach (Match m in GoToRe.Matches(raw))
+        foreach (Match m in GoToRe.Matches(text))
         {
             if (int.TryParse(m.Groups[1].Value, out var n)) refs.Add(n);
         }
         clean.References = refs.ToList();
 
-        foreach (Match m in ChoiceLineRe.Matches(raw))
-        {
-            if (!int.TryParse(m.Groups["n"].Value, out var target)) continue;
-            var label = m.Groups["label"].Value.Trim();
-            if (label.Length > 0 && IsContinuationLine(raw, m.Groups["label"].Index)) continue;
-            clean.Choices.Add(new CleanedChoice
-            {
-                Kind = "choice",
-                Label = label.Length > 0 ? label : null,
-                Target = target,
-                Text = $"Turn to {target}",
-            });
-        }
+        ExtractChoices(text, clean);
 
-        AnalyzeCombat(raw, features);
-        features.HasLuckTest = LuckTestRe.IsMatch(raw);
+        AnalyzeCombat(text, features);
+        features.HasLuckTest = LuckTestRe.IsMatch(text);
 
-        foreach (Match m in StatChangeRe.Matches(raw))
+        foreach (Match m in StatChangeRe.Matches(text))
         {
-            var text = Normalize($"{m.Groups[1].Value} {m.Groups["n"].Value} {m.Groups["stat"].Value}".ToUpperInvariant());
-            if (!features.StatChanges.Contains(text)) features.StatChanges.Add(text);
+            var entry = Normalize($"{m.Groups[1].Value} {m.Groups["n"].Value} {m.Groups["stat"].Value}".ToUpperInvariant());
+            if (!features.StatChanges.Contains(entry)) features.StatChanges.Add(entry);
         }
 
         features.LogDays = ParseLogDays(raw);
 
-        foreach (Match m in BootyRe.Matches(raw))
+        foreach (Match m in BootyRe.Matches(text))
         {
-            var text = Normalize($"{m.Groups[1].Value} {m.Groups["n"].Value} {m.Groups[3].Value}");
-            if (!features.Booty.Contains(text)) features.Booty.Add(text);
+            var entry = Normalize($"{m.Groups[1].Value} {m.Groups["n"].Value} {m.Groups[3].Value}");
+            if (!features.Booty.Contains(entry)) features.Booty.Add(entry);
         }
 
-        foreach (Match m in DiceRollRe.Matches(raw))
+        foreach (Match m in DiceRollRe.Matches(text))
         {
-            var sentence = FindSentence(raw, m.Index);
+            var sentence = FindSentence(text, m.Index);
             if (sentence != null && !features.DiceInstructions.Contains(sentence)) features.DiceInstructions.Add(sentence);
             if (features.DiceInstructions.Count >= 3) break;
         }
 
-        foreach (Match m in ItemMentionRe.Matches(raw))
+        foreach (Match m in ItemMentionRe.Matches(text))
         {
-            var text = Normalize(m.Groups[1].Value);
-            if (!features.ItemMentions.Contains(text)) features.ItemMentions.Add(text);
+            var entry = Normalize(m.Groups[1].Value);
+            if (!features.ItemMentions.Contains(entry)) features.ItemMentions.Add(entry);
             if (features.ItemMentions.Count >= 3) break;
         }
 
@@ -140,15 +143,103 @@ public static class ContentAnalyzer
         features.IsEnd = hasOutgoing == false && !features.MissingText;
         if (features.IsEnd)
         {
-            features.DeathEnd = DeathEndRe.IsMatch(raw);
-            features.VictoryEnd = VictoryEndRe.IsMatch(raw);
+            features.DeathEnd = DeathEndRe.IsMatch(text);
+            features.VictoryEnd = VictoryEndRe.IsMatch(text);
         }
 
-        var note = CombatNoteRe.Match(raw);
+        var note = CombatNoteRe.Match(text);
         if (note.Success) features.CombatNote = Normalize(note.Value);
 
-        clean.Clean = StripChoiceLines(raw);
+        clean.Clean = StripChoiceLines(text);
         return clean;
+    }
+
+    /// <summary>
+    /// Builds the choice list toward parity with <see cref="CleanedSection.References"/>:
+    /// (a) labeled end-of-line choices, (b) bare "Turn to N" footers with no label,
+    /// (c) mid-line / parenthesised references not already covered. Targets are
+    /// deduplicated (first occurrence wins) since buttons must be unique.
+    /// </summary>
+    private static void ExtractChoices(string text, CleanedSection clean)
+    {
+        var lineStarts = LineStarts(text);
+        var covered = new HashSet<(int Line, int Target)>();
+        var added = new HashSet<int>();
+
+        void Add(int line, int target, string? label)
+        {
+            if (!added.Add(target)) return;
+            covered.Add((line, target));
+            clean.Choices.Add(new CleanedChoice
+            {
+                Kind = "choice",
+                Label = string.IsNullOrWhiteSpace(label) ? null : label.Trim(),
+                Target = target,
+                Text = $"Turn to {target}",
+            });
+        }
+
+        foreach (Match m in ChoiceLineRe.Matches(text))
+        {
+            if (!int.TryParse(m.Groups["n"].Value, out var target)) continue;
+            // Line of the target number itself: the match may start on a preceding
+            // blank line when ^\s* consumes it, which would poison coverage.
+            int line = LineIndex(lineStarts, m.Groups["n"].Index);
+            var label = m.Groups["label"].Value.Trim();
+            // A vetoed continuation tail is narrative, not an option — but it still
+            // covers the reference so the mid-line pass below must not resurrect it.
+            covered.Add((line, target));
+            if (label.Length > 0 && IsContinuationLine(text, m.Groups["label"].Index)) continue;
+            Add(line, target, label.Length > 0 ? label : null);
+        }
+
+        foreach (Match m in BareExitRe.Matches(text))
+        {
+            if (!int.TryParse(m.Groups["n"].Value, out var target)) continue;
+            Add(LineIndex(lineStarts, m.Groups["n"].Index), target, null);
+        }
+
+        foreach (var re in new[] { TurnToRe, GoToRe })
+        {
+            foreach (Match m in re.Matches(text))
+            {
+                if (!int.TryParse(m.Groups[1].Value, out var target)) continue;
+                int line = LineIndex(lineStarts, m.Index);
+                if (covered.Contains((line, target)) || added.Contains(target)) continue;
+                Add(line, target, MidLineLabel(text, lineStarts, line, m.Index));
+            }
+        }
+    }
+
+    private static List<int> LineStarts(string text)
+    {
+        var starts = new List<int> { 0 };
+        for (int i = 0; i < text.Length; i++)
+            if (text[i] == '\n') starts.Add(i + 1);
+        return starts;
+    }
+
+    private static int LineIndex(List<int> lineStarts, int index)
+    {
+        int i = lineStarts.BinarySearch(index);
+        return i >= 0 ? i : ~i - 1;
+    }
+
+    /// <summary>
+    /// Derives a button label from the text preceding a mid-line reference:
+    /// strips other inline "(turn to N)" fragments and surrounding punctuation;
+    /// null when nothing meaningful remains or the prefix is narrative-length.
+    /// </summary>
+    private static string? MidLineLabel(string text, List<int> lineStarts, int line, int matchIndex)
+    {
+        int lineStart = lineStarts[line];
+        var prefix = text[lineStart..matchIndex];
+        prefix = InlineRefRe.Replace(prefix, " ");
+        prefix = prefix.Trim().Trim('(', ')', ',', ';', ':', '.', '!', '?', '-', '–', '—', '"', '\'', '“', '”');
+        if (prefix.StartsWith("or ", StringComparison.OrdinalIgnoreCase))
+            prefix = prefix[3..].TrimStart();
+        if (prefix.Length == 0 || prefix.Length > 150) return null;
+        return prefix;
     }
 
     private static void AnalyzeCombat(string raw, CleanedFeatures features)
@@ -314,7 +405,9 @@ public static class ContentAnalyzer
                 if (m.Groups["label"].Value.Length > 0 && IsContinuationLine(raw, offset + m.Groups["label"].Index))
                     kept.Add(m.Groups["label"].Value);
             }
-            else
+            // Bare "Turn to N" footers are navigation, not narrative: drop them.
+            // (Single-line match only — narrative lines are never swallowed.)
+            else if (!BareExitRe.IsMatch(lines[i]))
             {
                 kept.Add(lines[i]);
             }

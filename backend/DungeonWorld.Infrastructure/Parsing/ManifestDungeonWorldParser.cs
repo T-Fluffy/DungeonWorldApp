@@ -2,6 +2,7 @@ using System.Text.Json;
 using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Interfaces;
 using DungeonWorld.Core.Options;
+using DungeonWorld.Core.Text;
 using DungeonWorld.Infrastructure.Parsing.Reconstruction;
 using Microsoft.Extensions.Options;
 
@@ -38,16 +39,13 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual int MapPage => 1;
 
     /// <summary>
-    /// Replaces OCR-garbled "turn to" variants in assembled section content. FF03's curated
-    /// reconstruction normalized these ("Turnto261" -> "turn to 261"), so the parser must apply
-    /// the same fix to reproduce it. Left off for the other manifest books to keep their curated
-    /// output byte-for-byte (a shared normalization is a separate follow-up).
+    /// Replaces OCR-garbled "turn to" variants in assembled section content via the
+    /// shared <see cref="Core.Text.TurnToRepair"/> helper (verb variants + unambiguous
+    /// digit confusions, range-checked). Defaults on: unlike the old FF03-only regex,
+    /// the shared helper is idempotent on already-clean text, so curated output for
+    /// books whose text is already clean is unaffected.
     /// </summary>
-    protected virtual bool NormalizeTurnTos => false;
-
-    private static readonly System.Text.RegularExpressions.Regex TurnToVariantRegex = new(
-        @"(?i)\b(turnto|turmn\s*to|turm\s*to|tumn\s*to|tum\s*to|furn\s*to|fum\s*to|lurn\s*to|hurmn\s*to|turnin\s*to|on\s*to)\s*(\d{1,3})",
-        System.Text.RegularExpressions.RegexOptions.Compiled);
+    protected virtual bool NormalizeTurnTos => true;
 
     /// <summary>
     /// Optional per-book content correction applied after the manifest + normalization. FF03's
@@ -105,7 +103,7 @@ public abstract class ManifestDungeonWorldParser : IBookParser
             {
                 SectionNumber = s.SectionNumber,
                 Content = NormalizeTurnTos
-                    ? TurnToVariantRegex.Replace(s.Content, "turn to $2")
+                    ? TurnToRepair.RepairContent(s.Content, MaxSectionNumber)
                     : s.Content,
                 ImagePath = $"/assets/game-art/{Slug}/{s.ImagePath}_i0.png",
                 Choices = new List<Choice>(),

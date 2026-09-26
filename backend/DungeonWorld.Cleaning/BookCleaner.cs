@@ -9,10 +9,15 @@ namespace DungeonWorld.Cleaning;
 /// Turns a raw parsed <see cref="Book"/> into the structured <see cref="CleanedBook"/>
 /// document and (optionally) persists it to disk. Raw content is always preserved.
 /// </summary>
+/// <param name="introOverride">Canonical introduction text for the book (each
+/// adventure's intro is unique). When non-blank it replaces the OCR-derived
+/// introduction for both display and rule extraction, keeping the two in sync.
+/// Null by default: existing behavior unchanged.</param>
 public static class BookCleaner
 {
-    public static CleanedBook Clean(Book book, string sourceFile)
+    public static CleanedBook Clean(Book book, string sourceFile, string? introOverride = null)
     {
+        var intro = !string.IsNullOrWhiteSpace(introOverride) ? introOverride : book.Introduction;
         var cleaned = new CleanedBook
         {
             Meta = new CleanedMeta
@@ -25,10 +30,10 @@ public static class BookCleaner
                 MissingSectionCount = 0,
                 MapPath = string.IsNullOrWhiteSpace(book.MapPath) ? null : book.MapPath,
                 AdventureSheetPath = string.IsNullOrWhiteSpace(book.AdventureSheetPath) ? null : book.AdventureSheetPath,
-                Introduction = string.IsNullOrWhiteSpace(book.Introduction) ? null : book.Introduction,
+                Introduction = string.IsNullOrWhiteSpace(intro) ? null : intro,
             },
-            Rules = RulesExtractor.Extract(book.Introduction),
-            Sections = book.Sections.Select(ContentAnalyzer.Analyze).ToList(),
+            Rules = RulesExtractor.Extract(intro),
+            Sections = book.Sections.Select(s => ContentAnalyzer.Analyze(s, book.Sections.Count)).ToList(),
         };
 
         var missing = Enumerable.Range(1, cleaned.Meta.SectionCount)
