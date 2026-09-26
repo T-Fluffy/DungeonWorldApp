@@ -167,4 +167,35 @@ public class ChoicesParityTests
         cleaned.Clean.Should().NotContain("310-311");
         cleaned.Clean.Should().EndWith("turn to 135.");
     }
+
+    [Fact]
+    public void TriumphantlyForAnother_IsNotPlayerVictory()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(350, "He declares triumphantly himself the winner. You have lost the wager."));
+
+        cleaned.Features.IsEnd.Should().BeTrue();
+        cleaned.Features.VictoryEnd.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TriumphantPlayer_StillVictory()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(400, "I am the victor. I am triumphant. You have won."));
+
+        cleaned.Features.VictoryEnd.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BackCoverAdvert_StrippedFromClean_RawKept()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(400, "I am the victor. You have won. Send check or money order-no cash. City/State Zip"));
+
+        cleaned.Clean.Should().NotContain("money order");
+        cleaned.Clean.Should().Contain("You have won");
+        cleaned.Raw.Should().Contain("money order");
+        cleaned.Features.VictoryEnd.Should().BeTrue();
+    }
 }

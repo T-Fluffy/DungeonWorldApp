@@ -42,6 +42,18 @@ public static class ContentAnalyzer
         @"\s*\d{1,3}\s*[-–]\s*\d{1,3}\s*$",
         RegexOptions.Compiled);
 
+    // Back-cover order-form bleed ("Send check or money order ... City/State
+    // Zip") occasionally lands inside the last section during parsing. These
+    // multi-word markers never occur in genuine narrative; cut Clean there.
+    // Raw stays verbatim.
+    private static readonly string[] AdvertMarkers =
+    [
+        "Send check or money order",
+        "postage and handling",
+        "City/State Zip",
+        "Please allow 3-4 weeks for shipment",
+    ];
+
     private static readonly Regex LuckTestRe = new(
         @"\btest\s+your\s+luck\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -79,7 +91,7 @@ public static class ContentAnalyzer
         RegexOptions.Compiled);
 
     private static readonly Regex VictoryEndRe = new(
-        @"(?i)(you\s+have\s+won|you\s+win\s+the|king\s+of\s+the\s+pirates|crowned\s+the\s+new|triumph|victory\s+is\s+yours|you\s+succeed\s*[.!]?$)",
+        @"(?i)(you\s+have\s+won|you\s+win\s+the|king\s+of\s+the\s+pirates|crowned\s+the\s+new|triumph(?!antly)|victory\s+is\s+yours|you\s+succeed\s*[.!]?$)",
         RegexOptions.Compiled);
 
     private static readonly Regex CombatNoteRe = new(
@@ -157,7 +169,17 @@ public static class ContentAnalyzer
         var note = CombatNoteRe.Match(text);
         if (note.Success) features.CombatNote = Normalize(note.Value);
 
-        clean.Clean = PageRangeFooterRe.Replace(StripChoiceLines(text), "");
+        clean.Clean = StripAdverts(PageRangeFooterRe.Replace(StripChoiceLines(text), ""));
+        return clean;
+    }
+
+    private static string StripAdverts(string clean)
+    {
+        foreach (var marker in AdvertMarkers)
+        {
+            int i = clean.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (i >= 0) return Normalize(clean[..i]);
+        }
         return clean;
     }
 
