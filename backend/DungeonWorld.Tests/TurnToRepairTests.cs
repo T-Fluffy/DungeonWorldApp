@@ -16,6 +16,13 @@ public class TurnToRepairTests
     [InlineData("tumn to 32z", "turn to 322")]
     [InlineData("Turnto261", "turn to 261")]
     [InlineData("turmn to 268", "turn to 268")]
+    [InlineData("Turn o261", "turn to 261")]
+    [InlineData("turn o 148", "turn to 148")]
+    [InlineData("Turn lo 367", "turn to 367")]
+    [InlineData("turm fo 215", "turn to 215")]
+    [InlineData("fum 1o", "turn to 10")]
+    [InlineData("lum & 39", "turn to 39")]
+    [InlineData("tum to.237", "turn to 237")]
     public void RepairContent_NormalizesVerbVariantsAndDigits(string garbled, string expected)
     {
         TurnToRepair.RepairContent($"Choose {garbled}.").Should().Contain(expected);
@@ -27,6 +34,9 @@ public class TurnToRepairTests
     [InlineData("Turn to 8s", "Turn to 85")]
     [InlineData("turn to 1o3", "turn to 103")]
     [InlineData("Turn to 8o", "Turn to 80")]
+    [InlineData("Turn to Go", "Turn to 60")]
+    [InlineData("Turn bo b1", "turn to 81")]
+    [InlineData("Turn to267", "Turn to267")]
     public void RepairContent_RepairsUnambiguousDigitConfusions(string garbled, string expected)
     {
         TurnToRepair.RepairContent(garbled).Should().Be(expected);

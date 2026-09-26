@@ -22,17 +22,21 @@ namespace DungeonWorld.Core.Text;
 /// </summary>
 public static partial class TurnToRepair
 {
-    // Verb misreads observed across FF01-FF05 scans. Bare "turn" is excluded on
-    // purpose: "turn to 12" must pass through untouched (idempotency), and
-    // narrative "turn north / turn of events" must never match (no digits).
-    // The token after the verb may itself be garbled ("tumn to 32z",
-    // "fum to 1o") and is repaired by the same digit map.
-    [GeneratedRegex(@"\b(turnto|turmn\s*to|turm\s*to|tumn\s*to|tum\s*to|furn\s*to|fum\s*to|lurn\s*to|lum\s*to|hurmn\s*to|turnin\s*to|tuma?\s*to|turn\s*bo|furn\s*te|fum\s*bo|tum\s*o|turmn?\s*o)\s*([A-Za-z0-9]{1,4})\b",
+    // Verb misreads observed across FF01-FF05 scans, with an optional garbled
+    // preposition (o/te/bo/fo/lo). Bare "turn" is included so "turn o 261" and
+    // "turn lo 367" repair; narrative "turn north / turn of events" can never
+    // match because the token that follows never maps to a number, and the
+    // whole match is then left verbatim. The token itself may be garbled
+    // ("tumn to 32z", "fum to 1o"). Missing spaces ("to267"), stray periods
+    // ("to.237") and separators ("&", "(") are tolerated. Every alternative is
+    // safe by construction: the match is rewritten only when the token maps
+    // unambiguously to an in-range number.
+    [GeneratedRegex(@"\b(turnto|turmn|turm|tumn|tum|furn|fum|lurn|lum|hurmn|turnin|tuma?|turn)(?:\s*(to|bo|te|o|lo|fo))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnVerbVariantRegex();
 
     // Candidate target token after a (possibly already normalized) "turn to".
-    [GeneratedRegex(@"\bturn\s+to\s+(?:the\s+)?([A-Za-z0-9]{1,4})\b",
+    [GeneratedRegex(@"\bturn\s*to\s*\.?\s*(?:the\s+)?([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnTargetRegex();
 
@@ -42,7 +46,8 @@ public static partial class TurnToRepair
         ['l'] = '1', ['I'] = '1',
         ['z'] = '2', ['Z'] = '2',
         ['s'] = '5', ['S'] = '5',
-        ['B'] = '8',
+        ['B'] = '8', ['b'] = '8',
+        ['G'] = '6',
     };
 
     /// <summary>
@@ -57,10 +62,21 @@ public static partial class TurnToRepair
 
     private static string RepairVerb(Match m, int maxSection)
     {
-        var token = m.Groups[2].Value;
+        var token = m.Groups[3].Value;
         var repaired = MapToken(token, maxSection);
-        // Unrepairable token (e.g. "turn both 12" misfire): leave verbatim.
-        return repaired is null ? m.Value : $"turn to {repaired}";
+        // Unrepairable token: leave verbatim (e.g. narrative "turn both 12").
+        if (repaired is null) return m.Value;
+        // Already-canonical "turn to" keeps its original casing/spacing; only
+        // the token is spliced.
+        var verb = m.Groups[1].Value;
+        var prep = m.Groups[2].Success ? m.Groups[2].Value : "";
+        if (verb.Equals("turn", StringComparison.OrdinalIgnoreCase) &&
+            prep.Equals("to", StringComparison.OrdinalIgnoreCase))
+        {
+            int idx = m.Groups[3].Index - m.Index;
+            return m.Value.Remove(idx, token.Length).Insert(idx, repaired);
+        }
+        return $"turn to {repaired}";
     }
 
     /// <summary>Maps a garbled target token to digits; null when not unambiguously repairable.</summary>

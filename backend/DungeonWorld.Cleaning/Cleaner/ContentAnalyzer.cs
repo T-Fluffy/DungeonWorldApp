@@ -8,11 +8,11 @@ namespace DungeonWorld.Cleaning.Cleaner;
 public static class ContentAnalyzer
 {
     private static readonly Regex TurnToRe = new(
-        @"\bturn\s+to\s+(?:the\s+)?(\d{1,4})\b",
+        @"\bturn\s*to\s*\.?\s*(?:the\s+)?(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex GoToRe = new(
-        @"\bgo\s+to\s+(?:the\s+)?(\d{1,4})\b",
+        @"\bgo\s*to\s*\.?\s*(?:the\s+)?(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // A choice line ends with "Turn to N" (optionally prefixed by a label). The label
@@ -21,13 +21,13 @@ public static class ContentAnalyzer
     // standalone "Turn to N" footer (e.g. "...You stop and listen but can-\n\nnot hear
     // anything.\n\nTurn to 85." -> the "not hear anything" line would be stripped).
     private static readonly Regex ChoiceLineRe = new(
-        @"^\s*(?<label>.+?)[ \t]*\bturn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
+        @"^\s*(?<label>.+?)[ \t]*\bturn\s*to\s*\.?\s*(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
     // A bare "Turn to N" footer with no label (single-exit sections). ChoiceLineRe
     // requires a label, so these never became choices despite feeding References.
     private static readonly Regex BareExitRe = new(
-        @"^\s*turn\s+to\s+(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
+        @"^\s*turn\s*to\s*\.?\s*(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
     // Parenthesised fragments inside mid-line choice pairs, stripped from labels.
