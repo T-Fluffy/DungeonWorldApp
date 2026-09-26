@@ -63,13 +63,17 @@ public static partial class TurnToRepair
     private static string RepairVerb(Match m, int maxSection)
     {
         var token = m.Groups[3].Value;
+        var prep = m.Groups[2].Success ? m.Groups[2].Value : "";
+        // Bare verb with no preposition and a digit-free token is narrative, not
+        // a reference — notably the English plural "turns to ...", where the "s"
+        // would otherwise map to 5 ("stare turns to an" -> "turn to 5").
+        if (prep.Length == 0 && !token.Any(char.IsDigit)) return m.Value;
         var repaired = MapToken(token, maxSection);
         // Unrepairable token: leave verbatim (e.g. narrative "turn both 12").
         if (repaired is null) return m.Value;
         // Already-canonical "turn to" keeps its original casing/spacing; only
         // the token is spliced.
         var verb = m.Groups[1].Value;
-        var prep = m.Groups[2].Success ? m.Groups[2].Value : "";
         if (verb.Equals("turn", StringComparison.OrdinalIgnoreCase) &&
             prep.Equals("to", StringComparison.OrdinalIgnoreCase))
         {

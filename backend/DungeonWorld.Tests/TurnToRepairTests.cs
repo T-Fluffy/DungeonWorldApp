@@ -58,6 +58,9 @@ public class TurnToRepairTests
     [InlineData("turn north along the pass")]
     [InlineData("turn of events")]
     [InlineData("If you win, turn to 4.")]
+    [InlineData("His intimidating stare turns to an expression of pain.")]
+    [InlineData("She turns to stone before your eyes.")]
+    [InlineData("turn both 12")]
     public void RepairContent_IsIdempotentOnCleanText(string input)
     {
         TurnToRepair.RepairContent(input).Should().Be(input);
