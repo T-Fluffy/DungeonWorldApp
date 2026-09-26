@@ -198,4 +198,51 @@ public class ChoicesParityTests
         cleaned.Raw.Should().Contain("money order");
         cleaned.Features.VictoryEnd.Should().BeTrue();
     }
+
+    [Fact]
+    public void CuratedIntroOverride_ReplacesParsedIntroduction()
+    {
+        var book = new Book
+        {
+            Title = "FF02 Citadel of Chaos",
+            Introduction = "(frl garbled ocr junk",
+            Sections = new List<Section> { new() { SectionNumber = 1, Content = "Turn to 2." } },
+        };
+
+        var cleaned = BookCleaner.Clean(book, "FF02 Citadel of Chaos.json");
+
+        cleaned.Meta.Introduction.Should().Contain("HISTORY");
+        cleaned.Meta.Introduction.Should().Contain("Balthus Dire");
+        cleaned.Meta.Introduction.Should().NotContain("frl garbled");
+    }
+
+    [Fact]
+    public void ExplicitIntroOverride_WinsOverCurated()
+    {
+        var book = new Book
+        {
+            Title = "FF02 Citadel of Chaos",
+            Introduction = "(frl garbled ocr junk",
+            Sections = new List<Section> { new() { SectionNumber = 1, Content = "Turn to 2." } },
+        };
+
+        var cleaned = BookCleaner.Clean(book, "FF02 Citadel of Chaos.json", "Custom intro.");
+
+        cleaned.Meta.Introduction.Should().Be("Custom intro.");
+    }
+
+    [Fact]
+    public void BookWithoutCuratedIntro_KeepsParsedIntroduction()
+    {
+        var book = new Book
+        {
+            Title = "FF16 Seas of Blood",
+            Introduction = "The seaport of Tak.",
+            Sections = new List<Section> { new() { SectionNumber = 1, Content = "Turn to 2." } },
+        };
+
+        var cleaned = BookCleaner.Clean(book, "FF16 Seas of Blood.json");
+
+        cleaned.Meta.Introduction.Should().Be("The seaport of Tak.");
+    }
 }

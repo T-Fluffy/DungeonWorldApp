@@ -12,12 +12,16 @@ namespace DungeonWorld.Cleaning;
 /// <param name="introOverride">Canonical introduction text for the book (each
 /// adventure's intro is unique). When non-blank it replaces the OCR-derived
 /// introduction for both display and rule extraction, keeping the two in sync.
-/// Null by default: existing behavior unchanged.</param>
+/// When null, a curated embedded intro is used if one exists for the title,
+/// otherwise the parsed introduction. Existing behavior unchanged for books
+/// without a curated intro.</param>
 public static class BookCleaner
 {
     public static CleanedBook Clean(Book book, string sourceFile, string? introOverride = null)
     {
-        var intro = !string.IsNullOrWhiteSpace(introOverride) ? introOverride : book.Introduction;
+        var intro = !string.IsNullOrWhiteSpace(introOverride)
+            ? introOverride
+            : Text.IntroOverrides.Get(book.Title) ?? book.Introduction;
         var cleaned = new CleanedBook
         {
             Meta = new CleanedMeta

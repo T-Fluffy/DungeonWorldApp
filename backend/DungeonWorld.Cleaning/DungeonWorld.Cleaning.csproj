@@ -11,4 +11,8 @@
     <ProjectReference Include="../DungeonWorld.Core/DungeonWorld.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Text\Intros\*.txt" />
+  </ItemGroup>
+
 </Project>
