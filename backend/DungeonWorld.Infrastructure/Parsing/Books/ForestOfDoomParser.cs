@@ -36,25 +36,37 @@ public sealed class ForestOfDoomParser : ManifestDungeonWorldParser
     /// (unreachable); 306 "3g1"→391 (zero-incoming isolate). Round 2
     /// (best-model re-parse): 156 "10g"→109, 208 "9g"→99, 268 "11g"→119,
     /// 346 "11%"→111 (old-model readings confirm); 335 keeps new "326" and
-    /// 353 keeps new "130" (model disagreement, new wins); 137 reads clean
-    /// "turn to 10" (sole parent of reachable 10 — the old "1e"→16 reading
-    /// is retired); 355 "turn to iyo." is unresolvable from data (190/390/170
-    /// all connected — needs the book). The shared repair handles "rn to 55"
-    /// and "turn W307".
+    /// 353 keeps new "130" (model disagreement, new wins).
+    /// The shared repair handles "rn to 55" and "turn W307".
+    /// Round 3 (walkthrough + 600dpi evidence): 119 "(turn to go)"→90 (north
+    /// branch per walkthrough; west branch 120 already captured); 182 "7e"→70
+    /// (600dpi clean read; sole parent of unreachable 70); 221 "(urn to 19g)"
+    /// →199 (walkthrough explicit); 248 "38g"→389 (600dpi clean read);
+    /// 355 "iyo"→340 (600dpi clean read); 358 "Turn to go."→40 (walkthrough
+    /// explicit; S40's text matches the post-trap cursing).
     /// </summary>
-    protected override string PostProcessSection(int sectionNumber, string content) =>
+    public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
         {
             17 => content.Replace("Turn to 8g", "Turn to 89.", StringComparison.Ordinal),
             85 => content.Replace("turn to g.", "turn to 9.", StringComparison.Ordinal),
             87 => content.Replace("Turn to go.", "Turn to 90.", StringComparison.Ordinal),
+            119 => content.Replace("(turn to go) or head west", "(turn to 90) or head west", StringComparison.Ordinal),
             156 => content.Replace("Turn to 10g.", "Turn to 109.", StringComparison.Ordinal),
+            182 => content.Replace("turn to 7e.", "turn to 70.", StringComparison.Ordinal),
             204 => content.Replace("turn to 4o00.", "turn to 400.", StringComparison.Ordinal),
             208 => content.Replace("(tum to 9g)", "(turn to 99)", StringComparison.Ordinal),
+            221 => content.Replace("(urn to 19g).", "(turn to 199).", StringComparison.Ordinal),
             230 => content.Replace("Turn to 2go", "Turn to 290", StringComparison.Ordinal),
+            248 => content.Replace("turn to 38g)", "turn to 389)", StringComparison.Ordinal),
             268 => content.Replace("Tum to 11g", "Turn to 119.", StringComparison.Ordinal),
             306 => content.Replace("turn to 3g1.", "turn to 391.", StringComparison.Ordinal),
             346 => content.Replace("turn to 11%.", "turn to 111.", StringComparison.Ordinal),
-            _ => PostProcessContent(content),
+            355 => content.Replace("turn to iyo.", "turn to 340.", StringComparison.Ordinal),
+            358 => content.Replace("man trap. Turn to go.", "man trap. Turn to 40.", StringComparison.Ordinal),
+            _ => content,
         };
+
+    protected override string PostProcessSection(int sectionNumber, string content) =>
+        ApplySectionFixes(sectionNumber, PostProcessContent(content));
 }

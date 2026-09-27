@@ -185,6 +185,19 @@ public class ChoicesParityTests
     }
 
     [Theory]
+    [InlineData(119, "go north (turn to go) or head west", "go north (turn to 90) or head west")]
+    [InlineData(182, "turn to 7e.", "turn to 70.")]
+    [InlineData(221, "(urn to 19g).", "(turn to 199).")]
+    [InlineData(248, "turn to 38g)", "turn to 389)")]
+    [InlineData(355, "turn to iyo.", "turn to 340.")]
+    [InlineData(358, "man trap. Turn to go.", "man trap. Turn to 40.")]
+    public void ForestSectionFix_MapsEvidenceBackedTargets(int section, string garbled, string expected)
+    {
+        ForestOfDoomParser.ApplySectionFixes(section, $"prefix {garbled} suffix")
+            .Should().Be($"prefix {expected} suffix");
+    }
+
+    [Theory]
     [InlineData("Your adventure is over.")]
     [InlineData("Your adventure is at an end.")]
     [InlineData("This is the end of your adventure.")]
