@@ -232,9 +232,20 @@ public abstract class DungeonWorldBookParserBase : IBookParser
         FlushSection();
         RecoverOrphanSections(book, discardedContent);
         FillGaps(book);
+        PostProcessSections(book);
         await PersistBookAsync(book, bookTitle);
 
         return book;
+    }
+
+    /// <summary>
+    /// Book-specific content corrections applied once to the assembled sections,
+    /// after orphan recovery and gap filling (mirrors
+    /// <see cref="ManifestDungeonWorldParser.PostProcessSection"/>). Defaults to
+    /// no change.
+    /// </summary>
+    protected virtual void PostProcessSections(Book book)
+    {
     }
 
     // ---- Shared helpers -----------------------------------------------------

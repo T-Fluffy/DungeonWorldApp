@@ -3,6 +3,7 @@ using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Text;
 using DungeonWorld.Cleaning;
 using DungeonWorld.Cleaning.Cleaner;
+using DungeonWorld.Infrastructure.Parsing;
 using FluentAssertions;
 
 namespace DungeonWorld.Tests;
@@ -173,6 +174,14 @@ public class ChoicesParityTests
         cleaned.References.Should().BeEquivalentTo(new[] { 10, 55 });
         cleaned.Choices.Single(c => c.Target == 55).Label.Should().Be("If you possess the glove");
         cleaned.Choices.Single(c => c.Target == 10).Label.Should().Be("if you do not,");
+    }
+
+    [Fact]
+    public void WarlockSectionFix_MapsSouthExitTo94()
+    {
+        WarlockOfFiretopMountainParser.ApplySectionFixes(
+            359, "You are at a crossroads. To go south Turn to g4")
+            .Should().Be("You are at a crossroads. To go south Turn to 94.");
     }
 
     [Theory]

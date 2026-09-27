@@ -27,4 +27,24 @@ public sealed class WarlockOfFiretopMountainParser : DungeonWorldBookParserBase
         bookTitle.Contains("Warlock of Firetop Mountain", StringComparison.OrdinalIgnoreCase);
 
     protected override double PageNumberBand => 0.97;
+
+    /// <summary>
+    /// Hand-verified turn-to target: section 359's south exit "Turn to g4" is
+    /// section 94, currently unreachable with no other incoming edge (section
+    /// 64, the only other reading, is already well connected). Public and
+    /// static so the mapping is unit-testable without running the full
+    /// OCR-merge pipeline.
+    /// </summary>
+    public static string ApplySectionFixes(int sectionNumber, string content) =>
+        sectionNumber switch
+        {
+            359 => content.Replace("Turn to g4", "Turn to 94.", StringComparison.Ordinal),
+            _ => content,
+        };
+
+    protected override void PostProcessSections(DungeonWorld.Core.Entities.Book book)
+    {
+        foreach (var section in book.Sections)
+            section.Content = ApplySectionFixes(section.SectionNumber, section.Content);
+    }
 }
