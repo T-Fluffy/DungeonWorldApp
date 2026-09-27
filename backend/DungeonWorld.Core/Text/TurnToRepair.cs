@@ -40,6 +40,13 @@ public static partial class TurnToRepair
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnTargetRegex();
 
+    // A "turn to N" wrapped across a line break ("turn to\n55."). Joining first
+    // keeps references, choices and labels whole; without it the orphaned
+    // number fragment pollutes the next choice's label.
+    [GeneratedRegex(@"\b(?:turn|go)\s+to\s*\r?\n\s*(\d{1,4})\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex WrappedTurnToRegex();
+
     private static readonly Dictionary<char, char> DigitMap = new()
     {
         ['o'] = '0', ['O'] = '0',
@@ -56,7 +63,8 @@ public static partial class TurnToRepair
     public static string RepairContent(string content, int maxSection = 400)
     {
         if (string.IsNullOrEmpty(content)) return content;
-        var step1 = TurnVerbVariantRegex().Replace(content, m => RepairVerb(m, maxSection));
+        var step0 = WrappedTurnToRegex().Replace(content, "turn to $1");
+        var step1 = TurnVerbVariantRegex().Replace(step0, m => RepairVerb(m, maxSection));
         return TurnTargetRegex().Replace(step1, m => RepairTarget(m, maxSection));
     }
 

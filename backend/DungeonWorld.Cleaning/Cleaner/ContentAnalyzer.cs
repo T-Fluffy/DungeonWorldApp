@@ -265,11 +265,14 @@ public static class ContentAnalyzer
         var cut = -1;
         foreach (Match m in InlineRefRe.Matches(label))
             cut = m.Index + m.Length;
-        if (cut < 0) return label;
-        var tail = label[cut..].Trim().TrimStart(',', ';', ':', '.', '!', '?', '(', ')');
+        var tail = cut < 0 ? label : label[cut..];
+        tail = tail.Trim().TrimStart(',', ';', ':', '.', '!', '?', '(', ')');
         if (tail.StartsWith("or ", StringComparison.OrdinalIgnoreCase))
             tail = tail[3..].TrimStart();
         tail = tail.Trim('(', ')').Trim();
+        // Orphaned number fragment from a wrapped "turn to\nN" ("55. if you do
+        // not," when the join missed it): drop the fragment, keep the label.
+        tail = Regex.Replace(tail, @"^\d{1,4}[.!]?\s+", "");
         return tail.Length > 0 ? tail : label;
     }
 
