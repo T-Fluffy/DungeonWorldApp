@@ -152,6 +152,18 @@ public class ChoicesParityTests
         cleaned.Choices.Select(c => c.Target).Should().Equal(5);
     }
 
+    [Fact]
+    public void ChoiceLineLabel_DropsEarlierInlineRef()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(1, "If you possess a Glove of Missile Dexterity, turn to 55. if you do not, turn to 10."));
+
+        cleaned.References.Should().BeEquivalentTo(new[] { 10, 55 });
+        cleaned.Choices.Should().HaveCount(2);
+        cleaned.Choices.Single(c => c.Target == 10).Label.Should().Be("if you do not,");
+        cleaned.Choices.Single(c => c.Target == 55).Label.Should().Be("If you possess a Glove of Missile Dexterity");
+    }
+
     [Theory]
     [InlineData("Your adventure is over.")]
     [InlineData("Your adventure is at an end.")]

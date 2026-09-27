@@ -214,7 +214,7 @@ public static class ContentAnalyzer
             // Line of the target number itself: the match may start on a preceding
             // blank line when ^\s* consumes it, which would poison coverage.
             int line = LineIndex(lineStarts, m.Groups["n"].Index);
-            var label = m.Groups["label"].Value.Trim();
+            var label = TrimInlineRefs(m.Groups["label"].Value.Trim());
             // A vetoed continuation tail is narrative, not an option — but it still
             // covers the reference so the mid-line pass below must not resurrect it.
             covered.Add((line, target));
@@ -252,6 +252,25 @@ public static class ContentAnalyzer
     {
         int i = lineStarts.BinarySearch(index);
         return i >= 0 ? i : ~i - 1;
+    }
+
+    /// <summary>
+    /// Removes inline "turn to N" fragments from an end-of-line choice label so
+    /// the button shows only its own option ("If you possess X, turn to 55. if
+    /// you do not, turn to 10." labels the 10-choice "if you do not", while the
+    /// 55-choice is built separately from the preceding segment).
+    /// </summary>
+    private static string TrimInlineRefs(string label)
+    {
+        var cut = -1;
+        foreach (Match m in InlineRefRe.Matches(label))
+            cut = m.Index + m.Length;
+        if (cut < 0) return label;
+        var tail = label[cut..].Trim().TrimStart(',', ';', ':', '.', '!', '?', '(', ')');
+        if (tail.StartsWith("or ", StringComparison.OrdinalIgnoreCase))
+            tail = tail[3..].TrimStart();
+        tail = tail.Trim('(', ')').Trim();
+        return tail.Length > 0 ? tail : label;
     }
 
     /// <summary>
