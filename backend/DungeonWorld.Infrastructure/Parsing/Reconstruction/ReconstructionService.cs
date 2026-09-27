@@ -193,8 +193,8 @@ public static class ReconstructionService
         var psi = new System.Diagnostics.ProcessStartInfo(pdftoppm)
         {
             Arguments = wanted.Count > 0
-                ? $"-png -r {dpi} -f {first} -l {last} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\""
-                : $"-png -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
+                ? $"-png -gray -r {dpi} -f {first} -l {last} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\""
+                : $"-png -gray -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -210,7 +210,7 @@ public static class ReconstructionService
 
     private static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath)
     {
-        string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+        string dataPath = OcrData.DataPath();
         var result = new List<(int, string, double, string)>();
         using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);
         engine.SetVariable("debug_file", "NUL");

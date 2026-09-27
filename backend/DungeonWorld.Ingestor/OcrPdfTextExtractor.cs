@@ -91,7 +91,7 @@ public sealed class OcrPdfTextExtractor : IPdfTextExtractor
         string prefix = Path.Combine(workDir, "p");
         var psi = new ProcessStartInfo(_pdftoppmPath!)
         {
-            Arguments = $"-png -r {_dpi} \"{pdfPath}\" \"{prefix}\"",
+            Arguments = $"-png -gray -r {_dpi} \"{pdfPath}\" \"{prefix}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -116,7 +116,7 @@ public sealed class OcrPdfTextExtractor : IPdfTextExtractor
     private static List<TextBlock> OcrPage(string pngPath, TwoUpMode mode, double aspectThreshold)
     {
         var result = new List<TextBlock>();
-        string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+        string dataPath = OcrData.DataPath();
         int pageNum = int.Parse(PageFile.Match(Path.GetFileName(pngPath)).Groups[1].Value);
 
         using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);

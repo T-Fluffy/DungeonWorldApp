@@ -26,8 +26,13 @@ RUN dotnet publish "DungeonWorld.API/DungeonWorld.API.csproj" -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
+# poppler-utils (pdftoppm renders) + tesseract (OCR) for the parse pipeline.
 # Only standard libraries are needed for PdfPig.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    poppler-utils tesseract-ocr \
+    && rm -rf /var/lib/apt/lists
 COPY --from=build /app/publish .
+
 
 # Create storage structure
 RUN mkdir -p /app/Storage/Books /app/Storage/GameArt /app/Storage/ProcessedBooks /app/Storage/CleanedData

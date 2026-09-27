@@ -74,7 +74,7 @@ if (args.Length >= 3 && args[0] == "--ocr-dump")
 {
     int pageNum = int.Parse(args[1]);
     var pdf = Path.GetFullPath(args[2]);
-    string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    string dataPath = DungeonWorld.Infrastructure.Parsing.OcrData.DataPath();
     string workDir = Path.Combine(Path.GetTempPath(), "dw-ocr-dump", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(workDir);
     var finder = typeof(OcrPdfTextExtractor).GetMethod(
@@ -82,7 +82,7 @@ if (args.Length >= 3 && args[0] == "--ocr-dump")
     var pdftoppm = (string?)finder.Invoke(null, new object[] { "pdftoppm" });
     var psi = new System.Diagnostics.ProcessStartInfo(pdftoppm!)
     {
-        Arguments = $"-png -r 200 -f {pageNum} -l {pageNum} \"{pdf}\" \"{Path.Combine(workDir, "p")}\"",
+        Arguments = $"-png -gray -r 200 -f {pageNum} -l {pageNum} \"{pdf}\" \"{Path.Combine(workDir, "p")}\"",
         UseShellExecute = false,
         CreateNoWindow = true,
         RedirectStandardOutput = true,
@@ -130,7 +130,7 @@ if (args.Length >= 3 && args[0] == "--ocr-dump")
 if (args.Length >= 2 && args[0] == "--ocr-test")
 {
     var testPng = Path.GetFullPath(args[1]);
-    string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    string dataPath = DungeonWorld.Infrastructure.Parsing.OcrData.DataPath();
     using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);
     engine.SetVariable("preserve_interword_spaces", "1");
     using var img = Pix.LoadFromFile(testPng);
@@ -573,8 +573,8 @@ static List<string> RenderAllPages(string pdfPath, string workDir, int dpi, List
             .Invoke(null, new object[] { "pdftoppm" })!)
     {
         Arguments = only.Count > 0
-            ? $"-png -r {dpi} -f {first} -l {last} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\""
-            : $"-png -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
+            ? $"-png -gray -r {dpi} -f {first} -l {last} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\""
+            : $"-png -gray -r {dpi} \"{pdfPath}\" \"{Path.Combine(workDir, "p")}\"",
         UseShellExecute = false,
         CreateNoWindow = true,
         RedirectStandardOutput = true,
@@ -590,7 +590,7 @@ static List<string> RenderAllPages(string pdfPath, string workDir, int dpi, List
 
 static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath)
 {
-    string dataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    string dataPath = DungeonWorld.Infrastructure.Parsing.OcrData.DataPath();
     var result = new List<(int, string, double, string)>();
     using var engine = new TesseractEngine(dataPath, "eng", EngineMode.Default);
     engine.SetVariable("debug_file", "NUL");
