@@ -23,6 +23,9 @@ public class TurnToRepairTests
     [InlineData("fum 1o", "turn to 10")]
     [InlineData("lum & 39", "turn to 39")]
     [InlineData("tum to.237", "turn to 237")]
+    [InlineData("Tarn to 164", "turn to 164")]
+    [InlineData("fom bo 301", "turn to 301")]
+    [InlineData("tum to 8", "turn to 8")]
     public void RepairContent_NormalizesVerbVariantsAndDigits(string garbled, string expected)
     {
         TurnToRepair.RepairContent($"Choose {garbled}.").Should().Contain(expected);
