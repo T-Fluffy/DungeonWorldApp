@@ -31,7 +31,7 @@ public static partial class TurnToRepair
     // ("to.237") and separators ("&", "(") are tolerated. Every alternative is
     // safe by construction: the match is rewritten only when the token maps
     // unambiguously to an in-range number.
-    [GeneratedRegex(@"\b(turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn)(?:\s*(to|bo|te|o|lo|fo|b))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
+    [GeneratedRegex(@"\b(turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnVerbVariantRegex();
 
