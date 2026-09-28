@@ -6,18 +6,20 @@ namespace DungeonWorld.Core.Text;
 /// Repairs OCR-garbled "turn to N" navigation references shared by the parsing
 /// pipeline (parse time) and the cleaning pipeline (clean time).
 ///
-/// Two passes, both idempotent (already-valid "turn to N" is never rewritten):
+/// Three passes, all idempotent (already-valid "turn to N" is never rewritten):
 /// <list type="number">
+/// <item>Wrapped references are joined first ("turn to\n55.").</item>
 /// <item>Verb-variant normalization: OCR misreads of "turn"
 ///   (tum/fum/tumn/turm/furn/lum/turnto/turnin/...) followed by a numeric
 ///   target, including garbled prepositions ("Tum o 327", "furn te 221",
 ///   "turn bo b1" verb part), become "turn to N".</item>
-/// <item>Digit-confusion repair: unambiguous single-character OCR confusions in
-///   the target token (o/O→0, l/I→1, z/Z→2, s/S→5, B→8) are mapped back, but
-///   only when every character of the token maps and the result falls inside
-///   1..<paramref name="maxSection"/>. Ambiguous confusions (g→6/9,
-///   a/e/x) are deliberately left for per-book hand fixes — a wrong guess
-///   would plant a false graph edge, worse than a missing one.</item>
+/// <item>Digit-confusion repair on the target token: every character must map
+///   through o/O→0, l/I→1, z/Z→2, s/S→5, B/b→8, g/G→9 (or be a digit), with
+///   leading junk letters dropped ("x191"→191, "agz"→92), and the result
+///   must fall inside 1..<paramref name="maxSection"/>. The g→9 mapping is
+///   established by 20+ verified instances across FF01/FF03 (never g→6);
+///   remaining confusions (a/e/x/j/q) stay for per-book hand fixes — a wrong
+///   guess would plant a false graph edge, worse than a missing one.</item>
 /// </list>
 /// </summary>
 public static partial class TurnToRepair
@@ -40,10 +42,11 @@ public static partial class TurnToRepair
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnTargetRegex();
 
-    // A "turn to N" wrapped across a line break ("turn to\n55."). Joining first
-    // keeps references, choices and labels whole; without it the orphaned
-    // number fragment pollutes the next choice's label.
-    [GeneratedRegex(@"\b(?:turn|go)\s+to\s*\r?\n\s*(\d{1,4})\b",
+    // A "turn to N" wrapped across a line break ("turn to\n55.", also with
+    // garbled verbs). Joining first keeps references, choices and labels
+    // whole; without it the orphaned number fragment pollutes the next
+    // choice's label.
+    [GeneratedRegex(@"\b(?:turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex WrappedTurnToRegex();
 
@@ -54,7 +57,7 @@ public static partial class TurnToRepair
         ['z'] = '2', ['Z'] = '2',
         ['s'] = '5', ['S'] = '5',
         ['B'] = '8', ['b'] = '8',
-        ['G'] = '6',
+        ['g'] = '9', ['G'] = '9',
     };
 
     /// <summary>
@@ -96,13 +99,26 @@ public static partial class TurnToRepair
     {
         if (int.TryParse(token, out var already) && already >= 1 && already <= maxSection)
             return token;
+        // Strip up to two leading junk letters ("x191"→191, "agz"→92): dirt
+        // specks OCR'd as letters in front of the real number. Trailing junk
+        // is NOT stripped ("turn to 5x", ordinals like "21st" must not become
+        // references). Empty remainders stay unrepaired.
+        int start = 0;
+        while (start < token.Length && start < 2 && !char.IsAsciiDigit(token[start])
+               && !DigitMap.ContainsKey(token[start]))
+            start++;
+        if (start > 0)
+        {
+            if (start >= token.Length) return null;
+            token = token[start..];
+        }
         var mapped = new char[token.Length];
         for (int i = 0; i < token.Length; i++)
         {
             char c = token[i];
             if (c is >= '0' and <= '9') mapped[i] = c;
             else if (DigitMap.TryGetValue(c, out var d)) mapped[i] = d;
-            else return null; // ambiguous char (g/a/e/x/...) — leave for hand fix
+            else return null; // ambiguous char (a/e/x/j/...) — leave for hand fix
         }
         var repaired = new string(mapped).TrimStart('0');
         if (repaired.Length == 0) return null;

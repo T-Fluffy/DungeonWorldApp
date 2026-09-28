@@ -23,39 +23,27 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 2, 4, 5, 16 };
 
     /// <summary>
-    /// Enriches 15 sections whose final "turn to" line was dropped by the line-noise filter and
-    /// whose turn-to number was then swallowed from the following section header (or lost entirely,
-    /// as in section 50). The true targets were verified against 600 dpi OCR crops of the original
-    /// page spreads plus clean transcriptions (Scribd) and published walkthroughs. The shared OCR
-    /// prefix of each section is preserved byte-for-byte; only the truncated tail is corrected.
-    /// Each section keeps BOTH the legacy garble pattern and the current-pipeline form, so the
-    /// fix survives OCR variance across re-parses (the shared TurnToRepair normalization runs
-    /// first and may already have normalized the verb). All arms are section-scoped exact
-    /// matches. Section 192's old "Turn to 3" arm was retired: the current text reads
-    /// "Turn to SET a EERE TT Re", unresolvable from data (39/397 pending).
+    /// Hand fixes for sections whose garble survives the shared repair, written
+    /// against post-normalization text (the shared TurnToRepair pass runs first,
+    /// so patterns match its output: clean verbs, remaining digit garbles and
+    /// truncations). Targets verified against 600 dpi crops, transcriptions and
+    /// walkthroughs (arek's solution validates 95→367; narrative coherence
+    /// validates 100→276). Section 192's old "Turn to 3" arm was retired as a
+    /// substring footgun; its "Turn to SET a EERE TT Re" garble needs the book.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
         if (sectionNumber == 50) return "Turn to 164.";
         return sectionNumber switch
         {
-            40 => content.Replace("(turn 41", "(turn to 41)", StringComparison.Ordinal),
-            41 => content.Replace("Tum b 257", "Turn to 257.", StringComparison.Ordinal),
-            74 => content.Replace("Tum o 377", "Turn to 377.", StringComparison.Ordinal)
-                .Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
-            95 => content.Replace("Tum o 357,", "Turn to 367.", StringComparison.Ordinal)
-                .Replace("turn to 357.", "Turn to 367.", StringComparison.Ordinal),
-            100 => content.Replace("I not, turn 107", "If not, turn to 276.", StringComparison.Ordinal)
+            74 => content.Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
+            95 => content.Replace("turn to 357.", "Turn to 367.", StringComparison.Ordinal),
+            100 => content.Replace("I not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal)
                 .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal),
             102 => content.Replace("turn to 0.", "turn to 270.", StringComparison.Ordinal),
-            177 => content.Replace("(fum 178", "(turn to 344)?", StringComparison.Ordinal)
-                .Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
-            205 => content.Replace("turn b 368", "turn to 368.", StringComparison.Ordinal)
-                .Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
-            219 => content.Replace("Tum o 220", "Turn to 220.", StringComparison.Ordinal),
-            223 => content.Replace("Turn to 138,", "Turn to 138.", StringComparison.Ordinal),
-            229 => content.Replace("(fum to 230", "(turn to 230).", StringComparison.Ordinal)
-                .Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
+            177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
+            205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
+            229 => content.Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
             330 => Regex.Replace(
                 content.Replace("ten Lo 208", "turn to 208.", StringComparison.Ordinal),
                 @"turn to 33\b", "turn to 120."),
@@ -65,5 +53,5 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     }
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
-        ApplySectionFixes(sectionNumber, content);
+        ApplySectionFixes(sectionNumber, PostProcessContent(content));
 }

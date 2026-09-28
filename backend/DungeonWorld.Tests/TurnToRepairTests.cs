@@ -41,20 +41,25 @@ public class TurnToRepairTests
     [InlineData("Turn to 8s", "Turn to 85")]
     [InlineData("turn to 1o3", "turn to 103")]
     [InlineData("Turn to 8o", "Turn to 80")]
-    [InlineData("Turn to Go", "Turn to 60")]
+    [InlineData("Turn to Go", "Turn to 90")]
     [InlineData("Turn bo b1", "turn to 81")]
     [InlineData("Turn to267", "Turn to267")]
+    [InlineData("Turn to g9", "Turn to 99")]
+    [InlineData("Turn to 2go", "Turn to 290")]
+    [InlineData("turn to 26g", "turn to 269")]
+    [InlineData("turn to zog", "turn to 209")]
+    [InlineData("turn to x191", "turn to 191")]
+    [InlineData("turn to agz", "turn to 92")]
+    [InlineData("Turn to g4", "Turn to 94")]
     public void RepairContent_RepairsUnambiguousDigitConfusions(string garbled, string expected)
     {
         TurnToRepair.RepairContent(garbled).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("Turn to g6")]   // g -> 6 or 9: ambiguous, left for hand fix
-    [InlineData("turn to go")]   // ambiguous, left for hand fix
-    [InlineData("turn to zog")]  // ambiguous, left for hand fix
     [InlineData("Turn to agy")]  // out of range either way
     [InlineData("Turn to 497")]  // out of range for a 400-section book
+    [InlineData("turn to 5x")]   // trailing junk never stripped (counts/ordinals stay text)
     public void RepairContent_LeavesAmbiguousTargetsUntouched(string input)
     {
         TurnToRepair.RepairContent(input, maxSection: 400).Should().Be(input);
@@ -177,34 +182,33 @@ public class ChoicesParityTests
     }
 
     [Fact]
-    public void WarlockSectionFix_MapsSouthExitTo94()
+    public void WrappedGarbledVerb_JoinedBeforeExtraction()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(1, "You may either return to the ship (tum to\n184) or press onwards."));
+
+        cleaned.References.Should().Equal(184);
+    }
+
+    [Fact]
+    public void WarlockSectionFix_MapsNumberlessTurntoExit()
     {
         WarlockOfFiretopMountainParser.ApplySectionFixes(
-            359, "You are at a crossroads. To go south Turn to g4")
-            .Should().Be("You are at a crossroads. To go south Turn to 94.");
+            31, "leave through the north door. Turnto")
+            .Should().Be("leave through the north door. Turn to 90.");
     }
 
     [Theory]
-    [InlineData(16, "(turn to 26g).", "(turn to 269).")]
-    [InlineData(25, "straightaway (turn to go)", "straightaway (turn to 90)")]
-    [InlineData(31, "north door. Turnto", "north door. Turn to 90.")]
-    [InlineData(34, "Turn to g6.", "Turn to 96.")]
-    [InlineData(45, "Turn to go.", "Turn to 90.")]
-    [InlineData(162, "(turn to 6g).", "(turn to 69).")]
     [InlineData(296, "Turn to 4z2.", "Turn to 42.")]
-    [InlineData(343, "Turn to g2.", "Turn to 92.")]
-    [InlineData(388, "turn to go. Lose 1 more", "turn to 90. Lose 1 more")]
-    public void WarlockSectionFix_MapsTranscriptionBackedTargets(int section, string garbled, string expected)
+    public void WarlockSectionFix_MapsOutOfRangeToken(int section, string garbled, string expected)
     {
         WarlockOfFiretopMountainParser.ApplySectionFixes(section, $"prefix {garbled} suffix")
             .Should().Be($"prefix {expected} suffix");
     }
 
     [Theory]
-    [InlineData(119, "(turn to go) or head west", "(turn to 90) or head west")]
     [InlineData(182, "turn to 7e.", "turn to 70.")]
     [InlineData(221, "(urn to 19g).", "(turn to 199).")]
-    [InlineData(248, "turn to 38g)", "turn to 389)")]
     [InlineData(355, "turn to iyo.", "turn to 340.")]
     [InlineData(358, "man trap. Turn to go.", "man trap. Turn to 40.")]
     public void ForestSectionFix_MapsEvidenceBackedTargets(int section, string garbled, string expected)
