@@ -201,7 +201,7 @@ public class ChoicesParityTests
     }
 
     [Theory]
-    [InlineData(119, "go north (turn to go) or head west", "go north (turn to 90) or head west")]
+    [InlineData(119, "(turn to go) or head west", "(turn to 90) or head west")]
     [InlineData(182, "turn to 7e.", "turn to 70.")]
     [InlineData(221, "(urn to 19g).", "(turn to 199).")]
     [InlineData(248, "turn to 38g)", "turn to 389)")]
@@ -211,6 +211,29 @@ public class ChoicesParityTests
     {
         ForestOfDoomParser.ApplySectionFixes(section, $"prefix {garbled} suffix")
             .Should().Be($"prefix {expected} suffix");
+    }
+
+    [Theory]
+    [InlineData(95, "turn to 357.", "Turn to 367.")]
+    [InlineData(100, "1 not, turn to 107", "If not, turn to 276.")]
+    [InlineData(74, "counter-attack. Tum", "counter-attack. Turn to 377.")]
+    [InlineData(177, "down the steps (hum", "down the steps (turn to 344).")]
+    [InlineData(205, "tien Lo 300", "turn to 368")]
+    [InlineData(229, "(fur to 230", "(turn to 230).")]
+    [InlineData(330, "ten Lo 208", "turn to 208.")]
+    [InlineData(330, "turn to 33", "turn to 120.")]
+    [InlineData(354, "turn to 355", "Turn to 188.")]
+    public void CitadelSectionFix_MapsCurrentPipelineForms(int section, string garbled, string expected)
+    {
+        CitadelOfChaosParser.ApplySectionFixes(section, $"prefix {garbled} suffix")
+            .Should().Be($"prefix {expected} suffix");
+    }
+
+    [Fact]
+    public void CitadelSectionFix_DoesNotRewriteLongerNumbers()
+    {
+        CitadelOfChaosParser.ApplySectionFixes(330, "turn to 330 and turn to 335")
+            .Should().Be("turn to 330 and turn to 335");
     }
 
     [Theory]
