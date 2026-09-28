@@ -182,12 +182,23 @@ public class ChoicesParityTests
     }
 
     [Fact]
-    public void WrappedGarbledVerb_JoinedBeforeExtraction()
+    public void WrappedGarbledVerb_JoinedOnlyWhenInRange()
     {
         var cleaned = ContentAnalyzer.Analyze(
             Sec(1, "You may either return to the ship (tum to\n184) or press onwards."));
 
         cleaned.References.Should().Equal(184);
+    }
+
+    [Fact]
+    public void WrappedOutOfRangeNumber_LeftSplit()
+    {
+        // Joining "tum fo\n554" would manufacture ref 554 (no such section);
+        // the split form yields no ref instead of a false one.
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(1, "go either left (tum fo\n554, or right (turn to 249)."));
+
+        cleaned.References.Should().Equal(249);
     }
 
     [Fact]

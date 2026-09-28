@@ -66,7 +66,12 @@ public static partial class TurnToRepair
     public static string RepairContent(string content, int maxSection = 400)
     {
         if (string.IsNullOrEmpty(content)) return content;
-        var step0 = WrappedTurnToRegex().Replace(content, "turn to $1");
+        // Join a wrapped reference only when its number is a real section:
+        // otherwise ("tum fo\n554") the join manufactures a dangling ref.
+        var step0 = WrappedTurnToRegex().Replace(content, m =>
+            int.TryParse(m.Groups[1].Value, out var n) && n >= 1 && n <= maxSection
+                ? $"turn to {m.Groups[1].Value}"
+                : m.Value);
         var step1 = TurnVerbVariantRegex().Replace(step0, m => RepairVerb(m, maxSection));
         return TurnTargetRegex().Replace(step1, m => RepairTarget(m, maxSection));
     }
