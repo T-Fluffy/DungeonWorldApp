@@ -185,6 +185,22 @@ public class ChoicesParityTests
     }
 
     [Theory]
+    [InlineData(16, "(turn to 26g).", "(turn to 269).")]
+    [InlineData(25, "straightaway (turn to go)", "straightaway (turn to 90)")]
+    [InlineData(31, "north door. Turnto", "north door. Turn to 90.")]
+    [InlineData(34, "Turn to g6.", "Turn to 96.")]
+    [InlineData(45, "Turn to go.", "Turn to 90.")]
+    [InlineData(162, "(turn to 6g).", "(turn to 69).")]
+    [InlineData(296, "Turn to 4z2.", "Turn to 42.")]
+    [InlineData(343, "Turn to g2.", "Turn to 92.")]
+    [InlineData(388, "turn to go. Lose 1 more", "turn to 90. Lose 1 more")]
+    public void WarlockSectionFix_MapsTranscriptionBackedTargets(int section, string garbled, string expected)
+    {
+        WarlockOfFiretopMountainParser.ApplySectionFixes(section, $"prefix {garbled} suffix")
+            .Should().Be($"prefix {expected} suffix");
+    }
+
+    [Theory]
     [InlineData(119, "go north (turn to go) or head west", "go north (turn to 90) or head west")]
     [InlineData(182, "turn to 7e.", "turn to 70.")]
     [InlineData(221, "(urn to 19g).", "(turn to 199).")]
