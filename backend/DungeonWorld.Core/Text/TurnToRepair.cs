@@ -12,7 +12,10 @@ namespace DungeonWorld.Core.Text;
 /// <item>Verb-variant normalization: OCR misreads of "turn"
 ///   (tum/fum/tumn/turm/furn/lum/turnto/turnin/...) followed by a numeric
 ///   target, including garbled prepositions ("Tum o 327", "furn te 221",
-///   "turn bo b1" verb part), become "turn to N".</item>
+///   "turn bo b1" verb part), become "turn to N". Genuine navigation prose
+///   "turning to N" ("approach by turning to 258") normalizes too — only
+///   with an in-range numeric target, so "turning to dust/you/the door"
+///   stays verbatim.</item>
 /// <item>Verb confusion "burn to N" (FF04: "burn to 24/233/292") becomes
 ///   "turn to N" — only when the token maps to an in-range number, so
 ///   narrative "burn to ash" stays verbatim.</item>
@@ -36,7 +39,7 @@ public static partial class TurnToRepair
     // ("to.237") and separators ("&", "(") are tolerated. Every alternative is
     // safe by construction: the match is rewritten only when the token maps
     // unambiguously to an in-range number.
-    [GeneratedRegex(@"\b(turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b|w))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
+    [GeneratedRegex(@"\b(turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b|w))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnVerbVariantRegex();
 
@@ -57,7 +60,7 @@ public static partial class TurnToRepair
     // garbled verbs). Joining first keeps references, choices and labels
     // whole; without it the orphaned number fragment pollutes the next
     // choice's label.
-    [GeneratedRegex(@"\b(?:turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
+    [GeneratedRegex(@"\b(?:turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex WrappedTurnToRegex();
 

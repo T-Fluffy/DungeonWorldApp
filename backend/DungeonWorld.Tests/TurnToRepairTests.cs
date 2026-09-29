@@ -30,6 +30,8 @@ public class TurnToRepairTests
     [InlineData("Turm b 206", "turn to 206")]
     [InlineData("rn to 55", "turn to 55")]
     [InlineData("turn W307", "turn to 307")]
+    [InlineData("turning to 86", "turn to 86")]
+    [InlineData("approach it by turning to 258", "approach it by turn to 258")]
     public void RepairContent_NormalizesVerbVariantsAndDigits(string garbled, string expected)
     {
         TurnToRepair.RepairContent($"Choose {garbled}.").Should().Contain(expected);
@@ -89,6 +91,9 @@ public class TurnToRepairTests
     [InlineData("the modern tower looms")]
     [InlineData("turn west along the path")]
     [InlineData("turn white with fear")]
+    [InlineData("turning to dust")]
+    [InlineData("Turning to the door")]
+    [InlineData("turning to you")]
     public void RepairContent_IsIdempotentOnCleanText(string input)
     {
         TurnToRepair.RepairContent(input).Should().Be(input);

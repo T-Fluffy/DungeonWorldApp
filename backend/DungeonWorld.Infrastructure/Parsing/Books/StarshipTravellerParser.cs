@@ -24,16 +24,22 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
 
     /// <summary>
     /// Hand fixes for sections whose garble survives the shared repair, written
-    /// against post-normalization text. S225's "Turn ko 57" (ko never a number)
-    /// is fixed inline; S216/S238/S253 lost their exit lines to truncation, so
+    /// against post-normalization text. The "ko" preposition garble (S21, S186,
+    /// S225) and S330's "Turn 0 202" carry clean numbers; S180's "#6" is the
+    /// dull-blue planet. S216/S238/S253 lost their exit lines to truncation, so
     /// their targets come from the walkthrough transcription (arek: 216→138,
     /// 238→160, 253→109). S216's tail is additionally de-truncated ("towards
-    /// yo" → "towards you"). All four sources were verified against 600 dpi
-    /// crops before applying.
+    /// yo" → "towards you"). Every target below was verified against 600 dpi
+    /// crops, where the independent read agrees on the number (S21 "tum bo
+    /// 259", S186 "HET FO 336", S330 "Turn to 202", S180 "turning to 86").
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
         {
+            21 => content.Replace("(turn ko 259)", "(turn to 259)", StringComparison.Ordinal),
+            186 => content.Replace("Turn ko 336.", "Turn to 336.", StringComparison.Ordinal),
+            330 => content.Replace("Turn 0 202.", "Turn to 202.", StringComparison.Ordinal),
+            180 => content.Replace("turning to #6", "turning to 86", StringComparison.Ordinal),
             225 => content.Replace("Turn ko 57.", "Turn to 57.", StringComparison.Ordinal),
             216 => content.Replace("setting off towards yo", "setting off towards you. Turn to 138.", StringComparison.Ordinal),
             238 => content.Contains("Turn to 160.", StringComparison.Ordinal)
