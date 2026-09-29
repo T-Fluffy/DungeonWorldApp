@@ -6,13 +6,16 @@ namespace DungeonWorld.Core.Text;
 /// Repairs OCR-garbled "turn to N" navigation references shared by the parsing
 /// pipeline (parse time) and the cleaning pipeline (clean time).
 ///
-/// Three passes, all idempotent (already-valid "turn to N" is never rewritten):
+/// Four passes, all idempotent (already-valid "turn to N" is never rewritten):
 /// <list type="number">
 /// <item>Wrapped references are joined first ("turn to\n55.").</item>
 /// <item>Verb-variant normalization: OCR misreads of "turn"
 ///   (tum/fum/tumn/turm/furn/lum/turnto/turnin/...) followed by a numeric
 ///   target, including garbled prepositions ("Tum o 327", "furn te 221",
 ///   "turn bo b1" verb part), become "turn to N".</item>
+/// <item>Verb confusion "burn to N" (FF04: "burn to 24/233/292") becomes
+///   "turn to N" — only when the token maps to an in-range number, so
+///   narrative "burn to ash" stays verbatim.</item>
 /// <item>Digit-confusion repair on the target token: every character must map
 ///   through o/O→0, l/I→1, z/Z→2, s/S→5, B/b→8, g/G→9 (or be a digit), with
 ///   leading junk letters dropped ("x191"→191, "agz"→92), and the result
@@ -41,6 +44,14 @@ public static partial class TurnToRepair
     [GeneratedRegex(@"\bturn\s*to\s*\.?\s*(?:the\s+)?([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnTargetRegex();
+
+    // OCR verb confusion "burn to N" for "turn to N" (FF04 Starship Traveller:
+    // S35 "burn to 24", S130 "burn to 233"/"burn to 292", all navigation).
+    // Rewritten only when the token maps unambiguously to an in-range number,
+    // so narrative "burn to ash / burn to a crisp" stays verbatim.
+    [GeneratedRegex(@"\bburn\s+to\s+([A-Za-z0-9]{1,4})\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex BurnToRegex();
 
     // A "turn to N" wrapped across a line break ("turn to\n55.", also with
     // garbled verbs). Joining first keeps references, choices and labels
@@ -73,7 +84,8 @@ public static partial class TurnToRepair
                 ? $"turn to {m.Groups[1].Value}"
                 : m.Value);
         var step1 = TurnVerbVariantRegex().Replace(step0, m => RepairVerb(m, maxSection));
-        return TurnTargetRegex().Replace(step1, m => RepairTarget(m, maxSection));
+        var step1b = BurnToRegex().Replace(step1, m => RepairBurn(m, maxSection));
+        return TurnTargetRegex().Replace(step1b, m => RepairTarget(m, maxSection));
     }
 
     private static string RepairVerb(Match m, int maxSection)
@@ -129,6 +141,16 @@ public static partial class TurnToRepair
         if (repaired.Length == 0) return null;
         return int.TryParse(repaired, out var n) && n >= 1 && n <= maxSection ? repaired : null;
     }
+
+    /// <summary>
+    /// Rewrites "burn to X" as "turn to X" when X maps unambiguously to an
+    /// in-range section (the digit repair itself is left to the target pass).
+    /// Anything else ("burn to ash", "burn to a crisp") stays verbatim.
+    /// </summary>
+    private static string RepairBurn(Match m, int maxSection) =>
+        MapToken(m.Groups[1].Value, maxSection) is null
+            ? m.Value
+            : $"turn to {m.Groups[1].Value}";
 
     private static string RepairTarget(Match m, int maxSection)
     {

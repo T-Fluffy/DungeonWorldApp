@@ -57,9 +57,22 @@ public class TurnToRepairTests
     }
 
     [Theory]
+    [InlineData("burn to 24", "turn to 24")]
+    [InlineData("burn to 233", "turn to 233")]
+    [InlineData("Burn to 292", "turn to 292")]
+    public void RepairContent_NormalizesBurnTo(string garbled, string expected)
+    {
+        TurnToRepair.RepairContent(garbled).Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData("Turn to agy")]  // out of range either way
     [InlineData("Turn to 497")]  // out of range for a 400-section book
     [InlineData("turn to 5x")]   // trailing junk never stripped (counts/ordinals stay text)
+    [InlineData("burn to ash")]
+    [InlineData("burn to a crisp")]
+    [InlineData("burn the rope")]
+    [InlineData("his ship will burn to cinders")]
     public void RepairContent_LeavesAmbiguousTargetsUntouched(string input)
     {
         TurnToRepair.RepairContent(input, maxSection: 400).Should().Be(input);
