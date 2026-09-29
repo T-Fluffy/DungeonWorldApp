@@ -36,6 +36,11 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// left door "turn to gz" is 92 by dual-resolution agreement (g→9); S151's
     /// left staircase "lun lo 1g" reads clean "turn to 19"; S338's "Tum to ge"
     /// is the riverside 90 (g→9, o→0, dual-resolution agreement).
+    /// Round 3 (arek's chain + themes): S77's E.S.P. branch "lam to 187" is
+    /// the mind-read 187 (S187's theme is unmistakable; 600 dpi's "17" dropped
+    /// a digit); S99's right-hand door is the passageway-room 38 (arek's
+    /// chain is explicit and the theme fits; both OCRs misread trailing dirt
+    /// differently). S77's Creature Copy number stays open (44/94?).
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
@@ -43,10 +48,12 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
         return sectionNumber switch
         {
             74 => content.Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
-            77 => content.Replace("lurm to 355", "turn to 355", StringComparison.Ordinal),
+            77 => content.Replace("lurm to 355", "turn to 355", StringComparison.Ordinal)
+                .Replace("lam to 187", "turn to 187", StringComparison.Ordinal),
             92 => content.Replace("Turn io 136", "Turn to 156", StringComparison.Ordinal),
             95 => content.Replace("turn to 357.", "Turn to 367.", StringComparison.Ordinal),
-            99 => content.Replace("(turn to gz)", "(turn to 92)", StringComparison.Ordinal),
+            99 => content.Replace("(turn to gz)", "(turn to 92)", StringComparison.Ordinal)
+                .Replace("(turn to 3857", "(turn to 38", StringComparison.Ordinal),
             100 => content.Replace("I not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal)
                 .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal),
             102 => content.Replace("turn to 0.", "turn to 270.", StringComparison.Ordinal),
