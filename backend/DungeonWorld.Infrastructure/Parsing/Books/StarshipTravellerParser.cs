@@ -29,8 +29,9 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
     /// dull-blue planet. S216/S238/S253 lost their exit lines to truncation, so
     /// their targets come from the walkthrough transcription (arek: 216→138,
     /// 238→160, 253→109). S216's tail is additionally de-truncated ("towards
-    /// yo" → "towards you"). Every target below was verified against 600 dpi
-    /// crops, where the independent read agrees on the number (S21 "tum bo
+    /// yo" → "towards you"); S201's dice prose is corrected alongside its exit
+    /// ("double 8" → "double 6", same 600 dpi read). S315's "gu" is the keep
+    /// ("Turn to 91"). Every target below was verified against 600 dpi crops, where the independent read agrees on the number (S21 "tum bo
     /// 259", S186 "HET FO 336", S330 "Turn to 202", S180 "turning to 86").
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
@@ -38,6 +39,10 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
         {
             21 => content.Replace("(turn ko 259)", "(turn to 259)", StringComparison.Ordinal),
             186 => content.Replace("Turn ko 336.", "Turn to 336.", StringComparison.Ordinal),
+            201 => content.Replace("double 8, your Engineering Officer has died.", "double 6, your Engineering Officer has died.", StringComparison.Ordinal)
+                .Replace("to aya.", "to 172.", StringComparison.Ordinal)
+                .Replace("Turn\nto 172.", "Turn to 172.", StringComparison.Ordinal),
+            315 => content.Replace("Turn to gu.", "Turn to 91.", StringComparison.Ordinal),
             330 => content.Replace("Turn 0 202.", "Turn to 202.", StringComparison.Ordinal),
             180 => content.Replace("turning to #6", "turning to 86", StringComparison.Ordinal),
             225 => content.Replace("Turn ko 57.", "Turn to 57.", StringComparison.Ordinal),
