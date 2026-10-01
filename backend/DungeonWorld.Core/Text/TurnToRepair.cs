@@ -31,15 +31,15 @@ namespace DungeonWorld.Core.Text;
 public static partial class TurnToRepair
 {
     // Verb misreads observed across FF01-FF05 scans, with an optional garbled
-    // preposition (o/te/bo/fo/lo). Bare "turn" is included so "turn o 261" and
-    // "turn lo 367" repair; narrative "turn north / turn of events" can never
-    // match because the token that follows never maps to a number, and the
-    // whole match is then left verbatim. The token itself may be garbled
-    // ("tumn to 32z", "fum to 1o"). Missing spaces ("to267"), stray periods
-    // ("to.237") and separators ("&", "(") are tolerated. Every alternative is
-    // safe by construction: the match is rewritten only when the token maps
-    // unambiguously to an in-range number.
-    [GeneratedRegex(@"\b(turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b|w))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
+    // preposition (o/te/bo/fo/lo/tu/ta). Bare "turn" is included so "turn o
+    // 261" and "turn lo 367" repair; narrative "turn north / turn of events"
+    // can never match because the token that follows never maps to a number,
+    // and the whole match is then left verbatim. The token itself may be
+    // garbled ("tumn to 32z", "fum to 1o"). Missing spaces ("to267"), stray
+    // periods ("to.237") and separators ("&", "(") are tolerated. Every
+    // alternative is safe by construction: the match is rewritten only when
+    // the token maps unambiguously to an in-range number.
+    [GeneratedRegex(@"\b(turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b|w|tu|ta))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnVerbVariantRegex();
 
@@ -60,7 +60,7 @@ public static partial class TurnToRepair
     // garbled verbs). Joining first keeps references, choices and labels
     // whole; without it the orphaned number fragment pollutes the next
     // choice's label.
-    [GeneratedRegex(@"\b(?:turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
+    [GeneratedRegex(@"\b(?:turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w|tu|ta)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex WrappedTurnToRegex();
 
