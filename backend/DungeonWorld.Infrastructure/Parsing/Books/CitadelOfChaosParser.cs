@@ -57,6 +57,16 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// to 390 (bo-prep stable across resolutions, S390's torment scene fits
     /// talking to her, digits 3/9 stable); S235's "(tum fo 2451" is 245 plus
     /// a speck-digit on the arek-confirmed Citadel road.
+    /// Round 6 (fireside-to-library chain): S339's "Turn tor 134" is
+    /// arek-explicit (opening the shared-free "tor"-as-"to" class, kept
+    /// book-local like barn/harn); S339's "Timm tor 140" stays open (theme
+    /// clash with the tower stairs, needs the scan). S134's "(turn to 90)"
+    /// reads clean "(tum to 60)" at 600 dpi on the arek-confirmed password
+    /// branch (S90 keeps its 391 parent). S60's fight branch "(fumio 213)"
+    /// reads "(tam to 213)" at 600 dpi on the arek-confirmed fight, and its
+    /// Illusion branch "Turn ko 293" carries the verified ko-preposition to
+    /// the trident-stopping aftermath S293 confirms. S293's own "Tam fo 374"
+    /// reads "Torm to 374" at 600 dpi on arek's trident-drop link.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
@@ -64,6 +74,8 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
         return sectionNumber switch
         {
             1 => content.Replace("pose as a herbalist? turn to 28", "pose as a herbalist? turn to 261", StringComparison.Ordinal),
+            60 => content.Replace("Tusion Spell Turn ko 293", "Tusion Spell Turn to 293", StringComparison.Ordinal)
+                .Replace("(fumio 213).", "(turn to 213).", StringComparison.Ordinal),
             74 => content.Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
             77 => content.Replace("lurm to 355", "turn to 355", StringComparison.Ordinal)
                 .Replace("lam to 187", "turn to 187", StringComparison.Ordinal),
@@ -74,6 +86,7 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             100 => content.Replace("I not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal)
                 .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal),
             102 => content.Replace("turn to 0.", "turn to 270.", StringComparison.Ordinal),
+            134 => content.Replace("{turn to 90), leave them", "{turn to 60), leave them", StringComparison.Ordinal),
             151 => content.Replace("{lun lo 1g)", "{turn to 19)", StringComparison.Ordinal),
             177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
             205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
@@ -84,10 +97,12 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             261 => content.Replace("Eylitrone Turn to Ba", "Eylitrone Turn to 81", StringComparison.Ordinal)
                 .Replace("Pincus Twn te 175", "Pincus Turn to 175", StringComparison.Ordinal)
                 .Replace("Bla Turn ter 394", "Bla Turn to 394", StringComparison.Ordinal),
+            293 => content.Replace("Tam fo 374.", "turn to 374.", StringComparison.Ordinal),
             330 => Regex.Replace(
                 content.Replace("ten Lo 208", "turn to 208.", StringComparison.Ordinal),
                 @"turn to 33\b", "turn to 120."),
             338 => content.Replace("Tum to ge.", "Turn to 90.", StringComparison.Ordinal),
+            339 => content.Replace("Turn tor 134", "Turn to 134", StringComparison.Ordinal),
             354 => Regex.Replace(content, @"turn to 355\b", "Turn to 188."),
             _ => content,
         };
