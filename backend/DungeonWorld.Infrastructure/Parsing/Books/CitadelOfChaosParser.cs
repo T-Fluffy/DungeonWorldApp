@@ -50,6 +50,13 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// Pincus "Twn te 175" is 175 (S175 names Pincus explicitly); Bla "Turn
     /// ter 394" is 394 (only number left, theme fits the familiar-name
     /// reaction). S1's shelter branch ("Turn lo ze") stays open for the book.
+    /// Round 5 (Whirlwind decisions): S245's magic branch reads "turn to 37"
+    /// at 300 dpi but clean "47" at 600 dpi, and S47 is the whirlwind
+    /// spell-choice scene (S37's skin-and-hissing room is unrelated), so the
+    /// 4→3 misread is corrected; S245's talk branch "(ELrm bo 390" resolves
+    /// to 390 (bo-prep stable across resolutions, S390's torment scene fits
+    /// talking to her, digits 3/9 stable); S235's "(tum fo 2451" is 245 plus
+    /// a speck-digit on the arek-confirmed Citadel road.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
@@ -71,6 +78,9 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
             205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
             229 => content.Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
+            235 => content.Replace("(tum fo 2451", "(turn to 245", StringComparison.Ordinal),
+            245 => content.Replace("{turn to 37)?", "{turn to 47)?", StringComparison.Ordinal)
+                .Replace("(ELrm bo 390,", "(turn to 390,", StringComparison.Ordinal),
             261 => content.Replace("Eylitrone Turn to Ba", "Eylitrone Turn to 81", StringComparison.Ordinal)
                 .Replace("Pincus Twn te 175", "Pincus Turn to 175", StringComparison.Ordinal)
                 .Replace("Bla Turn ter 394", "Bla Turn to 394", StringComparison.Ordinal),
