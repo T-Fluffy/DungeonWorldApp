@@ -3,6 +3,8 @@ using DungeonWorld.Core.Entities;
 using DungeonWorld.Cleaning;
 using DungeonWorld.Cleaning.Cleaner;
 using DungeonWorld.Cleaning.Model;
+using DungeonWorld.Infrastructure.Parsing;
+using FluentAssertions;
 
 namespace DungeonWorld.Tests;
 
@@ -136,5 +138,30 @@ public class BookCleanerTests
         Assert.Equal("Round Trip", roundTripped!.Meta.Title);
         Assert.Equal(1, roundTripped.Sections[0].Number);
         Assert.True(roundTripped.Sections[0].Features.HasCombat);
+    }
+
+    [Fact]
+    public void ContentAnalyzer_StripsBackCoverBlurbFromLastSection()
+    {
+        var section = new Section
+        {
+            SectionNumber = 400,
+            Content = "With this book, unlimited power is yours. Part story, part game, " +
+                      "this is a book with a difference — one in which YOU become the hero!"
+        };
+
+        var cleaned = ContentAnalyzer.Analyze(section);
+
+        Assert.DoesNotContain("Part story", cleaned.Clean);
+        Assert.EndsWith("unlimited power is yours.", cleaned.Clean);
+    }
+
+    [Fact]
+    public void ForestOfDoom_S182_SevenE_MapsTo70()
+    {
+        const string content = "the sword slowly slides out of the rock (turn to 7e). If the " +
+                               "number rolled is greater than your current SKILL score.";
+
+        ForestOfDoomParser.ApplySectionFixes(182, content).Should().Contain("turn to 70)");
     }
 }

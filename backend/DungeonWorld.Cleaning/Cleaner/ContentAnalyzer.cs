@@ -52,6 +52,7 @@ public static class ContentAnalyzer
         "postage and handling",
         "City/State Zip",
         "Please allow 3-4 weeks for shipment",
+        "Part story, part game",
     ];
 
     private static readonly Regex LuckTestRe = new(
