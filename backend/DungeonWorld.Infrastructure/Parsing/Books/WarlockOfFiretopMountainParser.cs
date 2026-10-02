@@ -33,6 +33,7 @@ public sealed class WarlockOfFiretopMountainParser : DungeonWorldBookParserBase
     /// ends with a numberless "Turnto" (the exit number, 90, comes from the
     /// published book text), and section 296's "Turn to 4z2." maps out of range
     /// either way (422), so the drop-z reading (42) is applied explicitly.
+    /// Section 220's cut "Turnto" is the dead-end passage exit 171 (book-read).
     /// Everything else (26g/269, go/90, g6/96, 6g/69, g2/92, g4/94) is handled
     /// by the shared TurnToRepair g→9 mapping.
     /// Public and static so mappings are unit-testable without running the
@@ -42,6 +43,7 @@ public sealed class WarlockOfFiretopMountainParser : DungeonWorldBookParserBase
         sectionNumber switch
         {
             31 => content.Replace("north door. Turnto", "north door. Turn to 90.", StringComparison.Ordinal),
+            220 => content.Replace("dead-end passage. Turnto", "dead-end passage. Turn to 171.", StringComparison.Ordinal),
             296 => content.Replace("Turn to 4z2.", "Turn to 42.", StringComparison.Ordinal),
             _ => content,
         };
