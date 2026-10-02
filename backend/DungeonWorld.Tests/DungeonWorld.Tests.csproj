@@ -20,6 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="GoldenGraphs\*.refs.json" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

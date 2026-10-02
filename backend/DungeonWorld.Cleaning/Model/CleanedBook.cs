@@ -77,6 +77,12 @@ public sealed class CleanedFeatures
     public bool LargeScaleCombat { get; set; }
     public List<CleanedEnemy> Enemies { get; set; } = new();
     public string? CombatNote { get; set; }
+    /// <summary>
+    /// True when no outgoing references or choices could be extracted. This is
+    /// a structural statement, not a narrative one: sections whose exits were
+    /// lost to truncation or unmapped OCR garbles (e.g. "Turn to gu.") also
+    /// read as ends until their exits are recovered.
+    /// </summary>
     public bool IsEnd { get; set; }
     public bool DeathEnd { get; set; }
     public bool VictoryEnd { get; set; }
