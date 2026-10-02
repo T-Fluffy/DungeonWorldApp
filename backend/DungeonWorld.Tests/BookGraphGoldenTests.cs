@@ -16,13 +16,10 @@ public class BookGraphGoldenTests
 {
     /// <summary>
     /// Dangling refs that are known-open book-batch items, not regressions.
-    /// Keyed by cleaned-data file name, then section number. Remove entries
-    /// here as the book answers land (FF02 §77 Creature-Copy number).
+    /// Keyed by cleaned-data file name, then section number. Currently empty:
+    /// FF02 §77's Creature-Copy 940 was resolved to 349 by the book answer.
     /// </summary>
-    private static readonly Dictionary<string, Dictionary<int, int[]>> KnownDangling = new()
-    {
-        ["FF02 Citadel of Chaos.json"] = new() { [77] = new[] { 940 } },
-    };
+    private static readonly Dictionary<string, Dictionary<int, int[]>> KnownDangling = new();
     public static IEnumerable<object[]> GoldenResources()
     {
         var asm = typeof(BookGraphGoldenTests).Assembly;

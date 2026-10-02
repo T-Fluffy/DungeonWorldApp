@@ -49,7 +49,7 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// (arek-explicit; dual-resolution-stable with single-instance a→1);
     /// Pincus "Twn te 175" is 175 (S175 names Pincus explicitly); Bla "Turn
     /// ter 394" is 394 (only number left, theme fits the familiar-name
-    /// reaction). S1's shelter branch ("Turn lo ze") stays open for the book.
+    /// reaction). S1's shelter branch ("Turn lo ze") was resolved in round 10.
     /// Round 5 (Whirlwind decisions): S245's magic branch reads "turn to 37"
     /// at 300 dpi but clean "47" at 600 dpi, and S47 is the whirlwind
     /// spell-choice scene (S37's skin-and-hissing room is unrelated), so the
@@ -75,7 +75,7 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// about madly" continues S188's "slash out" verbatim, and S51's own
     /// 51→280 link is independently consistent — recorded as transcription
     /// evidence with the digit garble noted. S188's Strength branch and S30's
-    /// "urn boo z33" stay open (theme rejects every digit reading).
+    /// "urn boo z33" were resolved in round 10 (301 and 241 respectively).
     /// Round 8 (mid-chain garbles): S156's "Turn tor 114" is arek-explicit
     /// (second instance of the book-local tor-class opened at S339); S273's
     /// "turn to 372" answers the Scimitar password with 371, whose door-open
@@ -92,21 +92,33 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// because S371's door-opens scene has no other candidate parent, S372
     /// already has S24's Shielding setup, and S371's own "Tom to 177" exit
     /// (single-instance Tom-as-Turn) feeds S177's only live parent.
+    /// Round 10 (book answers, user-read): S10's "Turn foagy" is the pantry
+    /// 249; S77's Creature Copy "Turn to 940" is the Dire-duplicate 349
+    /// (S349's theme is unmistakable; the 940/446 garbles wobble first and
+    /// last digits); S151's right staircase "lum toagy" is the balcony 197;
+    /// S1's shelter branch "Turn lo ze" is the refused-shelter 20 (S20's
+    /// scene matches verbatim); S188's Strength branch "Turn mo 3m" is 301;
+    /// S30's fourth-hit "urn boo z33" is the sword-tangled 241; S140's
+    /// right-hand door "urn iozog" is 104, double-confirmed by arek.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
         if (sectionNumber == 50) return "Turn to 164.";
         return sectionNumber switch
         {
-            1 => content.Replace("pose as a herbalist? turn to 28", "pose as a herbalist? turn to 261", StringComparison.Ordinal),
+            1 => content.Replace("pose as a herbalist? turn to 28", "pose as a herbalist? turn to 261", StringComparison.Ordinal)
+                .Replace("Turn lo ze", "Turn to 20", StringComparison.Ordinal),
+            10 => content.Replace("Turn foagy.", "Turn to 249.", StringComparison.Ordinal),
             25 => content.Replace("Tum ts 206", "Turn to 206", StringComparison.Ordinal),
+            30 => content.Replace("urn boo z33.", "turn to 241.", StringComparison.Ordinal),
             60 => content.Replace("Tusion Spell Turn ko 293", "Tusion Spell Turn to 293", StringComparison.Ordinal)
                 .Replace("(fumio 213).", "(turn to 213).", StringComparison.Ordinal),
             68 => content.Replace("Turn io 207", "Turn to 207", StringComparison.Ordinal)
                 .Replace("Turn tr 354", "Turn to 354", StringComparison.Ordinal),
             74 => content.Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
             77 => content.Replace("lurm to 355", "turn to 355", StringComparison.Ordinal)
-                .Replace("lam to 187", "turn to 187", StringComparison.Ordinal),
+                .Replace("lam to 187", "turn to 187", StringComparison.Ordinal)
+                .Replace("Turn to 940", "Turn to 349", StringComparison.Ordinal),
             92 => content.Replace("Turn io 136", "Turn to 156", StringComparison.Ordinal),
             95 => content.Replace("turn to 357.", "Turn to 367.", StringComparison.Ordinal),
             99 => content.Replace("(turn to gz)", "(turn to 92)", StringComparison.Ordinal)
@@ -115,11 +127,14 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
                 .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal),
             102 => content.Replace("turn to 0.", "turn to 270.", StringComparison.Ordinal),
             134 => content.Replace("{turn to 90), leave them", "{turn to 60), leave them", StringComparison.Ordinal),
-            151 => content.Replace("{lun lo 1g)", "{turn to 19)", StringComparison.Ordinal),
+            140 => content.Replace("[urn iozog)?", "[turn to 104)?", StringComparison.Ordinal),
+            151 => content.Replace("{lun lo 1g)", "{turn to 19)", StringComparison.Ordinal)
+                .Replace("(lum toagy).", "(turn to 197).", StringComparison.Ordinal),
             156 => content.Replace("Turn tor 114", "Turn to 114", StringComparison.Ordinal),
             169 => content.Replace("Tum to 3317", "Turn to 317", StringComparison.Ordinal),
             177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
-            188 => content.Replace("Turn loge", "Turn to 51", StringComparison.Ordinal),
+            188 => content.Replace("Turn loge", "Turn to 51", StringComparison.Ordinal)
+                .Replace("Turn mo 3m", "Turn to 301", StringComparison.Ordinal),
             205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
             228 => content.Replace("Turn ty 2946", "Turn to 296", StringComparison.Ordinal)
                 .Replace("lien te 170", "turn to 170", StringComparison.Ordinal),
