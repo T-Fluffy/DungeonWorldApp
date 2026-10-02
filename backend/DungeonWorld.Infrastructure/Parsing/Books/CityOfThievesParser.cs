@@ -37,6 +37,16 @@ public sealed class CityOfThievesParser : ManifestDungeonWorldParser
     /// agree the have-all branch leads to the Ape Man at 201); S337's "goo"
     /// can only be 400 (900 is out of range). S230's "Be" is an o→e
     /// misread of "to" (the guardhouse at 54 follows the stair climb).
+    /// Round 2 (book answers, user-read): S167's "fun to 63" is 93, quoted
+    /// verbatim from the book; S224's "(barn to 236)" is Nicodemus 236;
+    /// S266's "(burn to ga)" and S329's west "turn to gr" are both Harbour
+    /// Street 91 (single-instance a→1, same class as FF04 S315's "gu");
+    /// S257's no-ring "tum to Fo" is the death end 70; S234's "(turn ber gl)"
+    /// is the chest-room 96 (not the beggar 91, as thematics required);
+    /// S53's cut "tum" is the no-silver branch to 39 (Serpent Queen combat
+    /// stats stay missing — only the exit is restored, no text invented).
+    /// S181 needs no change: its parsed text already reads the user's exact
+    /// sentence and extracts 159 (the empty Clean is normal choice-stripping).
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
@@ -48,20 +58,27 @@ public sealed class CityOfThievesParser : ManifestDungeonWorldParser
             25 => content.Replace("Turn ty 16g", "Turn to 169", StringComparison.Ordinal)
                 .Replace("Turn tiv 323", "Turn to 323", StringComparison.Ordinal),
             38 => content.Replace("(barn to 296)", "(turn to 296)", StringComparison.Ordinal),
+            53 => content.Replace("you wish to give away, tum", "you wish to give away, turn to 39.", StringComparison.Ordinal),
             65 => content.Replace("Turn to 31", "Turn to 319", StringComparison.Ordinal)
                 .Replace("turn to 9", "turn to 96", StringComparison.Ordinal),
             84 => content.Replace("burn bo 78", "turn to 78", StringComparison.Ordinal),
             107 => content.Replace("burn bo Bo", "turn to 78", StringComparison.Ordinal),
             108 => content.Replace("tum to 2949", "turn to 299", StringComparison.Ordinal),
             152 => content.Replace("turn to ze.", "turn to 20.", StringComparison.Ordinal),
+            167 => content.Replace("and fun to 63.", "and turn to 93.", StringComparison.Ordinal),
             180 => content.Replace("burn 181", "turn to 181", StringComparison.Ordinal),
             196 => content.Replace("tion to 148)", "turn to 148)", StringComparison.Ordinal),
             206 => content.Replace("(harn to 296)", "(turn to 296)", StringComparison.Ordinal),
+            224 => content.Replace("(barn to 236).", "(turn to 236).", StringComparison.Ordinal),
             230 => content.Replace("{turn Be 54)", "{turn to 54)", StringComparison.Ordinal),
+            234 => content.Replace("(turn\nber gl),", "(turn to 96),", StringComparison.Ordinal),
             239 => content.Replace("burn bo 204", "turn to 201", StringComparison.Ordinal),
+            257 => content.Replace("tum to Fo.", "turn to 70.", StringComparison.Ordinal),
+            266 => content.Replace("(burn to ga),", "(turn to 91),", StringComparison.Ordinal),
             304 => content.Replace("cium fo 138)", "turn to 138)", StringComparison.Ordinal),
             308 => content.Replace("turn to 18a)", "turn to 189)", StringComparison.Ordinal),
             322 => content.Replace("(barn bo g3)", "(turn to 93)", StringComparison.Ordinal),
+            329 => content.Replace("turn to gr,", "turn to 91,", StringComparison.Ordinal),
             337 => content.Replace("{turn to goo)", "{turn to 400)", StringComparison.Ordinal),
             369 => content.Replace("turn to 10 216", "turn to 216", StringComparison.Ordinal),
             376 => content.Replace("(fun 10 163", "(turn to 161", StringComparison.Ordinal),
