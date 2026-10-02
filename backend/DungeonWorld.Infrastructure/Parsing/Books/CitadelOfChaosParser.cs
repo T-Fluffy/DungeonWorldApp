@@ -41,12 +41,22 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// a digit); S99's right-hand door is the passageway-room 38 (arek's
     /// chain is explicit and the theme fits; both OCRs misread trailing dirt
     /// differently). S77's Creature Copy number stays open (44/94?).
+    /// Round 4 (arek's chain head + Kylltrog-name bluff): S1's herbalist
+    /// branch reads "turn to 28", but S28 is a fireball scene while S261 is
+    /// the Ape-Dog herb inspection, so the branch target lost its "61"
+    /// (S28 keeps its 139/350 parents). S261's three name-bluff exits resolve
+    /// by elimination against their aftermaths: Eylitrone "Turn to Ba" is 81
+    /// (arek-explicit; dual-resolution-stable with single-instance a→1);
+    /// Pincus "Twn te 175" is 175 (S175 names Pincus explicitly); Bla "Turn
+    /// ter 394" is 394 (only number left, theme fits the familiar-name
+    /// reaction). S1's shelter branch ("Turn lo ze") stays open for the book.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
         if (sectionNumber == 50) return "Turn to 164.";
         return sectionNumber switch
         {
+            1 => content.Replace("pose as a herbalist? turn to 28", "pose as a herbalist? turn to 261", StringComparison.Ordinal),
             74 => content.Replace("counter-attack. Tum", "counter-attack. Turn to 377.", StringComparison.Ordinal),
             77 => content.Replace("lurm to 355", "turn to 355", StringComparison.Ordinal)
                 .Replace("lam to 187", "turn to 187", StringComparison.Ordinal),
@@ -61,6 +71,9 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
             205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
             229 => content.Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
+            261 => content.Replace("Eylitrone Turn to Ba", "Eylitrone Turn to 81", StringComparison.Ordinal)
+                .Replace("Pincus Twn te 175", "Pincus Turn to 175", StringComparison.Ordinal)
+                .Replace("Bla Turn ter 394", "Bla Turn to 394", StringComparison.Ordinal),
             330 => Regex.Replace(
                 content.Replace("ten Lo 208", "turn to 208.", StringComparison.Ordinal),
                 @"turn to 33\b", "turn to 120."),
