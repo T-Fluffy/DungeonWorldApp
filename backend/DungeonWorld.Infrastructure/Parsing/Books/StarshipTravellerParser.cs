@@ -33,16 +33,26 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
     /// ("double 8" → "double 6", same 600 dpi read). S315's "gu" is the keep
     /// ("Turn to 91"). Every target below was verified against 600 dpi crops, where the independent read agrees on the number (S21 "tum bo
     /// 259", S186 "HET FO 336", S330 "Turn to 202", S180 "turning to 86").
+    /// Round 2 (book answers, user-read): S323's cut "Turn to" is the
+    /// onward journey 248; S26's "(fun to 202}" is the starbase (S202 freed);
+    /// S16's "(turn Eo g3)" is 93 (Eo-as-to plus g→9, same class as FF05
+    /// S322's "barn bo g3"); S178's "turn immediately to 271" resolves to the
+    /// portal aftermath (adverb shape kept book-local; S144→S178→S271 forms
+    /// the coherent portal track). S292 needs no change (refs already [233]).
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
         {
+            16 => content.Replace("(turn Eo g3)-", "(turn to 93)-", StringComparison.Ordinal),
             21 => content.Replace("(turn ko 259)", "(turn to 259)", StringComparison.Ordinal),
+            26 => content.Replace("(fun to 202}", "(turn to 202}", StringComparison.Ordinal),
+            178 => content.Replace("turn immediately to 271.", "turn to 271.", StringComparison.Ordinal),
             186 => content.Replace("Turn ko 336.", "Turn to 336.", StringComparison.Ordinal),
             201 => content.Replace("double 8, your Engineering Officer has died.", "double 6, your Engineering Officer has died.", StringComparison.Ordinal)
                 .Replace("to aya.", "to 172.", StringComparison.Ordinal)
                 .Replace("Turn\nto 172.", "Turn to 172.", StringComparison.Ordinal),
             315 => content.Replace("Turn to gu.", "Turn to 91.", StringComparison.Ordinal),
+            323 => content.Replace("You may now continue on your journey, Turn to", "You may now continue on your journey, Turn to 248.", StringComparison.Ordinal),
             330 => content.Replace("Turn 0 202.", "Turn to 202.", StringComparison.Ordinal),
             180 => content.Replace("turning to #6", "turning to 86", StringComparison.Ordinal),
             225 => content.Replace("Turn ko 57.", "Turn to 57.", StringComparison.Ordinal),
