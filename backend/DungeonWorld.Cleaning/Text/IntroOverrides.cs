@@ -19,6 +19,7 @@ public static class IntroOverrides
         ("forest of doom", "DungeonWorld.Cleaning.Text.Intros.ff03.txt"),
         ("starship traveller", "DungeonWorld.Cleaning.Text.Intros.ff04.txt"),
         ("city of thieves", "DungeonWorld.Cleaning.Text.Intros.ff05.txt"),
+        ("lizard king", "DungeonWorld.Cleaning.Text.Intros.ff07.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>

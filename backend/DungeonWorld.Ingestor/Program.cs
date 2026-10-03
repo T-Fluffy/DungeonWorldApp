@@ -275,6 +275,7 @@ var factory = new DungeonWorldParserFactory(
         new StarshipTravellerParser(storageOptions),
         new CityOfThievesParser(storageOptions),
         new DeathtrapDungeonParser(storageOptions),
+        new IslandOfTheLizardKingParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
