@@ -108,6 +108,12 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// hairbrush-offer 42 (Spikes ties gift explicitly to 42, S42's offer
     /// scene fits while S92's gremlin fluid clashes — overriding the naive
     /// gz→92 map). S292's leave-branch number is genuinely absent (book).
+    /// Round 12 (Nostalgic Bookshelf playthrough): S230's gold-nugget branch
+    /// "turn to 10 96" is 96 with a stuttered "to" misread as "10" (same
+    /// digit-letter class as FF05 S376's "fun 10 163"; S96's accepted-offering
+    /// scene fits the Fool's Gold rock exactly), and its battle branch
+    /// "(furn [ny 288)" is 288 (S288's Ape-Dog attack fits preparing for
+    /// battle). S10 keeps its other parents.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
@@ -149,6 +155,8 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             228 => content.Replace("Turn ty 2946", "Turn to 296", StringComparison.Ordinal)
                 .Replace("lien te 170", "turn to 170", StringComparison.Ordinal),
             229 => content.Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
+            230 => content.Replace("(turn to 10 96),", "(turn to 96),", StringComparison.Ordinal)
+                .Replace("(furn [ny 288).", "(turn to 288).", StringComparison.Ordinal),
             235 => content.Replace("(tum fo 2451", "(turn to 245", StringComparison.Ordinal),
             245 => content.Replace("{turn to 37)?", "{turn to 47)?", StringComparison.Ordinal)
                 .Replace("(ELrm bo 390,", "(turn to 390,", StringComparison.Ordinal),
