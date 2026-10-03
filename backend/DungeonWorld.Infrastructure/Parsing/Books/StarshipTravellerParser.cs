@@ -50,6 +50,13 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
     /// spot branch "(turn to gaz)" stays open); S98's drugged-food tail is
     /// cut mid-word in every transcript, so its arek+Lafe portal-lab exit is
     /// restored as an append (same documented pattern as S238/S253).
+    /// Round 5 (maze forks): S77's left fork reads "(turn to 322" but the
+    /// reader's exact quote gives 312 (fifth small-print 1/2 confusion in
+    /// this scan; S312's orphan status plus S322 keeping 53/293 decide it);
+    /// S214's left fork reads "(turn to 328" but arek and Steam both arrive
+    /// at 318 through it, a 328-death would kill both their runs, and no
+    /// other print points at orphaned S318 (S214's right fork stays 305
+    /// pending the reader's arrival-vs-reading answer).
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
@@ -62,11 +69,13 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
                 ? content
                 : content.TrimEnd() + " Turn to 127.",
             26 => content.Replace("(fun to 202}", "(turn to 202}", StringComparison.Ordinal),
+            77 => content.Replace("(turn to 322) or", "(turn to 312) or", StringComparison.Ordinal),
             178 => content.Replace("turn immediately to 271.", "turn to 271.", StringComparison.Ordinal),
             186 => content.Replace("Turn ko 336.", "Turn to 336.", StringComparison.Ordinal),
             201 => content.Replace("double 8, your Engineering Officer has died.", "double 6, your Engineering Officer has died.", StringComparison.Ordinal)
                 .Replace("to aya.", "to 172.", StringComparison.Ordinal)
                 .Replace("Turn\nto 172.", "Turn to 172.", StringComparison.Ordinal),
+            214 => content.Replace("(turn to 328) or", "(turn to 318) or", StringComparison.Ordinal),
             315 => content.Replace("Turn to gu.", "Turn to 91.", StringComparison.Ordinal),
             322 => content.TrimEnd().EndsWith("(turn to 323", StringComparison.Ordinal)
                 ? content.TrimEnd()[..^3] + "214"
