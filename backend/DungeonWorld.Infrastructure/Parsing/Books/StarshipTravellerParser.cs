@@ -39,17 +39,28 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
     /// S322's "barn bo g3"); S178's "turn immediately to 271" resolves to the
     /// portal aftermath (adverb shape kept book-local; S144→S178→S271 forms
     /// the coherent portal track). S292 needs no change (refs already [233]).
-    /// Round 3 (portal maze): when S322's tail is cut as "(turn to 323", the
+    /// Round 3 (portal maze): S322's right fork reads "(turn to 323", the
     /// right fork resolves to 214 per the reader, arek, and the Steam
     /// walkthrough (a weapons-resupply scene mid-maze is incoherent; S323
     /// keeps its 69/123 parents). Anchored to the cut tail so a complete
     /// "(turn to 323)" print is never touched.
+    /// Round 4 (Jolsen track opening): S11's blue-planet "(fun to 2)" and
+    /// S2's beam-down "(fun to 222)" carry the FF05-verified fun-as-turn
+    /// garble with clean numbers on the arek+Lafe walkthrough path (S11's
+    /// spot branch "(turn to gaz)" stays open); S98's drugged-food tail is
+    /// cut mid-word in every transcript, so its arek+Lafe portal-lab exit is
+    /// restored as an append (same documented pattern as S238/S253).
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
         {
+            2 => content.Replace("(fun to\n222)", "(turn to 222)", StringComparison.Ordinal),
+            11 => content.Replace("(fun to 2)", "(turn to 2)", StringComparison.Ordinal),
             16 => content.Replace("(turn Eo g3)-", "(turn to 93)-", StringComparison.Ordinal),
             21 => content.Replace("(turn ko 259)", "(turn to 259)", StringComparison.Ordinal),
+            98 => content.Contains("Turn to 127.", StringComparison.Ordinal)
+                ? content
+                : content.TrimEnd() + " Turn to 127.",
             26 => content.Replace("(fun to 202}", "(turn to 202}", StringComparison.Ordinal),
             178 => content.Replace("turn immediately to 271.", "turn to 271.", StringComparison.Ordinal),
             186 => content.Replace("Turn ko 336.", "Turn to 336.", StringComparison.Ordinal),
