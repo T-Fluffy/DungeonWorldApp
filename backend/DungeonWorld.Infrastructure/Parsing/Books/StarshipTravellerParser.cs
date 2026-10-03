@@ -39,6 +39,11 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
     /// S322's "barn bo g3"); S178's "turn immediately to 271" resolves to the
     /// portal aftermath (adverb shape kept book-local; S144→S178→S271 forms
     /// the coherent portal track). S292 needs no change (refs already [233]).
+    /// Round 3 (portal maze): when S322's tail is cut as "(turn to 323", the
+    /// right fork resolves to 214 per the reader, arek, and the Steam
+    /// walkthrough (a weapons-resupply scene mid-maze is incoherent; S323
+    /// keeps its 69/123 parents). Anchored to the cut tail so a complete
+    /// "(turn to 323)" print is never touched.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) =>
         sectionNumber switch
@@ -52,6 +57,9 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
                 .Replace("to aya.", "to 172.", StringComparison.Ordinal)
                 .Replace("Turn\nto 172.", "Turn to 172.", StringComparison.Ordinal),
             315 => content.Replace("Turn to gu.", "Turn to 91.", StringComparison.Ordinal),
+            322 => content.TrimEnd().EndsWith("(turn to 323", StringComparison.Ordinal)
+                ? content.TrimEnd()[..^3] + "214"
+                : content,
             323 => content.Replace("You may now continue on your journey, Turn to", "You may now continue on your journey, Turn to 248.", StringComparison.Ordinal),
             330 => content.Replace("Turn 0 202.", "Turn to 202.", StringComparison.Ordinal),
             180 => content.Replace("turning to #6", "turning to 86", StringComparison.Ordinal),
