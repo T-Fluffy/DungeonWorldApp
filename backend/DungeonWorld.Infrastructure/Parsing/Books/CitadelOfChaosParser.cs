@@ -118,6 +118,11 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     /// after all — S140's leave-room-to-tower-stairs text continues the
     /// fireside-joining scene naturally, tor-class matches the sibling fix,
     /// digits clean, slot certain.
+    /// Round 14 (book answer): S339's join branch is 149 after all — the
+    /// reader's "Tum to 149" plus S149's turned-away rebuff theme overrule
+    /// the clean-OCR 140 (small-print 9/0 wobble); S140 keeps its six other
+    /// parents. Both transcript variants ("Timm tor 140", "Turn to 140")
+    /// map, wobble-proofing the arm.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
@@ -176,7 +181,8 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
                 @"turn to 33\b", "turn to 120."),
             338 => content.Replace("Tum to ge.", "Turn to 90.", StringComparison.Ordinal),
             339 => content.Replace("Turn tor 134", "Turn to 134", StringComparison.Ordinal)
-                .Replace("Timm tor 140", "Turn to 140", StringComparison.Ordinal),
+                .Replace("Timm tor 140", "Turn to 149", StringComparison.Ordinal)
+                .Replace("Turn to 140", "Turn to 149", StringComparison.Ordinal),
             354 => Regex.Replace(content, @"turn to 355\b", "Turn to 188."),
             371 => content.Replace("Tom to 177.", "Turn to 177.", StringComparison.Ordinal),
             _ => content,
