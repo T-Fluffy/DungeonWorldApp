@@ -104,12 +104,12 @@ public sealed class IslandOfTheLizardKingParserTests
     }
 
     [Fact]
-    public void FireSwordPhantom_Neutralized()
+    public void FireSwordBranch_ResolvesTo111()
     {
         var content = "If vou are, turn to 1, If\nvou must fight the Lizard King with an ordinary";
         var fixed_ = IslandOfTheLizardKingParser.ApplySectionFixes(36, content);
+        Assert.Contains("turn to 111, If", fixed_);
         Assert.DoesNotContain("turn to 1,", fixed_);
-        Assert.Contains("TODO 600dpi p20", fixed_);
     }
 
     [Fact]

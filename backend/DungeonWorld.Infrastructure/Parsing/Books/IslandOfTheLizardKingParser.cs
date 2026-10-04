@@ -13,11 +13,10 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// continuous chain wherever they disagree. Shared TurnToRepair leaves tokens with
 /// unmapped letters verbatim (a/e/y/q/x), so those fixes target the raw token;
 /// fully-mapped tokens are fixed in their post-map form (og-&gt;09-&gt;9, Gg-&gt;99).
-/// Open items: S36 fire-sword branch "x1" (neutralized, would otherwise strip to
-/// phantom "turn to 1"); S185 body restored from user book text (mutant 9/8 -> 341);
-/// S213 right-branch 383 and S240 exit 139 likewise user-confirmed (S63 stays a
-/// true orphan). S35/S36 numbering stands: the boulder warning is S35 (S382 read ->
-/// 35 corroborates; print order forbids a 34/36/35/37 run).
+/// Open items: none remaining on the graph (S36 fire-sword x1 resolved to 111 at
+/// 600 dpi; S185 body restored from user book text; S213 right 383 and S240 exit
+/// 139 likewise user-confirmed). S35/S36 numbering stands: the boulder warning is
+/// S35 (S382 read -> 35 corroborates; print order forbids a 34/36/35/37 run).
 /// </summary>
 public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
 {
@@ -92,13 +91,13 @@ public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
             content += " 147).";
         if (sectionNumber == 240 && content.TrimEnd().EndsWith("(turn to", StringComparison.OrdinalIgnoreCase))
             content += " 139).";
-        // S36 fire-sword branch "turn to x1": shared repair strips the leading x to
-        // phantom "turn to 1" (S1 boat), wrapped across the line break. No adjudicated
-        // target exists, so neutralize the phantom instead of planting a false S36->S1 edge.
+        // S36 fire-sword branch: 300 dpi read "x1" (shared repair strips the leading x
+        // to phantom "turn to 1"); 600 dpi crop reads "111" unambiguously, and the
+        // content fits (fire sword vs fire sword = the SKILL 12 duel, ordinary -> 346).
         if (sectionNumber == 36)
             content = System.Text.RegularExpressions.Regex.Replace(content,
                 @"turn to 1,\s*If",
-                "turn to [x1: section number illegible in scan; TODO 600dpi p20]. If",
+                "turn to 111, If",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         // Restored exit tails: short trailing fragments the transcript carries but
         // TrimContent drops as noise (low letter ratio / bare number), orphaning the
