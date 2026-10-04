@@ -13,10 +13,11 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// continuous chain wherever they disagree. Shared TurnToRepair leaves tokens with
 /// unmapped letters verbatim (a/e/y/q/x), so those fixes target the raw token;
 /// fully-mapped tokens are fixed in their post-map form (og-&gt;09-&gt;9, Gg-&gt;99).
-/// Open items (600 dpi re-OCR): S36 fire-sword branch "x1" (neutralized, would
-/// otherwise strip to phantom "turn to 1"); S185 body lost in the p54R art gap
-/// (S279 roll 1-2 dangles onto the empty slice); S213 right-branch and S240 exit
-/// cut off mid-sentence (S241's header would merge into S240 as phantom 241).
+/// Open items: S36 fire-sword branch "x1" (neutralized, would otherwise strip to
+/// phantom "turn to 1"); S185 body restored from user book text (mutant 9/8 -> 341);
+/// S213 right-branch 383 and S240 exit 139 likewise user-confirmed (S63 stays a
+/// true orphan). S35/S36 numbering stands: the boulder warning is S35 (S382 read ->
+/// 35 corroborates; print order forbids a 34/36/35/37 run).
 /// </summary>
 public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
 {
@@ -57,9 +58,13 @@ public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
         // All restores below ASSIGN (never return early) so the per-section switch
         // arms still run afterwards (e.g. S334 needs both its tail restore and its
         // hollow-target fix; S297 needs both its west-exit restore and boots fix).
-        if (sectionNumber == 213 && content.TrimEnd().EndsWith("turn to 214", StringComparison.OrdinalIgnoreCase))
-            content = content.TrimEnd()[..^"turn to 214".Length].TrimEnd()
-                + " [right-branch target cut off in scan; TODO 600dpi p60].";
+        // S185's body is lost in the p54R art gap (empty slice): restore from the
+        // user's book text (mutant fight, win -> 341, parented by S279 roll 1-2).
+        if (sectionNumber == 185 && string.IsNullOrWhiteSpace(content))
+            content = "With your sword raised high, you lunge at your nearest foe. It is a mutant LIZARD MAN.\n"
+                + "MUTANT LIZARD MAN\nSKILL 9 STAMINA 8\nIf you win, turn to 341.";
+        if (sectionNumber == 213 && content.TrimEnd().EndsWith("turn right, turn", StringComparison.OrdinalIgnoreCase))
+            content += " to 383.";
         if (sectionNumber == 86 && content.TrimEnd().EndsWith("eat them, turn", StringComparison.OrdinalIgnoreCase))
             content = content.TrimEnd()[..^"turn".Length] + "turn to 203.";
         if (sectionNumber == 193 && content.TrimEnd().EndsWith("(turn", StringComparison.OrdinalIgnoreCase))
@@ -85,9 +90,8 @@ public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
             content += " 373.";
         if (sectionNumber == 368 && content.TrimEnd().EndsWith("(turn to", StringComparison.OrdinalIgnoreCase))
             content += " 147).";
-        if (sectionNumber == 240 && content.TrimEnd().EndsWith("(turn to 241", StringComparison.OrdinalIgnoreCase))
-            content = content.TrimEnd()[..^"(turn to 241".Length].TrimEnd()
-                + " [exit cut off in scan (cross archway like S62, provisionally 139); TODO 600dpi p67].";
+        if (sectionNumber == 240 && content.TrimEnd().EndsWith("(turn to", StringComparison.OrdinalIgnoreCase))
+            content += " 139).";
         // S36 fire-sword branch "turn to x1": shared repair strips the leading x to
         // phantom "turn to 1" (S1 boat), wrapped across the line break. No adjudicated
         // target exists, so neutralize the phantom instead of planting a false S36->S1 edge.
@@ -124,6 +128,7 @@ public sealed class IslandOfTheLizardKingParser : ManifestDungeonWorldParser
         {
             // Arek-proven chain fixes (sol6 visits both sides of each edge).
             4 => content.Replace("turn to 10", "turn to 101", StringComparison.OrdinalIgnoreCase), // T-junction left
+            1 => content.Replace("tam to 33", "turn to 33", StringComparison.OrdinalIgnoreCase), // right cove (tam verb miss)
             7 => content.Replace("urn to 317", "turn to 317", StringComparison.OrdinalIgnoreCase), // follow hopper
             26 => content.Replace("Tuen to og", "turn to 94", StringComparison.OrdinalIgnoreCase), // pouch boots (S259 prints 94)
             39 => content.Replace("turn to 20", "turn to 207", StringComparison.OrdinalIgnoreCase), // bitten -> poison kills Grannit

@@ -113,11 +113,10 @@ public sealed class IslandOfTheLizardKingParserTests
     }
 
     [Fact]
-    public void CutRightBranch_StrippedWithTodo()
+    public void CutRightBranch_RestoredFromBook()
     {
-        var content = "If you wish to turn right, turn to 214";
+        var content = "If you wish to turn right, turn";
         var fixed_ = IslandOfTheLizardKingParser.ApplySectionFixes(213, content);
-        Assert.DoesNotContain("turn to 214", fixed_);
-        Assert.Contains("TODO 600dpi p60", fixed_);
+        Assert.EndsWith("turn right, turn to 383.", fixed_);
     }
 }
