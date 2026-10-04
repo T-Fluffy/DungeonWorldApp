@@ -277,6 +277,7 @@ var factory = new DungeonWorldParserFactory(
         new DeathtrapDungeonParser(storageOptions),
         new IslandOfTheLizardKingParser(storageOptions),
         new ScorpionSwampParser(storageOptions),
+        new CavernsOfTheSnowWitchParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
