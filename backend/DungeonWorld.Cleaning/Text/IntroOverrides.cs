@@ -24,6 +24,7 @@ public static class IntroOverrides
         ("snow witch", "DungeonWorld.Cleaning.Text.Intros.ff09.txt"),
         ("house of hell", "DungeonWorld.Cleaning.Text.Intros.ff10.txt"),
         ("talisman of death", "DungeonWorld.Cleaning.Text.Intros.ff11.txt"),
+        ("space assassin", "DungeonWorld.Cleaning.Text.Intros.ff12.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
