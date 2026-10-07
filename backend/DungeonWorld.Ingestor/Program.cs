@@ -282,6 +282,7 @@ var factory = new DungeonWorldParserFactory(
         new TalismanOfDeathParser(storageOptions),
         new SpaceAssassinParser(storageOptions),
         new FreewayFighterParser(storageOptions),
+        new TempleOfTerrorParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
