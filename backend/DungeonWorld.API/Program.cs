@@ -74,6 +74,7 @@ builder.Services.AddScoped<IBookParser, TalismanOfDeathParser>();
 builder.Services.AddScoped<IBookParser, SpaceAssassinParser>();
 builder.Services.AddScoped<IBookParser, FreewayFighterParser>();
 builder.Services.AddScoped<IBookParser, TempleOfTerrorParser>();
+builder.Services.AddScoped<IBookParser, RingsOfKetherParser>();
 // The factory also injects the fallback by its concrete type.
 builder.Services.AddScoped<DefaultDungeonWorldParser>();
 // Factory: specific parser -> default rule-based parser

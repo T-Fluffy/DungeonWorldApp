@@ -283,6 +283,7 @@ var factory = new DungeonWorldParserFactory(
         new SpaceAssassinParser(storageOptions),
         new FreewayFighterParser(storageOptions),
         new TempleOfTerrorParser(storageOptions),
+        new RingsOfKetherParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);

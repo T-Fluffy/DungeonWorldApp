@@ -27,6 +27,7 @@ public static class IntroOverrides
         ("space assassin", "DungeonWorld.Cleaning.Text.Intros.ff12.txt"),
         ("freeway fighter", "DungeonWorld.Cleaning.Text.Intros.ff13.txt"),
         ("temple of terror", "DungeonWorld.Cleaning.Text.Intros.ff14.txt"),
+        ("rings of kether", "DungeonWorld.Cleaning.Text.Intros.ff15.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
