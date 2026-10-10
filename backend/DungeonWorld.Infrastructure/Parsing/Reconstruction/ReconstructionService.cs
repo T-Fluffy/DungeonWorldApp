@@ -57,7 +57,8 @@ public static class ReconstructionService
     /// </summary>
     public static List<Section> ApplyManifest(
         IReadOnlyList<OcrLine> lineStream,
-        IReadOnlyList<ManifestEntry> entries)
+        IReadOnlyList<ManifestEntry> entries,
+        bool keepExitFragments = false)
     {
         // Pure-illustration halves carry only garbled captions (few wordy lines);
         // a spanning section flows from the previous R half to the next text half,
@@ -101,7 +102,7 @@ public static class ReconstructionService
             }
 
             var raw = filtered.GetRange(startIdx, Math.Max(0, endIdx - startIdx)).Select(l => l.Text).ToList();
-            var content = TrimContent(raw);
+            var content = TrimContent(raw, keepExitFragments);
             sections.Add(new Section
             {
                 SectionNumber = e.Number,
@@ -129,7 +130,7 @@ public static class ReconstructionService
         return sb.ToString().Trim();
     }
 
-    public static List<string> TrimContent(List<string> raw)
+    public static List<string> TrimContent(List<string> raw, bool keepExitFragments = false)
     {
         var list = new List<string>();
         foreach (var line in raw)
@@ -141,11 +142,31 @@ public static class ReconstructionService
                 list[^1] = list[^1].TrimEnd() + " " + t;
                 continue;
             }
+            if (keepExitFragments && IsExitFragment(t)) { list.Add(t); continue; }
             if (IsNoiseLine(t)) continue;
             list.Add(t);
         }
-        while (list.Count > 0 && IsHeaderLine(list[^1])) list.RemoveAt(list.Count - 1);
+        while (list.Count > 0 && IsHeaderLine(list[^1])
+                   && !(keepExitFragments && IsExitFragment(list[^1])))
+            list.RemoveAt(list.Count - 1);
         return list;
+    }
+
+    /// <summary>
+    /// A line that carries only an exit: a bare number, or a mangled preposition plus a number,
+    /// such as "298." or "to 298." or "fo 236". <see cref="IsNoiseLine"/> discards these because their
+    /// letter-to-character ratio falls under 0.4, which silently deletes the exit whenever the
+    /// preceding line ends on a dangling verb ("...ready for action. Tum" + "to 298."). Hard scans
+    /// opt in via <c>keepExitFragments</c> so the number survives; other books keep the default.
+    /// </summary>
+    public static bool IsExitFragment(string line)
+    {
+        string t = line.Trim();
+        if (t.Length == 0 || t.Length > 16) return false;
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            t,
+            @"^[\(\[\{<""'”]{0,2}(?:(?:to|fo|io|bo|bn|tn|tor|tir|ta|ko|tr|go|0)\s*)?\d{1,4}[.,;:)\]\}>\-‐–—""'”]{0,3}$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
     public static bool DanglingTurnTo(string line)

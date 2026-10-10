@@ -284,6 +284,7 @@ var factory = new DungeonWorldParserFactory(
         new FreewayFighterParser(storageOptions),
         new TempleOfTerrorParser(storageOptions),
         new RingsOfKetherParser(storageOptions),
+        new AppointmentWithFearParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
@@ -683,7 +684,9 @@ static bool PrintReport(string title, string parserId, Book book, CleanedBook cl
     var totalChars = present.Sum(s => s.Content.Length);
 
     var choices = book.Sections.SelectMany(s => s.Choices).ToList();
-    var outOfRange = choices.Count(c => c.TargetSectionNumber < 1 || c.TargetSectionNumber > MaxSection);
+    // Larger books (FF17 has 440 sections) legitimately exceed the 400 cap used
+    // by the OCR merge path, so never flag the book's own high references.
+    var outOfRange = choices.Count(c => c.TargetSectionNumber < 1 || c.TargetSectionNumber > Math.Max(MaxSection, maxNum));
     var missingSet = book.Sections.Where(s => s.Content == Placeholder).Select(s => s.SectionNumber).ToHashSet();
     var toMissing = choices.Count(c => missingSet.Contains(c.TargetSectionNumber));
 

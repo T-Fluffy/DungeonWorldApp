@@ -62,6 +62,24 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual string PostProcessSection(int sectionNumber, string content) =>
         PostProcessContent(content);
 
+    /// <summary>
+    /// Opt-in enhanced OCR for the hard scans only (FF13/FF15/FF17). When set, the transcript is
+    /// produced by <c>HardScanReconstruction</c>, which keeps this class's 300 dpi / PageSegMode.Auto
+    /// pass as the line-index backbone (so every manifest's {n,page,side,line} still resolves exactly
+    /// as before) and overlays a higher-quality second pass aligned by (page, side, Top).
+    /// Defaults to <c>false</c>: every other book keeps the original single-pass transcript.
+    /// </summary>
+    protected virtual bool UseHardScanOcr => false;
+
+    /// <summary>
+    /// Book-scoped exit repair for the hard scans, applied after <see cref="PostProcessSection"/> and
+    /// the shared <see cref="TurnToRepair"/>. Deliberately not an extension of the shared repair:
+    /// <c>TurnToRepair</c> also runs inside the DataCleaner for every book, so widening it would
+    /// rewrite curated text in books that are already complete. Rules are range-checked against
+    /// <see cref="MaxSectionNumber"/>, so a rule valid for FF17 (440) cannot leak into FF13 (380).
+    /// </summary>
+    protected virtual string RepairExits(int sectionNumber, string content) => content;
+
     /// <summary>Static JSON serializer options mirroring the block pipeline's persistence format.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -88,8 +106,11 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         int firstPage = Math.Min(IntroPages.DefaultIfEmpty(MapPage).Min(), entries.Min(e => e.Page));
         int lastPage = Math.Max(IntroPages.DefaultIfEmpty(MapPage).Max(), entries.Max(e => e.Page));
 
-        var lines = ReconstructionService.OcrPdf(fullPdfPath, Dpi, Enumerable.Range(firstPage, lastPage - firstPage + 1).ToList());
-        var sections = ReconstructionService.ApplyManifest(lines, entries);
+        var pages = Enumerable.Range(firstPage, lastPage - firstPage + 1).ToList();
+        var lines = UseHardScanOcr
+            ? HardScanReconstruction.OcrPdfMerged(fullPdfPath, Dpi, pages, MaxSectionNumber)
+            : ReconstructionService.OcrPdf(fullPdfPath, Dpi, pages);
+        var sections = ReconstructionService.ApplyManifest(lines, entries, UseHardScanOcr);
         string intro = ReconstructionService.BuildIntroduction(lines, IntroPages);
 
         var book = new Book
@@ -112,7 +133,10 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         };
 
         foreach (var s in book.Sections)
+        {
             s.Content = PostProcessSection(s.SectionNumber, s.Content);
+            s.Content = RepairExits(s.SectionNumber, s.Content);
+        }
 
         FillGaps(book);
         await PersistBookAsync(book);

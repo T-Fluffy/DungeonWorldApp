@@ -20,6 +20,18 @@
       <Link>ocrdata\eng.user-words</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Isolated vocabulary for the hard scans (FF13/FF15/FF17) only. Re-uses the same
+         traineddata via <Link> so no second copy of the model is deployed, and leaves the
+         shared ocrdata folder - and therefore every already-completed book - untouched.
+         Selected via OcrData.DataPath("ocrdata_hard") from HardScanReconstruction. -->
+    <Content Include="ocrdata\eng.traineddata">
+      <Link>ocrdata_hard\eng.traineddata</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ocrdata_hard\eng.user-words">
+      <Link>ocrdata_hard\eng.user-words</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
