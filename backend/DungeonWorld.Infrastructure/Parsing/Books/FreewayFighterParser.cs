@@ -25,10 +25,27 @@ public sealed class FreewayFighterParser : ManifestDungeonWorldParser
     protected override string Slug => "ff13_freeway_fighter";
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff13.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 2, 14, 15 };
-    protected override int MaxSectionNumber => 380;
+    protected override int MaxSectionNumber => MaxSections;
+
+    /// <summary>FF13 runs to 380 sections.</summary>
+    private const int MaxSections = 380;
+
+    /// <summary>
+    /// Hard scan: keep the exit fragments the noise filter used to delete, and allow the hardened
+    /// second OCR pass to recover a lost exit. The curated sol12 fixes above stay authoritative and
+    /// run first; this only fills gaps they could not reach generically.
+    /// </summary>
+    protected override bool UseHardScanOcr => true;
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
+
+    /// <summary>FF13-scoped exit repair, bounded to this book's 380 sections.</summary>
+    protected override string RepairExits(int sectionNumber, string content) => RepairExits(content);
+
+    /// <summary>Exposed for tests.</summary>
+    public static string RepairExits(string content) =>
+        HardScanExitRepair.Repair(content, MaxSections);
 
     public static string ApplySectionFixes(int sectionNumber, string content)
     {

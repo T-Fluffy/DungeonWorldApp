@@ -80,4 +80,43 @@ public sealed class FreewayFighterParserTests
         var fixed_ = FreewayFighterParser.ApplySectionFixes(section, "Body text without exits.");
         Assert.Contains(expected, fixed_);
     }
+
+    /// <summary>
+    /// FF13 is one of the three "hard scans": it opts into the isolated
+    /// <c>HardScanExitRepair</c> pass, which runs after the curated sol12 fixes above.
+    /// These pin the book-specific bounds so an FF17 rule cannot leak in.
+    /// </summary>
+    [Theory]
+    [InlineData("You hold the wheel steady. Turn to 316.", "Turn to 316.")]
+    [InlineData("the barrier lifts. Turn now to 341.", "Turn to 341.")]
+    [InlineData("you squeeze past. urn to 132", "turn to 132")]
+    [InlineData("the engine dies. Turn io 57.", "Turn to 57.")]
+    public void RepairExits_FixesRecoverableGarble(string input, string expected) =>
+        Assert.Contains(expected, FreewayFighterParser.RepairExits(input));
+
+    [Fact]
+    public void RepairExits_IsBoundedToFF13s380Sections()
+    {
+        // 400 is a valid FF15/FF17 section but FF13 stops at 380, so it must not gain the edge.
+        Assert.DoesNotContain("[unclear]", FreewayFighterParser.RepairExits("You turn to 379."));
+        Assert.Contains("[unclear]", FreewayFighterParser.RepairExits("You turn to 400."));
+    }
+
+    [Fact]
+    public void RepairExits_LeavesOrdinaryProseAlone()
+    {
+        const string prose = "You drive in to the lay-by and slow down to 5 mph. Turn to 336.";
+        Assert.Equal(prose, FreewayFighterParser.RepairExits(prose));
+    }
+
+    /// <summary>
+    /// Ordering matters: the curated sol12 fixes are authoritative and must still win over the
+    /// generic hard-scan repair (e.g. S34 rewrites a misread "turn to soz" to section 302).
+    /// </summary>
+    [Fact]
+    public void CuratedSol12Fixes_StillApply()
+    {
+        var fixed_ = FreewayFighterParser.ApplySectionFixes(34, "you talk to her (turn to soz)");
+        Assert.Contains("turn to 302", fixed_);
+    }
 }
