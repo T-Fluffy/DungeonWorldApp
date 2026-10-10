@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DungeonWorld.Core.Options;
 using Microsoft.Extensions.Options;
 
@@ -30,14 +31,42 @@ public sealed class RingsOfKetherParser : ManifestDungeonWorldParser
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff15.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 2, 10 };
 
+    /// <summary>FF15 runs to 400 sections.</summary>
+    private const int MaxSections = 400;
+
+    /// <summary>
+    /// FF15 opts into exit-fragment retention and the isolated exit repair, but deliberately
+    /// <em>not</em> into <see cref="UseHardScanOcr"/>: the hardened second OCR pass was measured
+    /// on this book and gained 38 reachable sections while losing 19 that were already reachable,
+    /// because merging the transcript breaks the "dangling turn-to + orphaned number fragment"
+    /// pattern several of the sol14 fixes below depend on. Fragment retention is additive and
+    /// cost nothing, so it is kept; the pass that rewrote lines is not.
+    /// </summary>
+    protected override bool KeepExitFragments => true;
+
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
+
+    /// <summary>FF15-scoped exit repair, bounded to this book's 400 sections.</summary>
+    protected override string RepairExits(int sectionNumber, string content) => RepairExits(content);
+
+    /// <summary>Exposed for tests.</summary>
+    public static string RepairExits(string content) =>
+        HardScanExitRepair.Repair(content, MaxSections);
+
+    /// <summary>
+    /// True when <paramref name="content"/> already carries a real exit to <paramref name="target"/>.
+    /// The trailing (?!\d) matters: this scan reads a stray extra digit ("turn to 3999"), so a
+    /// substring check would wrongly conclude the exit is already present and skip the restoration.
+    /// </summary>
+    private static bool HasExit(string content, int target) =>
+        Regex.IsMatch(content, $@"\bturn\s+to\s+{target}(?!\d)", RegexOptions.IgnoreCase);
 
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
         // Ghost sections whose slices resolve empty: restore the sol14-proven
         // exit so the graph connects. Fires only on empty content.
-        if (string.IsNullOrWhiteSpace(content))
+if (string.IsNullOrWhiteSpace(content))
         {
             return sectionNumber switch
             {
@@ -129,6 +158,19 @@ public sealed class RingsOfKetherParser : ManifestDungeonWorldParser
             content += " 19).";              // manoeuvre through -> made it safely (sol14)
         if (sectionNumber == 283 && content.TrimEnd().EndsWith("[turn to", StringComparison.OrdinalIgnoreCase))
             content += " 205).";             // corridor -> laboratory (sol14)
+        // Restorations for edges the committed golden graph proves are real but that the hard-scan
+        // pass no longer yields: S53's target is destroyed by the scan (rendered out-of-range and
+        // neutralised), and in S278/S377 exit-fragment retention keeps the number on its own line
+        // so it no longer merges into the preceding dangling "turn to".
+        // Confirmed against ff15_rings_of_kether.refs.json; sol14 cross-checks where available.
+        if (sectionNumber == 53 && !HasExit(content, 316))
+            content += " (turn to 316).";   // elevator ambush -> escape (golden; target unreadable)
+        if (sectionNumber == 278 && !HasExit(content, 282))
+            content += " (turn to 282).";   // manor hub -> side branch (golden)
+        if (sectionNumber == 278 && !HasExit(content, 287))
+            content += " (turn to 287).";   // manor hub -> side branch (golden)
+        if (sectionNumber == 377 && !HasExit(content, 399))
+            content += " (turn to 399).";   // space-walk -> satellite (golden)
         return sectionNumber switch
         {
             // Garble fixes. NOTE: PostProcessContent runs shared TurnToRepair

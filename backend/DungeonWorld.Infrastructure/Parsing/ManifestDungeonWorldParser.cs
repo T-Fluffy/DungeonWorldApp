@@ -72,6 +72,15 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual bool UseHardScanOcr => false;
 
     /// <summary>
+    /// Retains exit fragments ("to 298.") that <c>IsNoiseLine</c> would otherwise delete, so an
+    /// exit survives when the preceding line ends on a dangling verb. Additive only: it can add a
+    /// line, never rewrite one. Defaults to <see cref="UseHardScanOcr"/> so most books need a single
+    /// switch, but FF15 separates the two - it wants fragment retention and exit repair while
+    /// staying off the second OCR pass, because the merged transcript cost it reachable sections.
+    /// </summary>
+    protected virtual bool KeepExitFragments => UseHardScanOcr;
+
+    /// <summary>
     /// Book-scoped exit repair for the hard scans, applied after <see cref="PostProcessSection"/> and
     /// the shared <see cref="TurnToRepair"/>. Deliberately not an extension of the shared repair:
     /// <c>TurnToRepair</c> also runs inside the DataCleaner for every book, so widening it would
@@ -110,7 +119,7 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         var lines = UseHardScanOcr
             ? HardScanReconstruction.OcrPdfMerged(fullPdfPath, Dpi, pages, MaxSectionNumber)
             : ReconstructionService.OcrPdf(fullPdfPath, Dpi, pages);
-        var sections = ReconstructionService.ApplyManifest(lines, entries, UseHardScanOcr);
+        var sections = ReconstructionService.ApplyManifest(lines, entries, KeepExitFragments);
         string intro = ReconstructionService.BuildIntroduction(lines, IntroPages);
 
         var book = new Book

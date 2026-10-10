@@ -127,4 +127,58 @@ public sealed class RingsOfKetherParserTests
         var fixed_ = RingsOfKetherParser.ApplySectionFixes(section, "Body text without exits.");
         Assert.Contains(expected, fixed_);
     }
+
+    /// <summary>
+    /// Edges the committed golden proves are real that the hard-scan pass stopped yielding.
+    /// The guard must be digit-aware: this scan reads a stray extra digit ("turn to 3999"), and a
+    /// plain substring check would think the exit already exists and skip the restoration.
+    /// </summary>
+    [Theory]
+    [InlineData(53, 316)]
+    [InlineData(278, 282)]
+    [InlineData(278, 287)]
+    [InlineData(377, 399)]
+    public void RestoresGoldenEdgesLostToHardScanPass(int section, int target)
+    {
+        // Body text with no exit at all: the restoration must fire.
+        var fixed_ = RingsOfKetherParser.ApplySectionFixes(section, "Body text without exits.");
+        Assert.Contains($"turn to {target}", fixed_);
+
+        // The real S377 shape: an unreadable target plus the true number on the next line.
+        var garbled = RingsOfKetherParser.ApplySectionFixes(
+            377, "you take a space-walk across lo look ab it (turn to 3999)\nto 399");
+        Assert.Contains("turn to 399", garbled);
+    }
+
+    [Fact]
+    public void Restoration_DoesNotDuplicateAnExistingExit()
+    {
+        var fixed_ = RingsOfKetherParser.ApplySectionFixes(377, "you look at it (turn to 399)");
+        Assert.Equal("you look at it (turn to 399)", fixed_);
+    }
+
+    /// <summary>
+    /// FF15 takes exit-fragment retention and the isolated exit repair but NOT the hardened second
+    /// OCR pass. These pin the book-specific bound so an FF17 rule (440) cannot leak in.
+    /// </summary>
+    [Theory]
+    [InlineData("the barrier lifts. Turn now to 341.", "Turn to 341.")]
+    [InlineData("you squeeze past. urn to 132", "turn to 132")]
+    [InlineData("the engine dies. Turn io 57.", "Turn to 57.")]
+    public void RepairExits_FixesRecoverableGarble(string input, string expected) =>
+        Assert.Contains(expected, RingsOfKetherParser.RepairExits(input));
+
+    [Fact]
+    public void RepairExits_IsBoundedTo400Sections()
+    {
+        Assert.DoesNotContain("[unclear]", RingsOfKetherParser.RepairExits("You turn to 380."));
+        Assert.Contains("[unclear]", RingsOfKetherParser.RepairExits("You turn to 428."));
+    }
+
+    [Fact]
+    public void RepairExits_LeavesOrdinaryProseAlone()
+    {
+        const string prose = "You drive in to the lay-by and slow down to 5 mph. Turn to 336.";
+        Assert.Equal(prose, RingsOfKetherParser.RepairExits(prose));
+    }
 }
