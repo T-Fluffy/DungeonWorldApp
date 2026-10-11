@@ -180,8 +180,13 @@ public static class ReconstructionService
 
     public static bool IsTurnTargetLine(string line)
     {
-        // Short all-digit target like "256." / "44," / "o 130." / "z7"
-        return Regex.IsMatch(line.Trim(), @"^(?:[a-z]\s*)?\d{1,3}[.,;:]?$", RegexOptions.IgnoreCase);
+        // The line that carries a target the previous line left dangling ("...turn" / "...(turn to").
+        // Scans wrap the target in many shapes, so accept an optional short lowercase lead-in and
+        // any trailing punctuation or prose: "256.", "44,", "o 130.", "z7", "204)?", "to 119.",
+        // "211; on 4-06, turn to 113.". The caller only asks this when the previous line is
+        // dangling, so the match stays bounded to the exit it belongs to.
+        return Regex.IsMatch(line.Trim(),
+            @"^[a-z]{0,3}\s*\d{1,3}(?!\d)", RegexOptions.IgnoreCase);
     }
 
     public static bool IsNoiseLine(string line)

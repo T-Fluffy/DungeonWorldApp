@@ -39,6 +39,12 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual int MapPage => 1;
 
     /// <summary>
+    /// Book author credited on the stored <c>Book</c>. Defaults to the series authors, which is
+    /// correct for most of the catalogue; FF18 Rebel Planet is written by Robin Waterfield.
+    /// </summary>
+    protected virtual string Author => "Steve Jackson and Ian Livingstone";
+
+    /// <summary>
     /// Replaces OCR-garbled "turn to" variants in assembled section content via the
     /// shared <see cref="Core.Text.TurnToRepair"/> helper (verb variants + unambiguous
     /// digit confusions, range-checked). Defaults on: unlike the old FF03-only regex,
@@ -128,7 +134,7 @@ public abstract class ManifestDungeonWorldParser : IBookParser
             Introduction = intro,
             AdventureSheetPath = string.Empty,
             MapPath = $"/assets/game-art/{Slug}/p{MapPage}_i0.png",
-            Author = "Steve Jackson and Ian Livingstone",
+            Author = Author,
             Sections = sections.Select(s => new Section
             {
                 SectionNumber = s.SectionNumber,

@@ -29,6 +29,7 @@ public static class IntroOverrides
         ("temple of terror", "DungeonWorld.Cleaning.Text.Intros.ff14.txt"),
         ("rings of kether", "DungeonWorld.Cleaning.Text.Intros.ff15.txt"),
         ("appointment with f.e.a.r.", "DungeonWorld.Cleaning.Text.Intros.ff17.txt"),
+        ("rebel planet", "DungeonWorld.Cleaning.Text.Intros.ff18.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
