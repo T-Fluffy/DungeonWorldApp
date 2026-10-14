@@ -286,6 +286,7 @@ var factory = new DungeonWorldParserFactory(
         new RingsOfKetherParser(storageOptions),
         new AppointmentWithFearParser(storageOptions),
         new RebelPlanetParser(storageOptions),
+        new DemonsOfTheDeepParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
