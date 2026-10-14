@@ -31,6 +31,7 @@ public static class IntroOverrides
         ("appointment with f.e.a.r.", "DungeonWorld.Cleaning.Text.Intros.ff17.txt"),
         ("rebel planet", "DungeonWorld.Cleaning.Text.Intros.ff18.txt"),
         ("demons of the deep", "DungeonWorld.Cleaning.Text.Intros.ff19.txt"),
+        ("sword of the samurai", "DungeonWorld.Cleaning.Text.Intros.ff20.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
