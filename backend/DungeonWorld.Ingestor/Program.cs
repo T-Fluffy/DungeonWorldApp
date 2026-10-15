@@ -288,6 +288,7 @@ var factory = new DungeonWorldParserFactory(
         new RebelPlanetParser(storageOptions),
         new DemonsOfTheDeepParser(storageOptions),
         new SwordOfTheSamuraiParser(storageOptions),
+        new TrialOfChampionsParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
