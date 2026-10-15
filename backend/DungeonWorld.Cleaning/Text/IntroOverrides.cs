@@ -34,6 +34,7 @@ public static class IntroOverrides
         ("sword of the samurai", "DungeonWorld.Cleaning.Text.Intros.ff20.txt"),
         ("trial of champions", "DungeonWorld.Cleaning.Text.Intros.ff21.txt"),
         ("robot commando", "DungeonWorld.Cleaning.Text.Intros.ff22.txt"),
+        ("masks of mayhem", "DungeonWorld.Cleaning.Text.Intros.ff23.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
