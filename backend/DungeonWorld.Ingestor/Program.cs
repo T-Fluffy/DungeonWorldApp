@@ -291,6 +291,7 @@ var factory = new DungeonWorldParserFactory(
         new TrialOfChampionsParser(storageOptions),
         new RobotCommandoParser(storageOptions),
         new MasksOfMayhemParser(storageOptions),
+        new CreatureOfHavocParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
