@@ -292,6 +292,7 @@ var factory = new DungeonWorldParserFactory(
         new RobotCommandoParser(storageOptions),
         new MasksOfMayhemParser(storageOptions),
         new CreatureOfHavocParser(storageOptions),
+        new BeneathNightmareCastleParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
