@@ -14,13 +14,25 @@ Metric definitions (kept stable so runs are comparable across sessions):
 - short_deadends = dead-end sections with < 150 chars of Clean text
 - missing     = sections flagged Features.MissingText
 - intro_len   = len(Meta.Introduction); combat/enemies from Meta counters
+
+Body-structure guard (catches collapsed manifests that merge/blank sections):
+- empty_raw   = sections with blank Raw body that are NOT flagged MissingText
+                (a section the parser silently produced with no text)
+- max_body    = longest Raw body in the book
+- oversized   = max_body >= MAX_BODY_CHARS (a section that swallowed neighbours)
+
 Exit code is always 0; this script reports, it does not gate. Gating lives in
-backend/DungeonWorld.Tests/BookGraphGoldenTests.cs.
+backend/DungeonWorld.Tests/BookGraphGoldenTests.cs and BookStructureSanityTests.cs.
 """
 import json
 import glob
 import os
 import sys
+
+# A genuine gamebook section is well under this; a merged/collapsed manifest
+# produces a body an order of magnitude larger. Chosen above every healthy book
+# (current healthy max ~3.5k) so only real corruption trips it.
+MAX_BODY_CHARS = 5000
 
 
 def find_cleaned_dir() -> str | None:
@@ -45,6 +57,7 @@ def main() -> None:
     if not files:
         print("No cleaned books found.")
         sys.exit(1)
+    structure_issues = []
     for f in files:
         d = json.load(open(f, encoding="utf-8"))
         secs = d["Sections"]
@@ -58,15 +71,27 @@ def main() -> None:
         term = d["Graph"].get("Terminal", [])
         short = sum(1 for n in dead if len(by[n].get("Clean", "")) < 150)
         missing = sum(1 for s in secs if s.get("Features", {}).get("MissingText"))
+        empty_raw = sum(1 for s in secs
+                        if not (s.get("Raw") or "").strip()
+                        and not s.get("Features", {}).get("MissingText"))
+        max_body = max((len(s.get("Raw") or "") for s in secs), default=0)
         meta = d.get("Meta", {})
         title = os.path.basename(f)[:-len(".json")]
+        oversized = max_body >= MAX_BODY_CHARS
+        if empty_raw or oversized:
+            structure_issues.append(title)
         print(f"### {title} | sections={len(secs)} range=1-{mx} "
               f"contig={sorted(by) == list(range(1, mx + 1))}")
         print(f"reachable={len(secs) - len(un)} unreachable={len(un)} dangling={dang} "
               f"mismatch={mm} short_deadends={short} deadends={len(dead)} terminal={term} "
               f"combat={meta.get('CombatSectionCount')} enemies={meta.get('EnemyCount')} "
               f"missing={missing} intro_len={len(meta.get('Introduction') or '')}")
+        print(f"structure empty_raw={empty_raw} max_body={max_body} oversized={oversized}")
     print("ALL CLEAN")
+    if structure_issues:
+        print("STRUCTURE ISSUES: " + ", ".join(structure_issues))
+    else:
+        print("STRUCTURE OK")
 
 
 if __name__ == "__main__":

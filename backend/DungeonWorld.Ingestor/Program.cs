@@ -23,6 +23,9 @@ using DungeonWorld.Ingestor;
 const string Placeholder = "[Text missing or unreadable in PDF]";
 const int MaxSection = 400;
 const int MergeThreshold = 400;
+// A healthy book section stays well under this; a collapsed/merged manifest
+// produces an order-of-magnitude larger body. Mirrors verify_books.MAX_BODY_CHARS.
+const int MaxBodyChars = 5000;
 var mergeDpis = new[] { 200, 250, 300, 400 };
 
 var protectedTitles = new[] { "Seas of Blood" };
@@ -700,16 +703,22 @@ static bool PrintReport(string title, string parserId, Book book, CleanedBook cl
 
     int introLen = cleaned.Meta.Introduction?.Length ?? 0;
 
+    var emptyRaw = cleaned.Sections.Count(s => string.IsNullOrWhiteSpace(s.Raw) && !s.Features.MissingText);
+    int maxBody = cleaned.Sections.Count > 0 ? cleaned.Sections.Max(s => (s.Raw ?? string.Empty).Length) : 0;
+
     bool check = maxNum < 200 ||
                  present.Count < 100 ||
                  outOfRange > 0 ||
                  toMissing > 5 ||
                  (present.Count > 0 && (avgLen < 300 || avgLen > 2500)) ||
-                 introLen == 0;
+                 introLen == 0 ||
+                 emptyRaw > 0 ||
+                 maxBody >= MaxBodyChars;
 
     Console.WriteLine($"{title}  [{parserId}]");
     Console.WriteLine($"  sections {present.Count}/{book.Sections.Count} present, max #{maxNum}, missing {missing}");
     Console.WriteLine($"  text avg {avgLen} chars (total {totalChars:N0})");
+    Console.WriteLine($"  bodies empty {emptyRaw}, longest {maxBody} (cap {MaxBodyChars})");
     Console.WriteLine($"  choices {choices.Count} (outOfRange {outOfRange}, toMissing {toMissing})");
     Console.WriteLine($"  combat {cleaned.Meta.CombatSectionCount}, enemies {cleaned.Meta.EnemyCount}");
     Console.WriteLine($"  deadEnds {cleaned.Graph.DeadEnds.Count}, terminal {cleaned.Graph.Terminal.Count}, " +
