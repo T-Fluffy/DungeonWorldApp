@@ -31,7 +31,6 @@ public class BookStructureSanityTests
     {
         "FF12 Space Assassin.json",
         "FF13 Freeway Fighter.json",
-        "FF14 Temple of Terror.json",
         "FF15 Rings of Kether.json",
         "FF19 Demons of the Deep.json",
     };

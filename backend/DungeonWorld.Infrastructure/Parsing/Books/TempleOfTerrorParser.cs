@@ -83,8 +83,14 @@ public sealed class TempleOfTerrorParser : ManifestDungeonWorldParser
             content += " to 340).";          // run past the Eye Stinger (sol13)
         if (sectionNumber == 219 && content.TrimEnd().EndsWith("turn", StringComparison.OrdinalIgnoreCase))
             content += " to 137).";          // run after Leesha (sol13)
-        if (sectionNumber == 171 && content.TrimEnd().EndsWith("Tum", StringComparison.OrdinalIgnoreCase))
-            content += " to 314).";          // run down the passageway (sol13)
+        if (sectionNumber == 171)
+        {
+            // "Tum tar 314" = garbled verb + preposition ("Turn to 314"); the
+            // shared TurnToRepair only knows "to/bo/te/o/lo/fo/b/w/tu/ta".
+            content = content.Replace("Tum tar 314", "turn to 314", StringComparison.OrdinalIgnoreCase);
+            if (content.TrimEnd().EndsWith("Tum", StringComparison.OrdinalIgnoreCase))
+                content += " to 314).";      // run down the passageway (sol13)
+        }
         return sectionNumber switch
         {
             // Garble fixes. NOTE: PostProcessContent runs shared TurnToRepair

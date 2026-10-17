@@ -25,6 +25,7 @@ public sealed class TempleOfTerrorParserTests
     [InlineData(358, "grapes, turn to 122.", "turn to 112")]
     [InlineData(12, "Sheet. Return to 34,", "turn to 34,")]
     [InlineData(391, "Sheet, return to 34.", "turn to 34.")]
+    [InlineData(171, "disappeared. Tum tar 314,", "turn to 314")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
