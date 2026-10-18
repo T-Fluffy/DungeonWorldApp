@@ -16,6 +16,10 @@ public sealed class TrialOfChampionsParserTests
     [InlineData(21, "walking up every step, turn to 572.", "turn to 372.")]
     [InlineData(370, "are nol wearing a cloak, turn to 701.", "turn to 101.")]
     [InlineData(19, "around your own neck, lum fo oo.", "turn to 70.")]
+    [InlineData(155, "berries, turn to 139. If you would rather walk on,", "turn to 119.")]
+    [InlineData(155, "rather walk on, turn GD 2RH.", "turn to 288.")]
+    [InlineData(156, "bids you, tum 0 199.", "turn to 199.")]
+    [InlineData(156, "the tunnel, form braze.", "turn to 222.")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -120,8 +124,6 @@ public sealed class TrialOfChampionsParserTests
     [InlineData(146, 165)]
     [InlineData(149, 388)]
     [InlineData(152, 117)]
-    [InlineData(155, 119)]
-    [InlineData(155, 139)]
     [InlineData(168, 77)]
     [InlineData(173, 68)]
     [InlineData(173, 150)]

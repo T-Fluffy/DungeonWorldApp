@@ -18,7 +18,9 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// "2z"/"2%"/"g1"/"g2"/"a5"/"a7"/"B3" style). Headers lost in illustration gaps are
 /// pinned at body starts. The book reprints whole scenarios under new numbers
 /// (S2/S391 centipede-cave). Each placement was confirmed against the transcript
-/// and, where ambiguous, the rendered PDF page.</para>
+/// and, where ambiguous, the rendered PDF page. One audit fix: S119 had been pinned
+/// inside S156 on p50 (a stale pointing line); it was re-anchored to its own header
+/// on p41, which restored S156's printed exits 199/222 and removed a phantom S118->288.</para>
 /// </summary>
 public sealed class TrialOfChampionsParser : ManifestDungeonWorldParser
 {
@@ -165,8 +167,6 @@ public sealed class TrialOfChampionsParser : ManifestDungeonWorldParser
             (146, 165, "rats lose -> Luck (print: S146 options)"),
             (149, 388, "box crash -> little (sol20: 149, 388)"),
             (152, 117, "bridge -> tablet (sol20: 152, 117)"),
-            (155, 119, "nuts walk -> forest (sol20: 155, 119)"),
-            (155, 139, "nuts eat -> Orcs (print: S155 options)"),
             (168, 77, "sunshine walk -> fence (sol20: 168, 77)"),
             (173, 68, "gas -> door (sol20: 173, 68)"),
             (173, 150, "tunnel -> branch (print: S173 options)"),
@@ -443,6 +443,14 @@ public sealed class TrialOfChampionsParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // no cloak -> youth (print: S370, S101)
             19 => content.Replace("lum fo oo", "turn to 70",
                 StringComparison.OrdinalIgnoreCase), // medallion neck (sol20: 19, 70)
+            155 => content.Replace("turn to 139", "turn to 119",
+                StringComparison.OrdinalIgnoreCase) // nuts eat -> set off again (render p49; OCR 13g)
+                .Replace("turn GD 2RH.", "turn to 288.",
+                StringComparison.OrdinalIgnoreCase), // nuts walk on (render p49; OCR 2RH)
+            156 => content.Replace("tum 0 199.", "turn to 199.",
+                StringComparison.OrdinalIgnoreCase) // dome lift -> little man (render p50)
+                .Replace("form braze.", "turn to 222.",
+                StringComparison.OrdinalIgnoreCase), // dome walk -> tunnel (render p50)
             _ => content,
         };
     }
