@@ -9,9 +9,10 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// 6-103; wide pages split into two-up L/R halves). Intro uses the cover/title
 /// pages (1-2) plus the VID NEWS BULLETIN and BACKGROUND (14-15); the curated
 /// intro text ships in Intros/ff13.txt. Section exits adjudicated against the
-/// arek.bdmonkeys.net walkthrough (sol12). Ghost slices (empty in ff13.json)
-/// carry sol12-restored exits; off-path ghosts with lost bodies stay empty
-/// (documented, never guessed).
+/// arek.bdmonkeys.net walkthrough (sol12). The manifest now reconstructs all 380
+/// bodies (no empty slices), so the exit-garble repairs below target OCR
+/// mis-reads inside each section's own slice. Defensive empty-slice restores are
+/// kept for the handful of sol12 sections whose bodies could still resolve blank.
 /// </summary>
 public sealed class FreewayFighterParser : ManifestDungeonWorldParser
 {
@@ -130,8 +131,6 @@ public sealed class FreewayFighterParser : ManifestDungeonWorldParser
             content += " (turn to 223).";    // spectate race (dump p87L[27])
         if (sectionNumber == 363 && !content.Contains("turn to 207", StringComparison.OrdinalIgnoreCase))
             content += " (turn to 207).";    // main road south -> modify engine (dump p99R[42])
-        if (sectionNumber == 370 && !content.Contains("turn to 229", StringComparison.OrdinalIgnoreCase))
-            content += " (turn to 229).";    // T-junction south ("22g." dump p101R[10])
         return sectionNumber switch
         {
             // Garble fixes. NOTE: PostProcessContent runs shared TurnToRepair
@@ -152,6 +151,12 @@ public sealed class FreewayFighterParser : ManifestDungeonWorldParser
             252 => content.Replace("turn to 285", "turn to 185", StringComparison.OrdinalIgnoreCase), // left door -> leave house ("185" misread as 285; sol12)
             372 => content.Replace("turn to 99.", "turn to 95.", StringComparison.OrdinalIgnoreCase), // drive after riders -> MOTOR CYCLE ("95" misread as gg->99; sol12)
             376 => content.Replace("(turn to ga)", "(turn to 90)", StringComparison.OrdinalIgnoreCase), // optimistic -> citizens obey ("90" misread; sol12)
+            91 => content.Replace("turn t0 230", "turn to 230", StringComparison.OrdinalIgnoreCase), // head east -> repairs ("to" misread as t0; sol12)
+            92 => content.Replace("(turn t 272)", "(turn to 272)", StringComparison.OrdinalIgnoreCase), // T-junction south -> dead-end bridge ("to" misread as t)
+            113 => content.Replace("harm to", "turn to", StringComparison.OrdinalIgnoreCase), // escape pursuers -> station-wagon ("turn" misread as harm; ref wraps a line)
+            315 => content.Replace("form fo 53.", "turn to 53.", StringComparison.OrdinalIgnoreCase), // bazooka hit -> chase attackers ("turn to" misread as form fo)
+            361 => content.Replace("turn to 98", "turn to 96", StringComparison.OrdinalIgnoreCase), // oil spray skids cycle -> fuel can ("96" misread as 98; sol12)
+            371 => content.Replace("turn to 229", "turn to 225", StringComparison.OrdinalIgnoreCase), // west T-junction -> fuel canister ("225" misread as 229; sol12)
             _ => content,
         };
     }

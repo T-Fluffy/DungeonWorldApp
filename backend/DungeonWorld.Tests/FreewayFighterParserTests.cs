@@ -27,6 +27,12 @@ public sealed class FreewayFighterParserTests
     [InlineData(252, "left, turn to 285.", "turn to 185")]
     [InlineData(372, "after them, turn to 99.", "turn to 95.")]
     [InlineData(376, "gang (turn to ga).", "(turn to 90)")]
+    [InlineData(91, "head east, turn t0 230,", "turn to 230")]
+    [InlineData(92, "Anglo (turn t 272).", "(turn to 272)")]
+    [InlineData(113, "come into view (harm to\n158).", "(turn to\n158)")]
+    [InlineData(315, "survive the blast, form fo 53.", "turn to 53.")]
+    [InlineData(361, "drive away (turn to 98).", "(turn to 96)")]
+    [InlineData(371, "San Anglo (turn to 229).", "(turn to 225)")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -73,7 +79,6 @@ public sealed class FreewayFighterParserTests
     [InlineData(241, "turn to 218")]
     [InlineData(300, "turn to 223")]
     [InlineData(363, "turn to 207")]
-    [InlineData(370, "turn to 229")]
     [InlineData(372, "turn to 304")]
     public void MissingExit_AppendsSol12Edge(int section, string expected)
     {
