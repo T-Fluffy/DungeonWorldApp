@@ -13,7 +13,11 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// <para><b>Layout notes.</b> Like FF18 this book prints a decorative range marker at the top of
 /// each half ("59-61") followed by the individual section numbers further down the column, so
 /// headers are NOT always at the top of a half. The manifest was derived by walking the headers
-/// in ascending order - the book prints sections in order, which is the reliable anchor. This
+/// in ascending order - the book prints sections in order, which is the reliable anchor. A later
+/// audit found fifteen pins (S212, S241-243, S274-275, S307-309, S345, S364-365, S370, S373,
+/// S377-378) collapsed onto a neighbouring section's slice - a few sat on a running head or a lost
+/// header, and three had silently merged two sections - so they were re-anchored to their true
+/// header/first body line against the rendered pages. This
 /// scan also has systematic digit confusion (5-&gt;3: "59"-&gt;"39", "57"-&gt;"37", "55"-&gt;"35",
 /// "40"-&gt;"30", "44"-&gt;"33"; 1-&gt;7: "41"-&gt;"47"; single letters: "T" = 1/7, "B" = 8,
 /// "f1" = 61, "gb" = 96, "Bo" = 80/86, "Ba" = 84, "Bs" = 88, "bz" = 62, "11]" = 60, "a3" = 94,
@@ -58,11 +62,28 @@ public sealed class DemonsOfTheDeepParser : ManifestDungeonWorldParser
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
 
     /// <summary>FF19-scoped exit repair, bounded to this book's 400 sections.</summary>
-    protected override string RepairExits(int sectionNumber, string content) => RepairExits(content);
+    protected override string RepairExits(int sectionNumber, string content) =>
+        ApplyPostRepairFixes(sectionNumber, RepairExits(content));
 
     /// <summary>Exposed for tests.</summary>
     public static string RepairExits(string content) =>
         HardScanExitRepair.Repair(content, MaxSections);
+
+    /// <summary>
+    /// Canonical-text follow-ups that run <em>after</em> <see cref="HardScanExitRepair"/>: two
+    /// re-pin corrections whose garbled verb (<c>urn to 8.</c>, <c>tum fox 18g.</c>) is only
+    /// repaired by that pass, so they are invisible to <see cref="ApplySectionFixes"/>, which
+    /// runs earlier. Every target is read from the rendered page.
+    /// </summary>
+    public static string ApplyPostRepairFixes(int sectionNumber, string content) =>
+        sectionNumber switch
+        {
+            213 => content.Replace("turn to 8.", "turn to 87.",
+                StringComparison.OrdinalIgnoreCase), // larger coral formation (render p71; OCR dropped the 7)
+            274 => content.Replace("turn to 18g", "turn to 188",
+                StringComparison.OrdinalIgnoreCase), // kill all the pirates (render p87; the g is an 8)
+            _ => content,
+        };
 
     /// <summary>
     /// True when <paramref name="content"/> already carries a real exit to <paramref name="target"/>.
@@ -184,19 +205,27 @@ public sealed class DemonsOfTheDeepParser : ManifestDungeonWorldParser
             (306, 47, "try another tactic -> return (verb-only garble)"),
             (292, 47, "no answer but Toll -> return (verb-only garble)"),
             (117, 78, "jump away -> Devilfish escape (verb-only garble)"),
-            (243, 275, "exchange a Pearl -> agree (verb-only garble)"),
             (178, 391, "no coins -> explain without them (verb-only garble)"),
             (138, 363, "Water Sprite -> chasm house (verb-only garble, number intact)"),
             (368, 162, "disobey -> leave (verb-only garble)"),
             (118, 384, "shake off tormentors -> return (trailing junk, forced 384)"),
             (291, 232, "return and fight to the finish (verb-only garble)"),
             (295, 47, "call for the Sea Dragon -> return (verb-only garble)"),
-            (309, 47, "try another Toolfish -> return (verb-only garble)"),
             (337, 77, "cannot hear you -> return (verb-only garble)"),
             (243, 47, "cannot summon -> return (verb-only garble)"),
             (54, 253, "leave it alone -> horn (verb-only garble)"),
             (61, 245, "no Dolphin name -> horn (verb-only garble)"),
             (89, 103, "try the frond entrance -> return (verb-only garble)"),
+            // Re-pin follow-ups: after S241-243/274/307-309/364-365/212-213/377-378 were
+            // re-anchored to their true headers (they had collapsed onto a neighbour's slice),
+            // the exits below - each read from the rendered PDF page - had to be restored.
+            (211, 16, "leave the building -> explore elsewhere (render p70)"),
+            (241, 318, "Vaporous Essence -> ice crystal (render p77)"),
+            (242, 275, "agree to exchange a Black Pearl (render p77)"),
+            (242, 85, "keep your Black Pearl (render p77; OCR read 83)"),
+            (364, 111, "rocks and sunken timbers (render p109)"),
+            (365, 74, "use your sword on the trapdoor (render p109)"),
+            (365, 134, "use the Axefish on the trapdoor (render p109)"),
         };
         foreach (var (parent, target, _) in codeEdges)
             if (sectionNumber == parent && !HasExit(content, target))
@@ -262,8 +291,12 @@ public sealed class DemonsOfTheDeepParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // investigate -> swim harder (verb-only garble)
             157 => content.Replace("Tam to 315", "turn to 315",
                 StringComparison.OrdinalIgnoreCase), // three times then three (verb-only garble)
-            242 => content.Replace("Tum tio 318", "turn to 318",
-                StringComparison.OrdinalIgnoreCase), // Vaporous Essence -> ice crystal (verb-only garble; option sits in S242's slice)
+            241 => content.Replace("Tum tio 318", "turn to 318",
+                StringComparison.OrdinalIgnoreCase), // Vaporous Essence -> ice crystal (render p77; option sits in S241's slice)
+            242 => content.Replace("fun lo 275", "turn to 275",
+                StringComparison.OrdinalIgnoreCase) // agree to exchange a Black Pearl (render p77)
+                .Replace("turn to 83.", "turn to 85.",
+                StringComparison.OrdinalIgnoreCase), // keep your Black Pearl (render p77; OCR read 83)
             300 => content.Replace("luen lo 335", "turn to 335",
                 StringComparison.OrdinalIgnoreCase), // demand an explanation (verb-only garble)
             48 => content.Replace("Lien to 344", "turn to 344",
@@ -294,14 +327,29 @@ public sealed class DemonsOfTheDeepParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // tossed out -> guards (4-digit overflow)
             117 => content.Replace("{turf to 78)", "{turn to 78)",
                 StringComparison.OrdinalIgnoreCase), // jump away (verb-only garble)
-            243 => content.Replace("fun lo 275", "turn to 275",
-                StringComparison.OrdinalIgnoreCase), // agree to exchange (verb-only garble)
             178 => content.Replace("rn io 391.", "turn to 391.",
                 StringComparison.OrdinalIgnoreCase), // no coins to clink (verb-only garble)
             138 => content.Replace("Tumtn 363", "turn to 363",
                 StringComparison.OrdinalIgnoreCase), // Water Sprite (verb-only garble)
             368 => content.Replace("Turn ro 162,", "Turn to 162,",
                 StringComparison.OrdinalIgnoreCase), // disobey and leave (verb-only garble)
+            // Re-pin follow-ups (see the codeEdges note above); every target read from the
+            // rendered page. These Replaces keep the printed text clean so the edges derive
+            // from the sentence itself rather than only from the restored codeEdge.
+            211 => content.Replace("Turn to 1h", "Turn to 16",
+                StringComparison.OrdinalIgnoreCase), // explore elsewhere (render p70)
+            212 => content.Replace("Turn to 105", "Turn to 195",
+                StringComparison.OrdinalIgnoreCase), // open the heavy chest (render p71; OCR read 105)
+            213 => content.Replace("turn to 8.", "turn to 87.",
+                StringComparison.OrdinalIgnoreCase), // larger coral formation (render p71; OCR dropped the 7)
+            274 => content.Replace("turn to 18g", "turn to 188",
+                StringComparison.OrdinalIgnoreCase), // kill all the pirates (render p87; g is an 8)
+            364 => content.Replace("burn rar", "turn to 111",
+                StringComparison.OrdinalIgnoreCase), // rocks and sunken timbers (render p109)
+            365 => content.Replace("Iurmiozg", "turn to 74",
+                StringComparison.OrdinalIgnoreCase) // sword on the trapdoor (render p109)
+                .Replace("turn to 39", "turn to 134",
+                StringComparison.OrdinalIgnoreCase), // use the Axefish (render p109)
             _ => content,
         };
     }

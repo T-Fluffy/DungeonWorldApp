@@ -25,12 +25,9 @@ public class BookStructureSanityTests
     /// <summary>
     /// Books known to have collapsed manifests at the time the gate was added.
     /// Each is removed here as its re-pin lands, so the gate becomes authoritative
-    /// for the whole catalogue.
+    /// for the whole catalogue. Empty: FF09-FF15 and FF19 have all been re-pinned.
     /// </summary>
-    private static readonly HashSet<string> KnownBad = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "FF19 Demons of the Deep.json",
-    };
+    private static readonly HashSet<string> KnownBad = new(StringComparer.OrdinalIgnoreCase);
 
     public static IEnumerable<object[]> CleanedBooks()
     {

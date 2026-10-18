@@ -41,10 +41,16 @@ public sealed class DemonsOfTheDeepParserTests
     [InlineData(190, "room, tum to 164.", "turn to 164.")]
     [InlineData(191, "pictures, tum to 367.", "turn to 367.")]
     [InlineData(117, "away from it {turf to 78)", "{turn to 78)")]
-    [InlineData(243, "this item, fun lo 275.", "turn to 275.")]
+    [InlineData(242, "this item, fun lo 275.", "turn to 275.")]
     [InlineData(178, "UH nol, rn io 391.", "turn to 391.")]
     [InlineData(138, "Sprite? Tumtn 363", "turn to 363")]
     [InlineData(368, "disobey, Turn ro 162,", "Turn to 162,")]
+    [InlineData(211, "elsewhere? Turn to 1h", "Turn to 16")]
+    [InlineData(212, "quite touch youn. Turn to 105.", "Turn to 195.")]
+    [InlineData(213, "distance, turn to 8. I you", "turn to 87. I you")]
+    [InlineData(274, "prates, turn to 18g.", "turn to 188.")]
+    [InlineData(364, "sunken fmbers, burn rar.", "turn to 111.")]
+    [InlineData(365, "Your sword? Iurmiozg", "turn to 74")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -150,7 +156,7 @@ public sealed class DemonsOfTheDeepParserTests
     [InlineData(289, 232)]
     [InlineData(306, 47)]
     [InlineData(117, 78)]
-    [InlineData(243, 275)]
+    [InlineData(242, 275)]
     [InlineData(178, 391)]
     [InlineData(138, 363)]
     [InlineData(368, 162)]
@@ -175,6 +181,16 @@ public sealed class DemonsOfTheDeepParserTests
         const string content = "A plain scene with no puzzle and no exits.";
         Assert.Equal(content, DemonsOfTheDeepParser.ApplySectionFixes(section, content));
     }
+
+    /// <summary>
+    /// Two re-pin corrections whose garbled verb ("urn to 8.", "tum fox 18g.") is only repaired by
+    /// HardScanExitRepair - so they run on its canonical output, not on ApplySectionFixes's input.
+    /// </summary>
+    [Theory]
+    [InlineData(213, "in the distance, turn to 8. I you", "turn to 87. I you")]
+    [InlineData(274, "all the prates, turn to 18g.", "turn to 188.")]
+    public void PostRepairFix_RewritesCanonicalTarget(int section, string input, string expected) =>
+        Assert.Contains(expected, DemonsOfTheDeepParser.ApplyPostRepairFixes(section, input));
 
     /// <summary>
     /// FF19 keeps exit-fragment retention and the isolated exit repair but NOT the hardened
