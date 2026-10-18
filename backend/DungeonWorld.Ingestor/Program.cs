@@ -176,7 +176,7 @@ if (args.Length >= 2 && args[0] == "--probe")
     return 0;
 }
 
-// --reconstruct <pdf> --out <dir> [--dpi 300] [--pages 1,2,3 | --start N [--end M]]
+// --reconstruct <pdf> --out <dir> [--dpi 300] [--pages 1,2,3 | --start N [--end M]] [--split N,M]
 // Renders every page, OCRs the content half, and dumps a line-numbered transcript per page
 // (pages/PageNNN.txt + .json). Used to rebuild a scan-heavy book section by section.
 if (args.Length >= 2 && args[0] == "--reconstruct")
@@ -185,6 +185,7 @@ if (args.Length >= 2 && args[0] == "--reconstruct")
     string? outDir = null;
     int dpi = 300;
     var pages = new List<int>();
+    var splitPages = new HashSet<int>();
     int startPage = -1, endPage = -1;
     for (int i = 2; i < args.Length; i++)
     {
@@ -199,6 +200,9 @@ if (args.Length >= 2 && args[0] == "--reconstruct")
             case "--pages":
                 if (i + 1 < args.Length) pages = args[++i].Split(',').Select(int.Parse).ToList();
                 break;
+            case "--split":
+                if (i + 1 < args.Length) splitPages = args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToHashSet();
+                break;
             case "--start":
                 if (i + 1 < args.Length) startPage = int.Parse(args[++i]);
                 break;
@@ -212,7 +216,7 @@ if (args.Length >= 2 && args[0] == "--reconstruct")
     }
     if (outDir == null) { Console.Error.WriteLine("--out <dir> required"); return 1; }
     Directory.CreateDirectory(Path.Combine(outDir, "pages"));
-    ReconstructPdf(pdf, outDir, dpi, pages, startPage, endPage);
+    ReconstructPdf(pdf, outDir, dpi, pages, startPage, endPage, splitPages);
     return 0;
 }
 
@@ -544,7 +548,7 @@ static bool IsHeaderLine(string line)
     return true;
 }
 
-static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pages, int startPage, int endPage)
+static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pages, int startPage, int endPage, HashSet<int> splitPages)
 {
     string workDir = Path.Combine(Path.GetTempPath(), "dw-reconstruct", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(workDir);
@@ -561,7 +565,7 @@ static void ReconstructPdf(string pdfPath, string outDir, int dpi, List<int> pag
     Parallel.ForEach(pngs, new ParallelOptions { MaxDegreeOfParallelism = 6 }, png =>
     {
         var pp = int.Parse(new Regex(@"-(\d+)\.png$").Match(Path.GetFileName(png)).Groups[1].Value);
-        var lines = OcrPageLines(png);
+        var lines = OcrPageLines(png, splitPages.Contains(pp));
         lock (index)
         {
             index.Add(new { page = pp, lines = lines.Count, file = $"pages/Page{pp:D3}.json" });
@@ -610,7 +614,7 @@ static List<string> RenderAllPages(string pdfPath, string workDir, int dpi, List
         .ToList();
 }
 
-static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath)
+static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath, bool forceSplit = false)
 {
     string dataPath = DungeonWorld.Infrastructure.Parsing.OcrData.DataPath();
     var result = new List<(int, string, double, string)>();
@@ -618,7 +622,7 @@ static List<(int n, string side, double top, string text)> OcrPageLines(string p
     engine.SetVariable("debug_file", "NUL");
     using var pix = Pix.LoadFromFile(pngPath);
     int w = pix.Width, h = pix.Height;
-    bool wide = w >= h * 1.05;
+    bool wide = forceSplit || w >= h * 1.05;
     if (!wide)
     {
         CollectRegion(engine, pix, new Rect(0, 0, w, h), "M", h, result);

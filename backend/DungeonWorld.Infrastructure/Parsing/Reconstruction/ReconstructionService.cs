@@ -27,7 +27,8 @@ public static class ReconstructionService
     /// given the whole document is rendered. Line numbering matches the transcript format the
     /// manifest line references were produced against.
     /// </summary>
-    public static List<OcrLine> OcrPdf(string pdfPath, int dpi, IReadOnlyList<int>? onlyPages = null)
+    public static List<OcrLine> OcrPdf(
+        string pdfPath, int dpi, IReadOnlyList<int>? onlyPages = null, IReadOnlySet<int>? forceSplitPages = null)
     {
         string workDir = Path.Combine(Path.GetTempPath(), "dw-reconstruct", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workDir);
@@ -38,7 +39,8 @@ public static class ReconstructionService
             Parallel.ForEach(pngs, new ParallelOptions { MaxDegreeOfParallelism = 6 }, png =>
             {
                 int pp = int.Parse(new Regex(@"-(\d+)\.png$").Match(Path.GetFileName(png)).Groups[1].Value);
-                foreach (var l in OcrPageLines(png))
+                bool split = forceSplitPages?.Contains(pp) == true;
+                foreach (var l in OcrPageLines(png, split))
                     lock (lines) lines.Add(new OcrLine(pp, l.n, l.side, l.top, l.text));
             });
             return lines.OrderBy(l => l.Page).ThenBy(l => l.N).ToList();
@@ -234,7 +236,7 @@ public static class ReconstructionService
             .ToList();
     }
 
-    private static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath)
+    private static List<(int n, string side, double top, string text)> OcrPageLines(string pngPath, bool forceSplit = false)
     {
         string dataPath = OcrData.DataPath();
         var result = new List<(int, string, double, string)>();
@@ -242,7 +244,11 @@ public static class ReconstructionService
         engine.SetVariable("debug_file", "NUL");
         using var pix = Pix.LoadFromFile(pngPath);
         int w = pix.Width, h = pix.Height;
-        bool wide = w >= h * 1.05;
+        // A two-up spread is usually landscape (w >> h), but a tightly-cropped near-square
+        // scan (e.g. FF12 p58, 1699x1696) falls under the ratio test and is OCR'd as one "M"
+        // region, interleaving the two columns. Books whose manifest was produced against a
+        // split transcript opt that page in via forceSplit.
+        bool wide = forceSplit || w >= h * 1.05;
         if (!wide)
         {
             CollectRegion(engine, pix, new Rect(0, 0, w, h), "M", h, result);

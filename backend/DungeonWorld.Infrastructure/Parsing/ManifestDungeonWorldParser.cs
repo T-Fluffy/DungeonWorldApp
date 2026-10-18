@@ -35,6 +35,14 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     /// <summary>Highest section number in this book.</summary>
     protected virtual int MaxSectionNumber => 400;
 
+    /// <summary>
+    /// Pages whose scan is a tightly-cropped two-up spread that the OCR's landscape ratio test
+    /// misclassifies as a single column (side "M"), interleaving the two book pages. Listing such
+    /// a page here forces it to be OCR'd as separate L/R halves. Defaults to empty, so only books
+    /// whose manifest was built against a split transcript opt in (FF12 p58).
+    /// </summary>
+    protected virtual IReadOnlySet<int> ForceSplitPages => System.Collections.Immutable.ImmutableHashSet<int>.Empty;
+
     /// <summary>Page the map artwork sits on (used for MapPath).</summary>
     protected virtual int MapPage => 1;
 
@@ -134,7 +142,7 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         var pages = Enumerable.Range(firstPage, lastPage - firstPage + 1).ToList();
         var lines = UseHardScanOcr
             ? HardScanReconstruction.OcrPdfMerged(fullPdfPath, Dpi, pages, MaxSectionNumber)
-            : ReconstructionService.OcrPdf(fullPdfPath, Dpi, pages);
+            : ReconstructionService.OcrPdf(fullPdfPath, Dpi, pages, ForceSplitPages);
         var sections = ReconstructionService.ApplyManifest(lines, entries, KeepExitFragments);
         string intro = ReconstructionService.BuildIntroduction(lines, IntroPages);
 
