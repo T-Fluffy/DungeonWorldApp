@@ -9,16 +9,16 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// 13-114; two-up L/R halves). Intro uses the cover/title pages (1-2) plus the
 /// MISSION BRIEFING (12); the curated intro text ships in Intros/ff12.txt.
 /// Section exits adjudicated against the arek.bdmonkeys.net walkthrough
-/// (sol11): all 128 path edges resolve, choices match references, no dangling
+/// (sol11): every path edge resolves, choices match references, no dangling
 /// targets. Ghost slices (empty in ff12.json) carry sol11-restored exits;
 /// dup-slot slices keep the foreign body verbatim. Misread headers restored
 /// as S33/S139/S147/S169/S189/S191/S194/S218/S227/S251/S260/S269/S294/S306/
-/// S309/S314/S319/S343/S382/S388/S389/S397; S123 keeps the Status-vehicle in
-/// its slice. Known scan losses: 18 off-path sections stay unreachable
-/// (lost bodies or parents, documented per precedent). Known sol11 errata:
-/// the walkthrough mislabels S21's ball-bearings section as 29 (twice);
-/// the graph routes 162->21->181 instead. S31 keeps the old-man cell text
-/// with sol11's spider edge appended; S278's aid-branch reads 286, not 279.
+/// S309/S314/S319/S343/S382/S388/S389/S397. Known scan losses: a few
+/// off-path sections stay unreachable (lost bodies or parents). Known sol11
+/// errata: the walkthrough lists the vehicle "turn on the spot" moves via
+/// their location sections (33 and 66), whereas the printed text routes only
+/// to the enemy/completion slice; the graph keeps the printed exits. S278's
+/// aid-branch reads 286, not 279.
 /// </summary>
 public sealed class SpaceAssassinParser : ManifestDungeonWorldParser
 {
@@ -32,6 +32,11 @@ public sealed class SpaceAssassinParser : ManifestDungeonWorldParser
     protected override string Slug => "ff12_space_assassin";
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff12.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 2, 12 };
+
+    // p58 is a tightly-cropped two-up spread (near-square scan) that the OCR ratio test
+    // would treat as a single "M" column, interleaving book pages 188-189 and 190-191.
+    // Force the split so each page resolves its own L/R transcript.
+    protected override IReadOnlySet<int> ForceSplitPages => new HashSet<int> { 58 };
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
@@ -127,8 +132,8 @@ public sealed class SpaceAssassinParser : ManifestDungeonWorldParser
             158 => content.Replace("(buen bo 25)", "(turn to 25)", StringComparison.OrdinalIgnoreCase)
                 .Replace("turn to 21417", "turn to 214", StringComparison.OrdinalIgnoreCase), // hills environs (dump p50; stray digits)
             164 => content.Replace("buen to 33", "turn to 31", StringComparison.OrdinalIgnoreCase), // revive first capsule (sol11 164->31; 33->31)
-            162 => content.Replace("Turn to 29", "Turn to 21", StringComparison.OrdinalIgnoreCase) // plastic cylinder -> ball-bearings info (S21; "29" misread "21")
-                .Replace("Turn to 1085", "Turn to 108", StringComparison.OrdinalIgnoreCase), // red-heart packet (stray digit; FF09 precedent)
+            162 => content.Replace("Turn to 1085", "Turn to 108", StringComparison.OrdinalIgnoreCase), // red-heart packet (stray digit; FF09 precedent)
+            151 => content.Replace("Turn to 20H", "turn to 208", StringComparison.OrdinalIgnoreCase), // other door (dump; H->8)
             181 => content.Replace("turn back to 162", "turn to 162", StringComparison.OrdinalIgnoreCase), // second item lookup (sol11 181->162)
             167 => content.Replace("burn fo 66", "turn to 66", StringComparison.OrdinalIgnoreCase), // Status-B-west exposure (dump p53)
             201 => content.Replace("turn to Jog", "turn to 209", StringComparison.OrdinalIgnoreCase), // investigate door (dump p60; J->2)

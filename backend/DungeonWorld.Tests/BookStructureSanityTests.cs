@@ -29,7 +29,6 @@ public class BookStructureSanityTests
     /// </summary>
     private static readonly HashSet<string> KnownBad = new(StringComparer.OrdinalIgnoreCase)
     {
-        "FF12 Space Assassin.json",
         "FF13 Freeway Fighter.json",
         "FF19 Demons of the Deep.json",
     };
