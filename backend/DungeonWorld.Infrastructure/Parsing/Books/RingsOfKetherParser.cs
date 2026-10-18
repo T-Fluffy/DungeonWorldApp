@@ -5,18 +5,19 @@ using Microsoft.Extensions.Options;
 namespace DungeonWorld.Infrastructure.Parsing;
 
 /// <summary>
-/// FF15 Rings of Kether (Andrew Chapman, 1985). Rebuilt from a manual
-/// reconstruction manifest (300 dpi line transcripts, 400 sections across pages
-/// 11-120; wide pages split into two-up L/R halves, front matter on narrow
-/// single-column pages). Intro uses the cover/title pages (1-2) plus the
-/// MISSION BRIEFING (10); the curated intro text ships in Intros/ff15.txt.
-/// Section exits adjudicated against the arek.bdmonkeys.net walkthrough
-/// (sol14). Ghost slices (empty in ff15.json) carry sol14-restored exits;
-/// dup-slot and range-header slices keep the foreign body verbatim.
-/// Misread headers restored via MANUAL walk entries (see ff15_walk.py);
-/// S4/S6 (bar-miner/Fed-ID) unattributable: ghosts with bodies preserved
-/// in S3/S5 slices. Known inversions: S82/S83 (S82 empty, accepted),
-/// S260/S259 (end-capped), S280/S281 (S280 empty, S281 end-capped).
+/// FF15 Rings of Kether (Andrew Chapman, 1985). Rebuilt from a reconstruction
+/// manifest (300 dpi line transcripts, 400 sections across pages 11-120; wide
+/// pages split into two-up L/R halves, front matter on narrow single-column
+/// pages). Intro uses the cover/title pages (1-2) plus the MISSION BRIEFING
+/// (10); the curated intro text ships in Intros/ff15.txt.
+///
+/// The manifest was re-pinned in full against a running-head page/section map
+/// plus per-page transcript review (dup/collapsed pins removed; every section
+/// pinned to its own header, spanning gutter flows preserved). All 400 bodies
+/// now assemble non-empty, so the empty-slice ghost branch below is a fallback
+/// that no longer fires on this book; the per-section exit rewrites recover the
+/// OCR garble the transcripts still contain (verified against the
+/// arek.bdmonkeys.net walkthrough, sol14).
 /// </summary>
 public sealed class RingsOfKetherParser : ManifestDungeonWorldParser
 {
