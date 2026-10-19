@@ -113,8 +113,8 @@ public sealed class SwordOfTheSamuraiParser : ManifestDungeonWorldParser
             (98, 256, "swamp serpent -> touch choice (sol19: 98, 258 as 256)"),
             (112, 2, "forest Tatsu -> riddle (print: S112, S2)"),
             (119, 37, "leg hack -> trap (print: S119, S37)"),
-            (191, 70, "helmet follow -> trail (print: S191, S70)"),
-            (191, 8, "helmet flight -> Hub (print: S191)"),
+            (114, 70, "helmet follow -> trail (print: S114, S70)"),
+            (114, 8, "helmet flight -> Hub (print: S114)"),
             (220, 76, "Jizo banish -> secret (print: S220, S76)"),
             (126, 48, "vacant woman -> item use (sol19: 126, 48)"),
             (131, 199, "reel back -> advance (sol19: 131, 199)"),
@@ -125,7 +125,7 @@ public sealed class SwordOfTheSamuraiParser : ManifestDungeonWorldParser
             (175, 15, "quit village -> Rokuro (sol19: 175, 15)"),
             (189, 220, "Tatsu amulet (print: S189 options)"),
             (189, 270, "no amulet (print: S189 options)"),
-            (199, 292, "advance -> fight Dai-Oni (print: S199)"),
+            (102, 292, "misfortune spell -> fight on (print: S102)"),
             (206, 270, "no amulet -> Shura (sol19: 206, 270)"),
             (206, 220, "have amulet (print: S206 options)"),
             (208, 172, "send Tiger (print: S208 options)"),
@@ -143,8 +143,6 @@ public sealed class SwordOfTheSamuraiParser : ManifestDungeonWorldParser
             (273, 329, "cave -> trembling stops (sol19: 273, 329)"),
             (101, 163, "oath -> clemency (print: S101 tail, S163)"),
             (399, 383, "hut -> chest (print: S399, S383)"),
-            (383, 350, "hovel -> cupboard chest (print: S383, S350)"),
-            (350, 359, "chest -> puppet (print: S350, S359)"),
             (320, 22, "send Eleanor (sol19: 320, 22)"),
             (340, 8, "Ki-Rin ally -> Hub (print: S340)"),
             (348, 8, "Phoenix ally -> Hub (print: S349)"),
@@ -172,8 +170,8 @@ public sealed class SwordOfTheSamuraiParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase) // gaoler Lucky (render p18: 20, 282)
                 .Replace("Unlucky, turn to 206", "Unlucky, turn to 296",
                 StringComparison.OrdinalIgnoreCase), // gaoler Unlucky (render p18: 20, 296)
-            39 => content.Replace("(turn to 3807", "(turn to 380",
-                StringComparison.OrdinalIgnoreCase), // grab weapon and run (print: S39, S380)
+            40 => content.Replace("(turn to 3807", "(turn to 380",
+                StringComparison.OrdinalIgnoreCase), // grab weapon and run (print: S40, S380)
             48 => content.Replace("Waters of Knowledge? Turn to gh", "Waters of Knowledge? Turn to 96",
                 StringComparison.OrdinalIgnoreCase), // Waters -> Eleanor (sol19: 48, 96)
             54 => content.Replace("Turn to 208", "Turn to 206",
@@ -218,16 +216,38 @@ public sealed class SwordOfTheSamuraiParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // crest descent (sol19: 295, 27)
             298 => content.Replace("Turn to 22.", "Turn to 121.",
                 StringComparison.OrdinalIgnoreCase), // vaporize -> throne (sol19: 298, 121)
-            320 => content.Replace("turn to 5 forward", "lumbers forward",
-                StringComparison.OrdinalIgnoreCase), // de-garble "lumbers forward" (print p105)
+            294 or 320 => content.Replace("turn to 5 forward", "lumbers forward",
+                StringComparison.OrdinalIgnoreCase), // de-garble "lumbers forward" (print p99/p105)
             303 => content.Replace("turn to 287.", "turn to 251.",
                 StringComparison.OrdinalIgnoreCase), // brass key -> find (sol19 287 as 251)
             357 => content.Replace("turn to 295.", "turn to 395.",
                 StringComparison.OrdinalIgnoreCase), // far bank -> mound (sol19: 357, 395)
             397 => content.Replace("turn to 31.", "turn to 391.",
-                StringComparison.OrdinalIgnoreCase) // elk win -> antler (sol19: 397, 391)
-                .Replace("(turn to 338)", "(turn to 398)",
-                StringComparison.OrdinalIgnoreCase), // mission -> circle castle (print: S398)
+                StringComparison.OrdinalIgnoreCase), // elk win -> antler (sol19: 397, 391)
+            28 => content.Replace("Turn to 31h.", "Turn to 316.",
+                StringComparison.OrdinalIgnoreCase), // cell capture -> morning (same text as S244)
+            66 => content.Replace("urn fo zzz.", "turn to 332.",
+                StringComparison.OrdinalIgnoreCase), // Ki-Rin, Honour<5 (render p34: 66, 332)
+            114 => content.Replace("tum to To.", "turn to 70.",
+                StringComparison.OrdinalIgnoreCase), // helmet follow (render p50: 114, 70)
+            191 => content.Replace("furn to z2o3.", "turn to 203.",
+                StringComparison.OrdinalIgnoreCase), // eat and sleep (render p73: 191, 203)
+            199 => content.Replace("torn to 47", "turn to 47",
+                StringComparison.OrdinalIgnoreCase) // Ikiru, STAMINA roll (render p75: 199, 47)
+                .Replace("turn ti goo.", "turn to 400.",
+                StringComparison.OrdinalIgnoreCase), // Ikiru win -> victory (render p75: 199, 400)
+            293 => content.Replace("[fom to 1935)", "(turn to 195)",
+                StringComparison.OrdinalIgnoreCase), // peasants spared (render p99: 293, 195)
+            330 => content.Replace("turn to 32a", "turn to 320",
+                StringComparison.OrdinalIgnoreCase) // send Phoenix (render p108: 330, 320)
+                .Replace("lun to 278", "turn to 278",
+                StringComparison.OrdinalIgnoreCase), // send Ki-Rin (render p108: 330, 278)
+            350 => content.Replace("(turn to $74)", "(turn to 374)",
+                StringComparison.OrdinalIgnoreCase) // bluff at gates (render p112: 350, 374)
+                .Replace("(Lien Lo 388)", "(turn to 388)",
+                StringComparison.OrdinalIgnoreCase), // scale walls (render p112: 350, 388)
+            359 => content.Replace("(um to 327)", "(turn to 327)",
+                StringComparison.OrdinalIgnoreCase), // throw chest and leave (print: S359, S327)
             _ => content,
         };
     }

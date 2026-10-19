@@ -78,6 +78,7 @@ public class TurnToRepairTests
     [InlineData("burn to a crisp")]
     [InlineData("burn the rope")]
     [InlineData("his ship will burn to cinders")]
+    [InlineData("the huge bronze goat-man lumbers forward")] // not "lumbers" -> 5
     public void RepairContent_LeavesAmbiguousTargetsUntouched(string input)
     {
         TurnToRepair.RepairContent(input, maxSection: 400).Should().Be(input);

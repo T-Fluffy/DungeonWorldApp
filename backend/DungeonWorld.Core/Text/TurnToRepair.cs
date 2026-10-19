@@ -131,6 +131,10 @@ public static partial class TurnToRepair
         {
             if (start >= token.Length) return null;
             token = token[start..];
+            // Never salvage a lone mapped char from stripped junk: "lum|bers"
+            // would otherwise yield "turn to 5" from the "s" and re-garble a
+            // real word ("lumbers") on the cleaning pass.
+            if (token.Length == 1) return null;
         }
         var mapped = new char[token.Length];
         for (int i = 0; i < token.Length; i++)
