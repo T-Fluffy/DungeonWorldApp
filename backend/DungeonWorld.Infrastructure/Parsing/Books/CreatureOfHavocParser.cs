@@ -46,6 +46,9 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
     /// <summary>FF24 prints sections scrambled, so bounds run pin-to-pin in the book.</summary>
     protected override bool ManifestInTranscriptOrder => true;
 
+    /// <summary>Page 124 is near-square, so the OCR merges the two columns into one stream.</summary>
+    protected override IReadOnlySet<int> ForceSplitPages => new HashSet<int> { 124 };
+
     /// <summary>FF24 keeps exit-fragment retention (exit numbers land on their own lines).</summary>
     protected override bool KeepExitFragments => true;
 
@@ -113,6 +116,8 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // Rhino-Man Testing Grounds (sol23: 62, 298)
             208 => content.Replace("tum to 1223", "turn to 123",
                 StringComparison.OrdinalIgnoreCase), // bridge east (sol23: 208, 123)
+            326 => content.Replace("turn t0 353", "turn to 353",
+                StringComparison.OrdinalIgnoreCase), // junction west (render p124: 326, 353)
             _ => content,
         };
     }

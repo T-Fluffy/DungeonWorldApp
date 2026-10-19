@@ -15,6 +15,7 @@ public sealed class CreatureOfHavocParserTests
     [InlineData(257, "turn to the west (turn to 3049).", "turn to 304")]
     [InlineData(62, "will know. Turn to 208.", "Turn to 298.")]
     [InlineData(208, "take the easterly passage (tum to 1223)?", "turn to 123")]
+    [InlineData(326, "head west instead (turn t0 353)?", "turn to 353")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
