@@ -112,6 +112,10 @@ public sealed class RobotCommandoParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // Amulet number (sol21: 102, 250)
             165 => content.Replace("Visit the airfield? Turn to 42", "Visit the airfield? Turn to 41",
                 StringComparison.OrdinalIgnoreCase), // airfield is S41 (sol21: 165, 41)
+            67 => content.Replace("turn toxz", "turn to 12",
+                StringComparison.OrdinalIgnoreCase), // fly away (render p32: 67, 12)
+            87 => content.Replace("turn toyz", "turn to 177",
+                StringComparison.OrdinalIgnoreCase), // enemy uniform (render p36: 87, 177)
             _ => content,
         };
     }

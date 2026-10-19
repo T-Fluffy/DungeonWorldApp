@@ -24,6 +24,8 @@ public sealed class RobotCommandoParserTests
     [InlineData(17, "If this means nothing to you, retum to 8g.", "turn to 89.")]
     [InlineData(102, "turn immediately to 25a.", "turn immediately to 250")]
     [InlineData(165, "Visit the airfield? Turn to 42", "Visit the airfield? Turn to 41")]
+    [InlineData(67, "If you fly away from them, turn toxz.", "turn to 12.")]
+    [InlineData(87, "wearing an enemy uniform, turn toyz. if", "turn to 177. if")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
