@@ -117,7 +117,6 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
             (345, 165, "marsh mounds -> Elves (sol22: 345, 165)"),
             (200, 178, "Dale uneventful -> village (sol22: 200, 178)"),
             (123, 198, "snow pass -> Chion (sol22: 123, 198)"),
-            (226, 257, "tunnel wake -> Kraken (sol22: 226, 257)"),
             (385, 87, "press on -> hands (print: S385, S87)"),
         };
         foreach (var (parent, target, _) in codeEdges)
@@ -184,6 +183,16 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // Elves break/taken (sol22: 334, 130/285)
             169 => content.Replace("Tum in 382.", "Turn to 382.",
                 StringComparison.OrdinalIgnoreCase), // village dissolve (sol22: 169, 382)
+            222 => content.Replace("turn to 132", "turn to 112",
+                StringComparison.OrdinalIgnoreCase) // met Doragar -> fight on (render p62: 222, 112)
+                .Replace("turn to21", "turn to 121",
+                StringComparison.OrdinalIgnoreCase), // else -> Fallow Dale (render p62: 222, 121)
+            223 => content.Replace("turn to 338", "turn to 336",
+                StringComparison.OrdinalIgnoreCase), // Juja north (render p62: 223, 336)
+            226 => content.Replace("turn to 357", "turn to 257",
+                StringComparison.OrdinalIgnoreCase), // Lucky sleep -> Kraken (render p63: 226, 257)
+            227 => content.Replace("Turn lo \u00a328.", "Turn to 128.",
+                StringComparison.OrdinalIgnoreCase), // snow Provisions (render p63: 227, 128)
             _ => content,
         };
     }

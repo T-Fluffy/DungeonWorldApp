@@ -65,6 +65,11 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(399, "sprint for the open air (hom fo 147)?", "turn to 147")]
     [InlineData(30, "Return to132 and choose again,", "turn to 112")]
     [InlineData(112, "None of these turn to 21", "None of these turn to 121")]
+    [InlineData(222, "in the mine, turn to 132; otherwise", "turn to 112; otherwise")]
+    [InlineData(222, "otherwise, turn to21,", "turn to 121,")]
+    [InlineData(223, "north (turn to 338) or north-east", "turn to 336) or north-east")]
+    [InlineData(226, "you are Lucky, turn to 357; if", "turn to 257; if")]
+    [InlineData(227, "instead of the usual 4, Turn lo \u00a328.", "Turn to 128.")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -100,7 +105,6 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(345, 165)]
     [InlineData(200, 178)]
     [InlineData(123, 198)]
-    [InlineData(226, 257)]
     [InlineData(385, 87)]
     public void CodeEdge_RestoredWhenAbsent(int section, int target)
     {
