@@ -193,6 +193,16 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // Lucky sleep -> Kraken (render p63: 226, 257)
             227 => content.Replace("Turn lo \u00a328.", "Turn to 128.",
                 StringComparison.OrdinalIgnoreCase), // snow Provisions (render p63: 227, 128)
+            52 => content.Replace("Tum to rag.", "Turn to 114.",
+                StringComparison.OrdinalIgnoreCase), // fire-break (render p24: 52, 114)
+            152 => content.Replace("Tum toag.", "Turn to 24.",
+                StringComparison.OrdinalIgnoreCase), // healer leave (render p46: 152, 24)
+            335 => content.Replace("tum ta Fz.", "turn to 72.",
+                StringComparison.OrdinalIgnoreCase), // Hands win (render p89: 335, 72)
+            390 => content.Replace("turn to a4", "turn to 94",
+                StringComparison.OrdinalIgnoreCase) // run away (render p103: 390, 94)
+                .Replace("turn to 31837", "turn to 318",
+                StringComparison.OrdinalIgnoreCase), // fight invisible (render p103: 390, 318)
             _ => content,
         };
     }

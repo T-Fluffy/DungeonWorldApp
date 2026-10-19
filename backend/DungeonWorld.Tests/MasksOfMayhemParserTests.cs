@@ -70,6 +70,11 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(223, "north (turn to 338) or north-east", "turn to 336) or north-east")]
     [InlineData(226, "you are Lucky, turn to 357; if", "turn to 257; if")]
     [InlineData(227, "instead of the usual 4, Turn lo \u00a328.", "Turn to 128.")]
+    [InlineData(52, "at least you are safe. Tum to rag.", "Turn to 114.")]
+    [InlineData(152, "hospitality will du vou good. Tum toag.", "Turn to 24.")]
+    [InlineData(335, "gauntlet. If vom wan, tum ta Fz.", "turn to 72.")]
+    [InlineData(390, "run away {turn to a4), or", "turn to 94), or")]
+    [InlineData(390, "advantage (turn to 31837", "turn to 318")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
