@@ -118,6 +118,10 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // bridge east (sol23: 208, 123)
             326 => content.Replace("turn t0 353", "turn to 353",
                 StringComparison.OrdinalIgnoreCase), // junction west (render p124: 326, 353)
+            42 => content.Replace("turn to =.", "turn to 2.",
+                StringComparison.OrdinalIgnoreCase), // defeat Hobbits (render p37: 42, 2)
+            387 => content.Replace("turn to \u00a28", "turn to 98",
+                StringComparison.OrdinalIgnoreCase), // guard club (render p143: 387, 98)
             _ => content,
         };
     }
