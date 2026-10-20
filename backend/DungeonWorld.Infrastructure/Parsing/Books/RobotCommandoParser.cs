@@ -81,6 +81,7 @@ public sealed class RobotCommandoParser : ManifestDungeonWorldParser
             (200, 378, "arcade handling -> Industry (sol21: 200, 378)"),
             (206, 265, "robot back -> Industry (sol21: 206, 265)"),
             (148, 91, "Luck pass -> surgeon (sol21: 148, 91)"),
+            (178, 94, "tunnel stairway (render p59: 178, 94)"),
         };
         foreach (var (parent, target, _) in codeEdges)
             if (sectionNumber == parent && !HasExit(content, target))
@@ -116,6 +117,12 @@ public sealed class RobotCommandoParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // fly away (render p32: 67, 12)
             87 => content.Replace("turn toyz", "turn to 177",
                 StringComparison.OrdinalIgnoreCase), // enemy uniform (render p36: 87, 177)
+            177 => content.Replace("Turn to \u00e95.", "Turn to 65.",
+                StringComparison.OrdinalIgnoreCase), // uniform bluff (render p59: 177, 65)
+            194 => content.Replace("turn back to 308", "turn to 308",
+                StringComparison.OrdinalIgnoreCase), // construction robot (print: 194, 308)
+            199 => content.Replace("Turn to fi.", "Turn to 65.",
+                StringComparison.OrdinalIgnoreCase), // uniform bluff (render p64: 199, 65)
             _ => content,
         };
     }

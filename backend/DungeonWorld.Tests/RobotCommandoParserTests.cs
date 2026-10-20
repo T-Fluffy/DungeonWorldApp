@@ -26,6 +26,9 @@ public sealed class RobotCommandoParserTests
     [InlineData(165, "Visit the airfield? Turn to 42", "Visit the airfield? Turn to 41")]
     [InlineData(67, "If you fly away from them, turn toxz.", "turn to 12.")]
     [InlineData(87, "wearing an enemy uniform, turn toyz. if", "turn to 177. if")]
+    [InlineData(177, "peacefully. Turn to \u00e95.", "Turn to 65.")]
+    [InlineData(194, "Whether or not you take it, turn back to 308.", "turn to 308.")]
+    [InlineData(199, "peacefully. Turn to fi.", "Turn to 65.")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -50,6 +53,7 @@ public sealed class RobotCommandoParserTests
     [InlineData(200, 378)]
     [InlineData(206, 265)]
     [InlineData(148, 91)]
+    [InlineData(178, 94)]
     public void CodeEdge_RestoredWhenAbsent(int section, int target)
     {
         var content = "Body text without exits.";
