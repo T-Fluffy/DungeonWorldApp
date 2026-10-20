@@ -29,6 +29,22 @@ public sealed class RobotCommandoParserTests
     [InlineData(177, "peacefully. Turn to \u00e95.", "Turn to 65.")]
     [InlineData(194, "Whether or not you take it, turn back to 308.", "turn to 308.")]
     [InlineData(199, "peacefully. Turn to fi.", "Turn to 65.")]
+    [InlineData(11, "Return to 308.", "turn to 308.")]
+    [InlineData(12, "your SKILL, turn to sx6.", "turn to 316.")]
+    [InlineData(21, "Return to 166;", "turn to 166;")]
+    [InlineData(24, "place to go: turn to Fo.", "turn to 70.")]
+    [InlineData(71, "simply choose not to use it, turn tor 134.", "turn to 134.")]
+    [InlineData(75, "press on towards the encampment, burn bo\n245.", "turn to 245.")]
+    [InlineData(85, "Search the whole office thoroughly? Tum to g\u00e9", "Turn to 96")]
+    [InlineData(90, "attack him by surprise, turn to zox.", "turn to 201.")]
+    [InlineData(96, "have lost 1 STAMINA point, Return to 8s.", "turn to 85.")]
+    [InlineData(101, "If you return to the city, turn tc\n144.", "turn to 144.")]
+    [InlineData(171, "If you have already opened this building, tum im-\nmediately to 231.", "turn to 231.")]
+    [InlineData(190, "leave the Capitol Building {turn to 296).", "turn to 298)")]
+    [InlineData(190, "Turn to 2a5 and fight.", "Turn to 215 and fight.")]
+    [InlineData(192, "use it now (turn to 2a).", "turn to 29)")]
+    [InlineData(285, "Leave the city? Turn to 2q8", "Turn to 298")]
+    [InlineData(369, "If you push another button, retum to 26g", "turn to 269")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";

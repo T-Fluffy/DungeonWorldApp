@@ -105,14 +105,36 @@ public sealed class RobotCommandoParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // run for cover (sol21: 45, 159)
             49 => content.Replace("The Temple of Glory? Turn to 330", "The Temple of Glory? Turn to 339",
                 StringComparison.OrdinalIgnoreCase), // Glory (sol21: 49, 339)
+            11 => content.Replace("Return to 308.", "turn to 308.",
+                StringComparison.OrdinalIgnoreCase), // hospital medikits (print: 11, 308)
+            12 => content.Replace("turn to sx6", "turn to 316",
+                StringComparison.OrdinalIgnoreCase), // violent storm (render p18: 12, 316)
+            21 => content.Replace("Return to 166;", "turn to 166;",
+                StringComparison.OrdinalIgnoreCase), // flee temple (print: 21, 166)
+            24 => content.Replace("turn to Fo", "turn to 70",
+                StringComparison.OrdinalIgnoreCase), // cowboy robot choice (render p21: 24, 70)
             53 => content.Replace("Return to 8s,", "turn to 85,",
                 StringComparison.OrdinalIgnoreCase), // Cloak (sol21: 53, 85)
             17 => content.Replace("retum to 8g.", "turn to 89.",
                 StringComparison.OrdinalIgnoreCase), // uniform bluff (print: S17, S89)
+            71 => content.Replace("turn tor 134", "turn to 134",
+                StringComparison.OrdinalIgnoreCase), // on foot (render: 71, 134)
+            75 => content.Replace("burn bo\n245", "turn to 245",
+                StringComparison.OrdinalIgnoreCase), // press on (render: 75, 245)
+            85 => content.Replace("Tum to g\u00e9", "Turn to 96",
+                StringComparison.OrdinalIgnoreCase), // search offices (render p36: 85, 96)
+            90 => content.Replace("turn to zox", "turn to 201",
+                StringComparison.OrdinalIgnoreCase), // attack Minos (render p36: 90, 201)
+            96 => content.Replace("Return to 8s.", "turn to 85.",
+                StringComparison.OrdinalIgnoreCase), // electric shock (print: 96, 85)
+            101 => content.Replace("turn tc\n144", "turn to 144",
+                StringComparison.OrdinalIgnoreCase), // return to city (render: 101, 144)
             102 => content.Replace("turn immediately to 25a", "turn immediately to 250",
                 StringComparison.OrdinalIgnoreCase), // Amulet number (sol21: 102, 250)
             165 => content.Replace("Visit the airfield? Turn to 42", "Visit the airfield? Turn to 41",
                 StringComparison.OrdinalIgnoreCase), // airfield is S41 (sol21: 165, 41)
+            171 => content.Replace("tum im-\nmediately to 231", "turn to 231",
+                StringComparison.OrdinalIgnoreCase), // already opened barn (render: 171, 231)
             67 => content.Replace("turn toxz", "turn to 12",
                 StringComparison.OrdinalIgnoreCase), // fly away (render p32: 67, 12)
             87 => content.Replace("turn toyz", "turn to 177",
@@ -123,6 +145,15 @@ public sealed class RobotCommandoParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // construction robot (print: 194, 308)
             199 => content.Replace("Turn to fi.", "Turn to 65.",
                 StringComparison.OrdinalIgnoreCase), // uniform bluff (render p64: 199, 65)
+            190 => content.Replace("turn to 296", "turn to 298")
+                .Replace("Turn to 2a5", "Turn to 215",
+                StringComparison.OrdinalIgnoreCase), // Capitol sword (render p62: 190, 298/215)
+            192 => content.Replace("turn to 2a", "turn to 29",
+                StringComparison.OrdinalIgnoreCase), // hospital cloak (render p62: 192, 29)
+            285 => content.Replace("Turn to 2q8", "Turn to 298",
+                StringComparison.OrdinalIgnoreCase), // flying robot (render p83: 285, 298)
+            369 => content.Replace("retum to 26g", "turn to 269",
+                StringComparison.OrdinalIgnoreCase), // lift button (render: 369, 269)
             _ => content,
         };
     }
