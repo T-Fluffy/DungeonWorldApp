@@ -75,6 +75,15 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(335, "gauntlet. If vom wan, tum ta Fz.", "turn to 72.")]
     [InlineData(390, "run away {turn to a4), or", "turn to 94), or")]
     [InlineData(390, "advantage (turn to 31837", "turn to 318")]
+    [InlineData(29, "In any case, urn ioa73.", "turn to 173.")]
+    [InlineData(175, "in the area. Turn \u00a30 343.", "Turn to 343.")]
+    [InlineData(182, "graze vou. Retum fo 142 and continue", "turn to 142 and continue")]
+    [InlineData(190, "in danger of collapsing. Tum bo", "Turn to 272.")]
+    [InlineData(270, "of the forest.\u201d Tum 10134.", "Turn to 154.")]
+    [InlineData(310, "further down the slope. Turn to 8a.", "Turn to 89.")]
+    [InlineData(375, "if vou survive, turn \u00a3013.", "turn to 13.")]
+    [InlineData(392, "Lucky, burn toa8z; if you are", "turn to 182; if you are")]
+    [InlineData(392, "Unlucky, tun to bo.", "turn to 60.")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";

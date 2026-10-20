@@ -203,6 +203,24 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase) // run away (render p103: 390, 94)
                 .Replace("turn to 31837", "turn to 318",
                 StringComparison.OrdinalIgnoreCase), // fight invisible (render p103: 390, 318)
+            29 => content.Replace("urn ioa73.", "turn to 173.",
+                StringComparison.OrdinalIgnoreCase), // snow-shoes (render p19: 29, 173)
+            175 => content.Replace("Turn \u00a30 343.", "Turn to 343.",
+                StringComparison.OrdinalIgnoreCase), // horsemen (render p51: 175, 343)
+            182 => content.Replace("Retum fo 142", "turn to 142",
+                StringComparison.OrdinalIgnoreCase), // grazed -> fight on (render p53: 182, 142)
+            190 => content.Replace("Tum bo", "Turn to 272.",
+                StringComparison.OrdinalIgnoreCase), // bridge collapse (render p54: 190, 272)
+            270 => content.Replace("Tum 10134.", "Turn to 154.",
+                StringComparison.OrdinalIgnoreCase), // shaman ring (render p75: 270, 154)
+            310 => content.Replace("Turn to 8a.", "Turn to 89.",
+                StringComparison.OrdinalIgnoreCase), // helmet slope (render p83: 310, 89)
+            375 => content.Replace("turn \u00a3013.", "turn to 13.",
+                StringComparison.OrdinalIgnoreCase), // Mordida survive (render p99: 375, 13)
+            392 => content.Replace("burn toa8z", "turn to 182",
+                StringComparison.OrdinalIgnoreCase) // Lucky (render p103: 392, 182)
+                .Replace("tun to bo", "turn to 60",
+                StringComparison.OrdinalIgnoreCase), // Unlucky (render p103: 392, 60)
             _ => content,
         };
     }
