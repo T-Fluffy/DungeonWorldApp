@@ -93,7 +93,6 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
         content = NormalizeTurnVerbs(content);
         (int parent, int target, string note)[] codeEdges =
         {
-            (172, 141, "Doragar items -> chasm (sol22: 172, 141)"),
             (231, 343, "leave area -> Fallow Dale (sol22: 231, 343)"),
             (289, 173, "ladder climb -> tribesmen (sol22: 289, 173)"),
             (289, 54, "ladder drop -> Luck (sol22: 289, 54)"),
@@ -101,7 +100,6 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
             (59, 100, "Galrin call -> throne (sol22: 59, 100)"),
             (208, 88, "seeds dragons -> oaks (sol22: 208, 88)"),
             (151, 104, "Snake struggle -> pool (sol22: 151, 104)"),
-            (104, 25, "STAMINA pass -> warrior (print: S104, S25)"),
             (301, 112, "tusk seeds -> items (sol22: 301, 112)"),
             (26, 149, "Hever otherwise -> test (sol22: 26, 149)"),
             (320, 74, "helmet lost -> lab (sol22: 320, 74)"),
@@ -117,7 +115,6 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
             (345, 165, "marsh mounds -> Elves (sol22: 345, 165)"),
             (200, 178, "Dale uneventful -> village (sol22: 200, 178)"),
             (123, 198, "snow pass -> Chion (sol22: 123, 198)"),
-            (385, 87, "press on -> hands (print: S385, S87)"),
         };
         foreach (var (parent, target, _) in codeEdges)
             if (sectionNumber == parent && !HasExit(content, target))
@@ -221,6 +218,40 @@ public sealed class MasksOfMayhemParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase) // Lucky (render p103: 392, 182)
                 .Replace("tun to bo", "turn to 60",
                 StringComparison.OrdinalIgnoreCase), // Unlucky (render p103: 392, 60)
+            85 => content.Replace("turn to veo", "turn to 100",
+                StringComparison.OrdinalIgnoreCase), // Galrin summon (render p32: 85, 100)
+            87 => content.Replace("turn to aga", "turn to 192",
+                StringComparison.OrdinalIgnoreCase), // hands tied (render p32: 87, 192)
+            98 => content.Replace("tum to 18a", "turn to 180",
+                StringComparison.OrdinalIgnoreCase), // giant helmet (render p35: 98, 180)
+            104 => content.Replace("turn toas.", "turn to 15.",
+                StringComparison.OrdinalIgnoreCase), // STAMINA pass (render p36: 104, 15)
+            131 => content.Replace("burn to 15371 fFitis", "turn to 153; if it is",
+                StringComparison.OrdinalIgnoreCase), // snow pass (render p42: 131, 153)
+            172 => content.Replace("tum\nvasttoags,", "turn to 141,",
+                StringComparison.OrdinalIgnoreCase), // Doragar leave (render p51: 172, 141)
+            180 => content.Replace("burn tira17", "turn to 117",
+                StringComparison.OrdinalIgnoreCase), // rope bridge (render p52: 180, 117)
+            218 => content.Replace("turn \u00a9 314", "turn to 319",
+                StringComparison.OrdinalIgnoreCase), // hands tied (render p61: 218, 319)
+            245 => content.Replace("tum tor 230", "turn to 230",
+                StringComparison.OrdinalIgnoreCase), // lakeside camp (render p69: 245, 230)
+            248 => content.Replace("turn {0 209", "turn to 209",
+                StringComparison.OrdinalIgnoreCase), // crystal mirror (render p70: 248, 209)
+            261 => content.Replace("tum to 7a", "turn to 74",
+                StringComparison.OrdinalIgnoreCase), // throne crown (render p73: 261, 74)
+            283 => content.Replace("travel east (tum lo", "travel east (turn to 388)?",
+                StringComparison.OrdinalIgnoreCase), // mine east (render p78: 283, 388)
+            303 => content.Replace("hurn to Bg", "turn to 89",
+                StringComparison.OrdinalIgnoreCase), // camp-fire (render p81: 303, 89)
+            338 => content.Replace("turn tr 238", "turn to 238",
+                StringComparison.OrdinalIgnoreCase), // Morgana lair (render p90: 338, 238)
+            356 => content.Replace("turn tn zsz", "turn to 252",
+                StringComparison.OrdinalIgnoreCase), // thieves (render p95: 356, 252)
+            383 => content.Replace("lum to\n1494.", "turn to 194.",
+                StringComparison.OrdinalIgnoreCase), // tiger claws (render p101: 383, 194)
+            385 => content.Replace("tum\ntor a7)?", "turn to 171)?",
+                StringComparison.OrdinalIgnoreCase), // press on (render p101: 385, 171)
             _ => content,
         };
     }

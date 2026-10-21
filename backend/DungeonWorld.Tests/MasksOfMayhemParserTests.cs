@@ -84,6 +84,23 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(375, "if vou survive, turn \u00a3013.", "turn to 13.")]
     [InlineData(392, "Lucky, burn toa8z; if you are", "turn to 182; if you are")]
     [InlineData(392, "Unlucky, tun to bo.", "turn to 60.")]
+    [InlineData(85, "that you can call on Galrin, turn to veo.", "turn to 100.")]
+    [InlineData(87, "If your hands are tied, turn to aga;", "turn to 192;")]
+    [InlineData(98, "continue on your way (tum to 18a)?", "(turn to 180)?")]
+    [InlineData(104, "or more, turn toas.", "turn to 15.")]
+    [InlineData(131, "score is 12 or less, burn to 15371 fFitis", "turn to 153; if it is")]
+    [InlineData(172, "Doragar family, tum\nvasttoags,", "turn to 141,")]
+    [InlineData(180, "down the trail {burn tira17)?", "turn to 117)?")]
+    [InlineData(218, "If your hands are tied, turn \u00a9 314;", "turn to 319;")]
+    [InlineData(245, "camp here by the lakeside {tum tor 230),", "turn to 230),")]
+    [InlineData(248, "look in the mirror (turn {0 209),", "turn to 209),")]
+    [InlineData(261, "crown {tum to 7a),", "turn to 74),")]
+    [InlineData(283, "travel east (tum lo", "travel east (turn to 388)?")]
+    [InlineData(303, "closer look (hurn to Bg).", "turn to 89)")]
+    [InlineData(338, "lair (turn tr 238)?", "turn to 238)?")]
+    [InlineData(356, "otherwise, turn tn zsz.", "turn to 252.")]
+    [InlineData(383, "otherwise, lum to\n1494.", "turn to 194.")]
+    [InlineData(385, "press on (tum\ntor a7)?", "press on (turn to 171)?")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -95,7 +112,6 @@ public sealed class MasksOfMayhemParserTests
     /// verb garble or truncation defeats the cleaner.
     /// </summary>
     [Theory]
-    [InlineData(172, 141)]
     [InlineData(231, 343)]
     [InlineData(289, 173)]
     [InlineData(289, 54)]
@@ -103,7 +119,6 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(59, 100)]
     [InlineData(208, 88)]
     [InlineData(151, 104)]
-    [InlineData(104, 25)]
     [InlineData(301, 112)]
     [InlineData(26, 149)]
     [InlineData(320, 74)]
@@ -119,7 +134,6 @@ public sealed class MasksOfMayhemParserTests
     [InlineData(345, 165)]
     [InlineData(200, 178)]
     [InlineData(123, 198)]
-    [InlineData(385, 87)]
     public void CodeEdge_RestoredWhenAbsent(int section, int target)
     {
         var content = "Body text without exits.";
@@ -132,7 +146,6 @@ public sealed class MasksOfMayhemParserTests
     /// Parents with exactly one code edge keep the assertion exact.
     /// </summary>
     [Theory]
-    [InlineData(172, 141)]
     [InlineData(231, 343)]
     public void CodeEdge_NotDuplicatedWhenPresent(int section, int target)
     {
