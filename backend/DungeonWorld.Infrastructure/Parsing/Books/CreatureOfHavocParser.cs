@@ -49,6 +49,9 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
     /// <summary>Page 124 is near-square, so the OCR merges the two columns into one stream.</summary>
     protected override IReadOnlySet<int> ForceSplitPages => new HashSet<int> { 124 };
 
+    /// <summary>S460 continues onto page 165, which has no section pin of its own.</summary>
+    protected override int? LastPageOverride => 165;
+
     /// <summary>FF24 keeps exit-fragment retention (exit numbers land on their own lines).</summary>
     protected override bool KeepExitFragments => true;
 
@@ -88,7 +91,6 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
             (20, 40, "dead end -> room (sol23: 20, 40)"),
             (107, 55, "Coven trail -> Grog (sol23: 107, 55)"),
             (435, 62, "Rhino-Man door -> guardroom (sol23: 435, 62)"),
-            (458, 110, "rock choice -> club (sol23: 458, 110)"),
             (177, 125, "copse hut -> Rosina (sol23: 177, 125)"),
             (90, 140, "mines slave -> ring (sol23: 90, 140)"),
             (92, 141, "dream witches -> forest (sol23: 92, 141)"),
@@ -122,6 +124,16 @@ public sealed class CreatureOfHavocParser : ManifestDungeonWorldParser
                 StringComparison.OrdinalIgnoreCase), // defeat Hobbits (render p37: 42, 2)
             387 => content.Replace("turn to \u00a28", "turn to 98",
                 StringComparison.OrdinalIgnoreCase), // guard club (render p143: 387, 98)
+            192 => content.Replace("{turn to g50)7", "(turn to 450)?",
+                StringComparison.OrdinalIgnoreCase), // south door (render p83: 192, 450)
+            293 => content.Replace("(tum to B67", "(turn to 66)?",
+                StringComparison.OrdinalIgnoreCase), // surprise attack (render p114: 293, 66)
+            324 => content.Replace("turn tc\n301", "turn to 301",
+                StringComparison.OrdinalIgnoreCase), // north from camp (render p124: 324, 301)
+            458 => content.Replace("turn to11e.", "turn to 110.",
+                StringComparison.OrdinalIgnoreCase), // rock choice (render p163: 458, 110)
+            459 => content.Replace("Turnto11x", "Turn to 111",
+                StringComparison.OrdinalIgnoreCase), // crossed swords (render p164: 459, 111)
             _ => content,
         };
     }

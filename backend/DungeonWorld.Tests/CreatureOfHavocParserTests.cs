@@ -18,6 +18,11 @@ public sealed class CreatureOfHavocParserTests
     [InlineData(326, "head west instead (turn t0 353)?", "turn to 353")]
     [InlineData(42, "If you defeat them all, turn to =.", "turn to 2.")]
     [InlineData(387, "for the blow and turn to \u00a28 to battle", "turn to 98 to battle")]
+    [InlineData(192, "the south wall {turn to g50)7", "(turn to 450)?")]
+    [InlineData(293, "claws drawn (tum to B67", "claws drawn (turn to 66)?")]
+    [InlineData(324, "head north (turn tc\n301), south", "head north (turn to 301), south")]
+    [InlineData(458, "choose the rock, turn to11e.", "turn to 110.")]
+    [InlineData(459, "The crossed swords? Turnto11x", "Turn to 111")]
     public void ExitFix_RewritesTarget(int section, string exit, string expected)
     {
         var content = $"Some scene text. {exit} More text.";
@@ -41,7 +46,6 @@ public sealed class CreatureOfHavocParserTests
     [InlineData(20, 40)]
     [InlineData(107, 55)]
     [InlineData(435, 62)]
-    [InlineData(458, 110)]
     [InlineData(177, 125)]
     [InlineData(90, 140)]
     [InlineData(92, 141)]

@@ -47,6 +47,13 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual int MapPage => 1;
 
     /// <summary>
+    /// Optional final PDF page to OCR beyond the last manifest pin. A book's last section can
+    /// continue onto a page that has no section start of its own; without this, that tail is
+    /// dropped. Defaults to null, so only affected books opt in.
+    /// </summary>
+    protected virtual int? LastPageOverride => null;
+
+    /// <summary>
     /// Book author credited on the stored <c>Book</c>. Defaults to the series authors, which is
     /// correct for most of the catalogue; FF18 Rebel Planet is written by Robin Waterfield.
     /// </summary>
@@ -137,7 +144,9 @@ public abstract class ManifestDungeonWorldParser : IBookParser
 
         var entries = LoadManifest();
         int firstPage = Math.Min(IntroPages.DefaultIfEmpty(MapPage).Min(), entries.Min(e => e.Page));
-        int lastPage = Math.Max(IntroPages.DefaultIfEmpty(MapPage).Max(), entries.Max(e => e.Page));
+        int lastPage = Math.Max(
+            Math.Max(IntroPages.DefaultIfEmpty(MapPage).Max(), entries.Max(e => e.Page)),
+            LastPageOverride ?? 0);
 
         var pages = Enumerable.Range(firstPage, lastPage - firstPage + 1).ToList();
         var lines = UseHardScanOcr
