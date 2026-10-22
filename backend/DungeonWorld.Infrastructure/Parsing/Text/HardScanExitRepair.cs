@@ -35,7 +35,7 @@ public static class HardScanExitRepair
         @"\s+(?:now\s+|then\s+|also\s+|just\s+)?" +
         // The garbled verb is already known-bad, so a wider preposition set is safe here
         // ("tum in 122" is "turn to 122"; a plain "walk in to the shop" never matches).
-        @"(?:to|fo|io|bo|bn|tn|tor|tir|ta|ko|tr|go|fom|fo0|f0|t0|0|rn|ir|tao|too|" +
+        @"(?:to|fo|io|bo|bn|tn|tor|tir|ta|ko|tr|go|fom|fo0|f0|t0|0|rn|ir|tao|too|lo|" +
         @"in|on|at|up|down|over|" +
         @"\[0|\(0|\{0|£0|£o|\[o|\(o|\{o" +
         @")\s*[^\d\r\n]{0,3}(?=\d)",

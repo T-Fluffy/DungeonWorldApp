@@ -56,9 +56,39 @@ public sealed class AppointmentWithFearParser : ManifestDungeonWorldParser
         HardScanExitRepair.Repair(content, MaxSections);
 
     /// <summary>
-    /// Per-section corrections: exit targets OCR read as a different but valid number. Each entry is
-    /// a printed number the scan mangled; evidence is the sol16 solution path or the surrounding
-    /// dump text. Anything unresolved is deliberately left verbatim for manual review.
+    /// Per-section corrections: exit targets OCR read as a different but valid number, or dropped
+    /// entirely at a column/page break. Each entry is a printed number confirmed against the sol16
+    /// solution path and/or the 600 dpi spread. Anything unresolved is deliberately left verbatim.
     /// </summary>
-    public static string ApplySectionFixes(int sectionNumber, string content) => content;
+    public static string ApplySectionFixes(int sectionNumber, string content) => sectionNumber switch
+    {
+        60 => content.Replace("turn to 8.", "turn to 98."),
+        72 => content.Replace("Turn to 290", "Turn to 299"),
+        77 => content.Replace("retum to gy", "turn to 97"),
+        78 => content.Replace("turn\nto 2286,", "turn to 226,"),
+        83 => content.Replace("Poo tlic to Bo.", "Turn to 60."),
+        99 => content.Replace("(lurn to", "(turn to 305)."),
+        124 => content.Replace("Turn now to &7.", "Turn to 67."),
+        130 => content.Replace("bottom edge. Tum", "bottom edge. Turn to 298."),
+        182 => content.Replace("feet. Tum", "feet. Turn to 241."),
+        235 => content.Replace("Turn io 23.", "Turn to 25."),
+        271 => content.Replace("Tom fo 133.", "Turn to 143."),
+        296 => content.Replace("{form fo 423)", "(turn to 423)"),
+        298 => content.Replace("urn to 150", "turn to 159"),
+        299 => content.Replace("Turn to 204.", "Turn to 294."),
+        300 => content.Replace("turn to 5) 3277.", "turn to 327."),
+        311 => content.Replace("Turn te ro", "Turn to 70"),
+        327 => content.Replace("Turn to9", "Turn to 4"),
+        336 => content.Replace("Turn now", "Turn to 372."),
+        368 => content.Replace("Purn tog.", "Turn to 369."),
+        369 => content.Replace("(bn to 27817", "(turn to 278)")
+            .Replace("turn to [unclear]7", "turn to 278"),
+        372 => content.Replace("7a}", "72"),
+        391 => content.Replace("(turn to 308)", "(turn to 396)"),
+        409 => content.Replace("{turn tr 285)", "(turn to 185)"),
+        412 => content.Replace("(rum\nor 2687", "(turn to 382"),
+        428 => content.Replace("(turn tir 18g)", "(turn to 189)")
+            .Replace("(lum to 30057", "(turn to 300)"),
+        _ => content,
+    };
 }

@@ -20,14 +20,44 @@ public sealed class AppointmentWithFearParserTests
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     [Theory]
-    [InlineData(1, "As you walk the ten blocks to work that morning. Turn to 12.")]
-    [InlineData(7, "After the second round of combat, tum to 359.")]
-    [InlineData(440, "You have earned 10 Hero Points for this victory.")]
-    public void ApplySectionFixes_IsCurrentlyAPassThrough(int section, string content) =>
-        // No hand-written exit corrections were needed for FF17: every exit is either legible or
-        // genuinely unrecoverable. The hook stays so future evidence can be added without touching
-        // the shared pipeline.
-        AppointmentWithFearParser.ApplySectionFixes(section, content).Should().Be(content);
+    // Exit targets OCR read as a different but valid in-range number, or lost at a break. The raw
+    // forms are what ApplySectionFixes sees, before HardScanExitRepair canonicalises the verb.
+    [InlineData(60, "turn to 8.", "turn to 98.")]
+    [InlineData(72, "Turn to 290", "Turn to 299")]
+    [InlineData(77, "retum to gy", "turn to 97")]
+    [InlineData(78, "turn\nto 2286,", "turn to 226,")]
+    [InlineData(83, "Poo tlic to Bo.", "Turn to 60.")]
+    [InlineData(99, "(lurn to", "(turn to 305).")]
+    [InlineData(124, "Turn now to &7.", "Turn to 67.")]
+    [InlineData(130, "bottom edge. Tum", "bottom edge. Turn to 298.")]
+    [InlineData(182, "feet. Tum", "feet. Turn to 241.")]
+    [InlineData(235, "Turn io 23.", "Turn to 25.")]
+    [InlineData(271, "Tom fo 133.", "Turn to 143.")]
+    [InlineData(296, "{form fo 423)", "(turn to 423)")]
+    [InlineData(298, "urn to 150", "turn to 159")]
+    [InlineData(299, "Turn to 204.", "Turn to 294.")]
+    [InlineData(300, "turn to 5) 3277.", "turn to 327.")]
+    [InlineData(311, "Turn te ro", "Turn to 70")]
+    [InlineData(327, "Turn to9", "Turn to 4")]
+    [InlineData(336, "Turn now", "Turn to 372.")]
+    [InlineData(368, "Purn tog.", "Turn to 369.")]
+    [InlineData(369, "(bn to 27817", "(turn to 278)")]
+    [InlineData(369, "turn to [unclear]7", "turn to 278")]
+    [InlineData(372, "7a}", "72")]
+    [InlineData(391, "(turn to 308)", "(turn to 396)")]
+    [InlineData(409, "{turn tr 285)", "(turn to 185)")]
+    [InlineData(412, "(rum\nor 2687", "(turn to 382")]
+    [InlineData(428, "(turn tir 18g)", "(turn to 189)")]
+    [InlineData(428, "(lum to 30057", "(turn to 300)")]
+    public void ApplySectionFixes_RewritesAdjudicatedExits(int section, string raw, string expected) =>
+        AppointmentWithFearParser.ApplySectionFixes(section, raw).Should().Be(expected);
+
+    [Fact]
+    public void ApplySectionFixes_LeavesUnlistedSectionsAlone()
+    {
+        const string content = "You walk in to the shop and go down to 5th Avenue. Turn to 336.";
+        AppointmentWithFearParser.ApplySectionFixes(1, content).Should().Be(content);
+    }
 
     [Theory]
     // Garbled verbs and prepositions are the dominant FF17 failure mode.
