@@ -42,6 +42,20 @@ public sealed class RebelPlanetParser : ManifestDungeonWorldParser
     private const int MaxSections = 400;
     protected override int MaxSectionNumber => MaxSections;
 
+    /// <summary>
+    /// Sections whose printed body is split across a page turn or truncated by the OCR
+    /// transcript. Verified against the 600-dpi scan.
+    /// </summary>
+    private static readonly Dictionary<int, string> SectionOverrides = new()
+    {
+        [297] = "297\nWell done! The door slides open easily and lets you into an ante-chamber before sliding shut again behind you. Only then do the next doors open - and there are four more sets of doors; this is to keep the building as free as possible from dust. Once inside, you can see the computer room ahead, but there are also some steps down to a basement. Will you go straight to the computer room (turn to 381), or down to the basement first (turn to 169)?",
+        [355] = "355\nThe crack is deep and narrow, and you cannot reach too far. The strength of the bird, which you already knew from your fight with it, is further proved by the size of the objects you find - smaller things have presumably fallen into the inaccessible depths of the fissure. Apart from some useless chunks of metal and a broken spy missile, you find a staff with seven strips of different metals coiled around its wooden stem, a casket containing 180 credits, and a mind-probe. The probe will fit into your anti-grav pack, and you put the money in your money-belt, but if you take the staff, it will make your descent down the cliff more risky, since you will have to carry it by hand. Even more alarming is the fact that a faint power seems to be suggesting that you take the staff. You cannot tell whether the power is good or evil, but you are able to resist it, if you want to. Note down on your Equipment List what you take. Will you now explore the other fissure (turn to 14), or climb back down to the path to continue your journey (turn to 10)?",
+    };
+
+    /// <summary>Exposed for tests; returns the verified text for split/truncated sections.</summary>
+    public static string ApplySectionOverrides(int sectionNumber, string content) =>
+        SectionOverrides.TryGetValue(sectionNumber, out var overrideText) ? overrideText : content;
+
     /// <summary>Written by Robin Waterfield, not the usual series authors.</summary>
     protected override string Author => "Robin Waterfield";
 
@@ -53,7 +67,7 @@ public sealed class RebelPlanetParser : ManifestDungeonWorldParser
     protected override bool KeepExitFragments => true;
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
-        ApplySectionFixes(sectionNumber, PostProcessContent(content));
+        ApplySectionFixes(sectionNumber, PostProcessContent(ApplySectionOverrides(sectionNumber, content)));
 
     /// <summary>FF18-scoped exit repair, bounded to this book's 400 sections.</summary>
     protected override string RepairExits(int sectionNumber, string content) => RepairExits(content);
@@ -77,6 +91,10 @@ public sealed class RebelPlanetParser : ManifestDungeonWorldParser
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
+        // The scan frequently reads an opening parenthesis as a brace; none are used as literal
+        // braces in this book.
+        content = content.Replace('{', '(');
+
         // FF18 routes a lot of play through binary/decimal code puzzles whose sections are entered
         // by "turn to the paragraph whose number looks the same as this binary number" rather than
         // by a literal target. The number is a reader-computed value, so no exit can be parsed and
@@ -93,12 +111,7 @@ public sealed class RebelPlanetParser : ManifestDungeonWorldParser
             (245, 294, "left-hand cave -> enter the gloom (sol17: 245, 294)"),
             (222, 400, "elmonite blast -> the Empire is finished (sol17: 222, 400)"),
             (101, 294, "hotel search -> cave mouth (sol17: 101, 294)"),
-            // S98 has no sol17 coverage (the solution visits 173 of 400 sections). Its parent is
-            // S49 "climb back down the path": S358 sends you to S10, S10 splits on carrying the
-            // staff, and S10's staff branch reaches S49, which is the climb-down hub whose cliff
-            // descent is S232 (no staff) or S98 (staff breaks). Only S98 was orphaned.
-            (49, 98, "climb down the path -> cliff descent with the staff (book: S358,S10,S49,S98)"),
-            // S239 likewise: S97 tells you to note Zacharias's room number, S202 sends you to the
+            // S239: S97 tells you to note Zacharias's room number, S202 sends you to the
             // Arts Floor, and S258 says "turn to the paragraph which has the same number as the
             // room you need" - the room is 239.
             (258, 239, "Arts Floor room-number puzzle -> knock on Zacharias's door (book: S97,S202,S258,S239)"),
@@ -109,6 +122,15 @@ public sealed class RebelPlanetParser : ManifestDungeonWorldParser
 
         return sectionNumber switch
         {
+            // The new manifest merges the first printed 47 into 46; drop its header line.
+            46 => Regex.Replace(content, @"(?m)^\s*47\s*\r?\n?", string.Empty),
+            // S48's printed footer is read as "| Turn to 164."; drop the stray pipe.
+            48 => Regex.Replace(content, @"(?m)^\s*\|\s*Turn to 164\.\s*$", "Turn to 164.", RegexOptions.IgnoreCase),
+            // S49 prints "bitten by a Saw-toothed Rat, turn to 98"; the scan reads 98 as "¢8".
+            49 => Regex.Replace(content, @"\bturn\s+to\s*[^\d\r\n]{0,2}8\b", "turn to 98", RegexOptions.IgnoreCase),
+            // S106: "If you know the Scabrok's weakness, turn to the relevant reference" - S262 is
+            // that weakness, and sol17 confirms 106, 262.
+            106 => Regex.Replace(content, @"turn\s+to\s+the\s+relevant\s+reference", "turn to 262", RegexOptions.IgnoreCase),
             // Garble fixes. NOTE: PostProcessContent runs shared TurnToRepair FIRST, so the text
             // matched here is already post-shared-repair.
             222 => content.Replace("Turn to goo.", "Turn to 400.", StringComparison.OrdinalIgnoreCase), // elmonite (sol17: 222, 400)
