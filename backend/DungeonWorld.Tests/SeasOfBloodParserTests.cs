@@ -46,6 +46,25 @@ public sealed class SeasOfBloodParserTests
         Assert.DoesNotContain("middle\nof its back?", fixedContent);
     }
 
+    [Theory]
+    [InlineData(50, "/assets/game-art/ff16_seas_of_blood/p49_i0.png")]
+    [InlineData(92, "/assets/game-art/ff16_seas_of_blood/p74_i0.png")]
+    [InlineData(134, "/assets/game-art/ff16_seas_of_blood/p94_i0.png")]
+    [InlineData(216, "/assets/game-art/ff16_seas_of_blood/p139_i0.png")]
+    [InlineData(261, "/assets/game-art/ff16_seas_of_blood/p166_i0.png")]
+    [InlineData(314, "/assets/game-art/ff16_seas_of_blood/p195_i0.png")]
+    public void ImagePathOverrides_UseVerifiedStartingPage(int section, string expected)
+    {
+        Assert.Equal(expected, SeasOfBloodParser.ApplyImagePathOverride(section, "/wrong.png"));
+    }
+
+    [Fact]
+    public void ImagePathOverrides_LeaveUnlistedSectionsAlone()
+    {
+        const string path = "/assets/game-art/ff16_seas_of_blood/p100_i0.png";
+        Assert.Equal(path, SeasOfBloodParser.ApplyImagePathOverride(1, path));
+    }
+
     [Fact]
     public void UnrelatedSectionsAreLeftAlone()
     {

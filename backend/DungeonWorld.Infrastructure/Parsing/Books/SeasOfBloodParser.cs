@@ -50,6 +50,21 @@ public sealed class SeasOfBloodParser : DungeonWorldBookParserBase
     };
 
     /// <summary>
+    /// Sections whose header was misread on the preceding page, so the base extractor attached
+    /// the wrong illustration. These page bindings were verified against the 600-dpi scan and are
+    /// kept here so a re-ingest does not silently undo them.
+    /// </summary>
+    private static readonly Dictionary<int, string> ImagePathOverrides = new()
+    {
+        [50] = "/assets/game-art/ff16_seas_of_blood/p49_i0.png",
+        [92] = "/assets/game-art/ff16_seas_of_blood/p74_i0.png",
+        [134] = "/assets/game-art/ff16_seas_of_blood/p94_i0.png",
+        [216] = "/assets/game-art/ff16_seas_of_blood/p139_i0.png",
+        [261] = "/assets/game-art/ff16_seas_of_blood/p166_i0.png",
+        [314] = "/assets/game-art/ff16_seas_of_blood/p195_i0.png",
+    };
+
+    /// <summary>
     /// S70 prints "otherwise, turn to no." - a typo for 110, the Horror combat that
     /// follows. S298 tells the reader to note 311 for defeating the Cyclops, but the
     /// instruction is not phrased as a normal exit, so the edge is added explicitly.
@@ -71,10 +86,16 @@ public sealed class SeasOfBloodParser : DungeonWorldBookParserBase
     public static string ApplySectionOverrides(int sectionNumber, string content) =>
         SectionOverrides.TryGetValue(sectionNumber, out var overrideText) ? overrideText : content;
 
+    /// <summary>Exposed for tests; returns the verified image path for miscatalogued sections.</summary>
+    public static string? ApplyImagePathOverride(int sectionNumber, string? imagePath) =>
+        ImagePathOverrides.TryGetValue(sectionNumber, out var overridePath) ? overridePath : imagePath;
+
     protected override void PostProcessSections(Book book)
     {
         foreach (var section in book.Sections)
         {
+            section.ImagePath = ApplyImagePathOverride(section.SectionNumber, section.ImagePath);
+
             string content = ApplySectionOverrides(section.SectionNumber, section.Content);
             content = ApplySectionFixes(section.SectionNumber, content);
             if (content == section.Content) continue;
