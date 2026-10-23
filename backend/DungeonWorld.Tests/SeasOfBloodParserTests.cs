@@ -33,6 +33,20 @@ public sealed class SeasOfBloodParserTests
     }
 
     [Fact]
+    public void S305_JoinsWrappedFinalChoice()
+    {
+        const string content =
+            "Landing lightly, you run nimbly behind the stricken Cyclops. Will you:\n" +
+            "Punch it in the kidneys? Turn to 347\n" +
+            "Elbow it in the back of the knees? Turn to 46\n" +
+            "Take a flying kick into the middle\n" +
+            "of its back? Turn to 384";
+        var fixedContent = SeasOfBloodParser.ApplySectionFixes(305, content);
+        Assert.Contains("Take a flying kick into the middle of its back? Turn to 384", fixedContent);
+        Assert.DoesNotContain("middle\nof its back?", fixedContent);
+    }
+
+    [Fact]
     public void UnrelatedSectionsAreLeftAlone()
     {
         const string content = "A plain scene with no fixes.";

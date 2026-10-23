@@ -53,12 +53,17 @@ public sealed class SeasOfBloodParser : DungeonWorldBookParserBase
     /// S70 prints "otherwise, turn to no." - a typo for 110, the Horror combat that
     /// follows. S298 tells the reader to note 311 for defeating the Cyclops, but the
     /// instruction is not phrased as a normal exit, so the edge is added explicitly.
+    /// S305's final choice wraps across two printed lines; joining it keeps the cleaner
+    /// from dropping the first half of the label and truncating the body text.
     /// </summary>
     public static string ApplySectionFixes(int sectionNumber, string content) => sectionNumber switch
     {
         70 => Regex.Replace(content, @"turn\s+to\s+no\.", "turn to 110.", RegexOptions.IgnoreCase),
         298 when !Regex.IsMatch(content, @"\bturn\s+to\s+311(?!\d)", RegexOptions.IgnoreCase) =>
             content + " (turn to 311).",
+        305 => content.Replace(
+            "Take a flying kick into the middle\nof its back?",
+            "Take a flying kick into the middle of its back?"),
         _ => content,
     };
 
