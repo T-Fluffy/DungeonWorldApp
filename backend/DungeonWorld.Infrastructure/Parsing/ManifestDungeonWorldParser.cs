@@ -111,6 +111,16 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     protected virtual string RepairExits(int sectionNumber, string content) => content;
 
     /// <summary>
+    /// Optional per-book hook that runs after assembly and gap filling, immediately before the
+    /// processed book is persisted. Books with an authoritative graph (FF26) use it to attach
+    /// <see cref="Section.ReferenceOverride"/> so the cleaner can bypass unrepairable OCR exits.
+    /// Defaults to a no-op.
+    /// </summary>
+    protected virtual void PostProcessBook(Book book)
+    {
+    }
+
+    /// <summary>
     /// When true, the manifest file order is the transcript order (page, line) and each
     /// entry carries its own section number, so section bounds run from one pin to the
     /// next pin in the book instead of from one section number to the next. Defaults to
@@ -181,6 +191,7 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         }
 
         FillGaps(book);
+        PostProcessBook(book);
         await PersistBookAsync(book);
         return book;
     }

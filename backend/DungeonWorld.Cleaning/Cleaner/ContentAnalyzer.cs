@@ -127,6 +127,7 @@ public static class ContentAnalyzer
         clean.References = refs.ToList();
 
         ExtractChoices(text, clean);
+        ApplyReferenceOverride(section, clean, maxSection);
 
         AnalyzeCombat(text, features);
         features.HasLuckTest = LuckTestRe.IsMatch(text);
@@ -172,6 +173,37 @@ public static class ContentAnalyzer
 
         clean.Clean = StripAdverts(PageRangeFooterRe.Replace(StripChoiceLines(text), ""));
         return clean;
+    }
+
+    /// <summary>
+    /// Replaces text-derived exits with an authoritative list when the parser supplies one.
+    /// The graph still comes from OCR for every other book; this exists for scans whose exit
+    /// numbers are too garbled to repair safely (FF26). Labels already extracted for a target
+    /// that survives the override are kept, while targets the text never resolved fall back to
+    /// a plain "Turn to N" button. An empty override is meaningful: it clears false exits and
+    /// marks the section as a genuine end.
+    /// </summary>
+    private static void ApplyReferenceOverride(Section section, CleanedSection clean, int maxSection)
+    {
+        if (section.ReferenceOverride is null) return;
+
+        var targets = section.ReferenceOverride
+            .Where(n => n >= 1 && n <= maxSection)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToList();
+        var labels = clean.Choices
+            .GroupBy(c => c.Target)
+            .ToDictionary(g => g.Key, g => g.First().Label);
+
+        clean.References = targets;
+        clean.Choices = targets.Select(target => new CleanedChoice
+        {
+            Kind = "choice",
+            Label = labels.TryGetValue(target, out var label) ? label : null,
+            Target = target,
+            Text = $"Turn to {target}",
+        }).ToList();
     }
 
     private static string StripAdverts(string clean)

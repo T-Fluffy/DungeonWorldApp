@@ -37,6 +37,8 @@ public static class IntroOverrides
         ("masks of mayhem", "DungeonWorld.Cleaning.Text.Intros.ff23.txt"),
         ("creature of havoc", "DungeonWorld.Cleaning.Text.Intros.ff24.txt"),
         ("beneath nightmare castle", "DungeonWorld.Cleaning.Text.Intros.ff25.txt"),
+        ("crypt of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
+        ("crypts of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>

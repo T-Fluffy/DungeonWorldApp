@@ -300,6 +300,7 @@ var factory = new DungeonWorldParserFactory(
         new MasksOfMayhemParser(storageOptions),
         new CreatureOfHavocParser(storageOptions),
         new BeneathNightmareCastleParser(storageOptions),
+        new CryptsOfTheSorcererParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
