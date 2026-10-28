@@ -39,6 +39,7 @@ public static class IntroOverrides
         ("beneath nightmare castle", "DungeonWorld.Cleaning.Text.Intros.ff25.txt"),
         ("crypt of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
         ("crypts of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
+        ("star strider", "DungeonWorld.Cleaning.Text.Intros.ff27.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>
