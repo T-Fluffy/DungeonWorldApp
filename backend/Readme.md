@@ -121,14 +121,27 @@ On startup, `CatalogSeeder` populates the game database:
 ## 🔍 How The Parser Works
 
 1. **Layout analysis** — `PdfPigLayoutAnalyzer` inspects the PDF and reports single-page vs 2-up layout.
-2. **Parser selection** — `DungeonWorldParserFactory` picks the first registered parser whose `CanHandle()` matches (defaults to `DoublePageParser`, the most common FF scan format).
-3. **Geometric parsing** — `BaseDungeonWorldParser` locates section headers by centered X/Y coordinates (ignoring page-top navigation numbers), extracts body text, choices (`Turn to N` / `If you have...`), and embedded illustrations.
-4. **Physical page tracking** — each text line records the **physical PDF page** it came from (`LineInfo.PhysicalPage`). When a section is flushed, its illustration path is derived from that physical page (`p{physicalPage}_i0.png`) rather than a sequential index — critical for double-page books, where the section's logical position and its source page diverge. This guarantees `/assets/game-art/...` links match the extracted PNGs.
-5. **Patches** — hard-coded rules fix known layout quirks (e.g. a section that is printed without its number) and the *Victory Terminator* stops ingestion once the story's "You have won" signature appears, keeping publisher back-matter out of the data.
-6. **Output** — each book is written as `<Title>.json` under `Storage/Books/ProcessedBooks`, with extracted images under `Storage/GameArt`, served statically at `/assets/game-art`.
-7. **Optional structure pass** — `dotnet run --project DungeonWorld.DataCleaner` reads every `<Title>.json` and writes a sidecar `<Title>.cleaned.json` (raw content always preserved). It extracts rule formulas (SKILL/STAMINA/LUCK/CREW/Booty/LOG) from the intro, labels each section's `Turn to N` choices, parses individual and large-scale (STRIKE/STRENGTH) combat enemies, flags dice/Luck tests, stat & Booty/LOG changes, and builds a section graph (outgoing/incoming, dead ends, terminal ends, unreachable, orphan links).
+2. **Parser selection** — the API parser factory selects a registered parser for the PDF layout. The batch `DungeonWorld.Ingestor` also supports book-specific parsers and manifest-driven reconstruction for books whose scans need OCR/page-level guidance; these paths can apply book-specific fixes and reference overrides.
+3. **Text and section extraction** — the geometric parser finds section headers and extracts text, choices, and illustrations from layout blocks. The reconstruction path combines OCR with the corresponding JSON manifests and boundary rules. Both paths produce the same processed-book model; missing or unreadable section text is retained as a detectable gap rather than silently treated as valid prose.
+4. **Physical page tracking** — illustration paths use the **physical PDF page** (`p{physicalPage}_i0.png`), not a logical section index. This matters for double-page scans, where a section's logical position and source page differ; assets are served at `/assets/game-art`.
+5. **Book-specific handling** — parser fixes cover known scan/layout issues, and the *Victory Terminator* prevents publisher back-matter from being ingested after the story ends.
+6. **Output** — the batch ingestor writes `<BookTitle>.json` to `Storage/Books/ProcessedBooks`, cleaned game data to `Storage/Books/CleanedData/<BookTitle>.json`, and (unless `--no-images` is used) extracted images to `Storage/GameArt`.
+7. **Cleaning and analysis** — `dotnet run --project backend/DungeonWorld.DataCleaner` rebuilds cleaned data from processed JSON. Pass `-- --only "FF02 Citadel of Chaos.json,FF03 Forest of Doom.json"` to select processed filenames; without it, all processed books are read. Cleaned output is in `Storage/Books/CleanedData`, not a `.cleaned.json` sidecar. The cleaner derives section choices/references and graph data, rules, combat and game-state features, and missing-text metadata. It avoids overwriting existing cleaned files by choosing a numbered filename, so inspect/remove the intended stale output before rerunning a book to avoid duplicate outputs.
 
-> **Existing books:** the physical-page change was also applied in place to already-ingested books — `Seas of Blood` had 345 illustration paths remapped and 48 nulled (kept under `Storage/Books/ProcessedBooks/Seas of Blood.json.bak`). New ingestions get correct paths automatically from the parser.
+## 📚 Local Book Data Status
+
+The local `Storage/Books` data is generated/ignored content; it is not included in the repository. Current audit snapshot:
+
+- **28 canonical books** are present in both `ProcessedBooks` and `CleanedData`; 24 have bodies for all their sections.
+- **FF09 — Caverns of the Snow Witch:** 38 section bodies are missing (362/400 present): §§7, 39–40, 43, 45, 47, 49, 51, 55, 64, 70, 80–82, 88, 109, 164–165, 167, 177–178, 197, 220–222, 269, 276–277, 283–284, 286–287, 292, 294, 347, and 383–385. The local scan does not supply usable text for those sections.
+- **FF11 — Talisman of Death:** §§38 and 77 are missing (398/400 present); the corresponding local scan pages appear to contain artwork only.
+- **FF26 — Crypts of the Sorcerer:** §§14–17 are missing (396/400 present); those sections are absent from the local scan.
+- **FF28 — Phantoms of Fear:** 222/400 bodies are present; 106 are blank and 72 are explicit missing-text placeholders. Sections 308, 334, and 347 have unusually long bodies that likely contain merged section boundaries.
+- **FF09 §67** is also unusually long (5,387 characters) and needs a boundary/source-page check.
+
+The remaining body gaps need better scans or verified transcription. Preserve `Storage/Books/tmp` PDFs and reconstruction/OCR evidence while this work continues. Confirm uncertain section links against the page images before changing parser logic or golden graphs; goldens are expected-data snapshots, not proof that OCR or the source scan is correct.
+
+The latest combined graph/structure validation snapshot had **39 tests passing and 16 failing**: 14 graph snapshots have unresolved differences, and two structure checks report four oversized sections (FF09 §67 and the three FF28 sections above). User-verified corrections for FF02–FF05 are recorded, but other graph differences still need visual adjudication.
 
 ## 🛠️ Local Setup (without Docker)
 

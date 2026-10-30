@@ -1,3 +1,4 @@
+using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Options;
 using Microsoft.Extensions.Options;
 
@@ -96,4 +97,15 @@ public sealed class StarshipTravellerParser : ManifestDungeonWorldParser
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
+
+    protected override void PostProcessBook(Book book)
+    {
+        ApplyReferenceFixes(book);
+    }
+
+    public static void ApplyReferenceFixes(Book book)
+    {
+        var section = book.Sections.Single(s => s.SectionNumber == 5);
+        section.ReferenceOverride = new List<int> { 15, 85, 143, 148 };
+    }
 }

@@ -6,11 +6,12 @@ using DungeonWorld.Cleaning;
 // structured CleanedData/<Title>.json used by the game API. Run after ingesting a new
 // book, or to repair existing output:
 //   dotnet run --project backend/DungeonWorld.DataCleaner
+//   dotnet run --project backend/DungeonWorld.DataCleaner -- --only "FF02 Citadel of Chaos.json,FF03 Forest of Doom.json"
 
 var dirs = LocateDirs();
 if (dirs == null)
 {
-    Console.Error.WriteLine("Storage/Books directory not found. Run from the repo root or pass --dir <books>.");
+    Console.Error.WriteLine("Storage/Books directory not found. Run from the repository root or a subdirectory.");
     return 1;
 }
 
@@ -18,16 +19,40 @@ var (booksDir, processedDir) = dirs.Value;
 var cleanedDir = Path.Combine(booksDir, "CleanedData");
 Directory.CreateDirectory(cleanedDir);
 
+var onlyFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+for (int i = 0; i < args.Length; i++)
+{
+    if (args[i] != "--only" || i + 1 >= args.Length)
+    {
+        Console.Error.WriteLine(args[i] == "--only"
+            ? "--only requires a comma-separated list of processed book filenames."
+            : $"Unknown option: {args[i]}");
+        return 1;
+    }
+
+    var names = args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (names.Length == 0)
+    {
+        Console.Error.WriteLine("--only requires at least one processed book filename.");
+        return 1;
+    }
+    foreach (var name in names)
+        onlyFiles.Add(name);
+}
+
 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 var files = Directory.GetFiles(processedDir, "*.json")
     .Where(f => !Path.GetFileName(f).EndsWith(".cleaned.json", StringComparison.OrdinalIgnoreCase))
     .Where(f => !Path.GetFileName(f).EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+    .Where(f => onlyFiles.Count == 0 || onlyFiles.Contains(Path.GetFileName(f)))
     .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
     .ToList();
 
 if (files.Count == 0)
 {
-    Console.Error.WriteLine("No book JSON files found to clean.");
+    Console.Error.WriteLine(onlyFiles.Count == 0
+        ? "No book JSON files found to clean."
+        : $"No matching processed books found for --only: {string.Join(", ", onlyFiles)}");
     return 1;
 }
 
