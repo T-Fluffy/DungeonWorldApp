@@ -113,7 +113,7 @@ public static class ContentAnalyzer
         };
 
         var features = clean.Features;
-        features.MissingText = MissingTextRe.IsMatch(raw);
+        features.MissingText = string.IsNullOrWhiteSpace(raw) || MissingTextRe.IsMatch(raw);
 
         var refs = new SortedSet<int>();
         foreach (Match m in TurnToRe.Matches(text))

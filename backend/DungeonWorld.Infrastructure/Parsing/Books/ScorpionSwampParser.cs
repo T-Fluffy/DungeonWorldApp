@@ -9,9 +9,9 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// 28-232; single-page portraits, side M throughout). Intro uses the cover/title
 /// pages (1, 3) plus the BACKGROUND narrative (24-26); the curated intro text
 /// ships in Intros/ff08.txt. Section exits were adjudicated against the
-/// arek.bdmonkeys.net walkthrough (sol7). Open items: S171 body lost (only the
-/// p121 range line survives; parent S337-fire); S36/S22 south-branch "go" and
-/// similar single-letter garbles below need book-checks.
+/// arek.bdmonkeys.net walkthrough (sol7). S171's body is restored from the
+/// local scan; S36/S22 south-branch "go" and similar single-letter garbles
+/// below still need book-checks.
 /// </summary>
 public sealed class ScorpionSwampParser : ManifestDungeonWorldParser
 {
@@ -29,8 +29,16 @@ public sealed class ScorpionSwampParser : ManifestDungeonWorldParser
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
 
+    private const string Section171 =
+        "The Slime is very strong, but almost mindless.\n" +
+        "SLIME SKILL 5 STAMINA 17\n" +
+        "You can Escape at any time; turn to 153, but leave on the path by which you entered. " +
+        "If you kill the Slime, turn to 38.";
+
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
+        if (sectionNumber == 171 && string.IsNullOrWhiteSpace(content)) return Section171;
+
         // Restored exit tails: short trailing fragments the transcript carries but
         // TrimContent drops as noise, orphaning the exit's head. Strings verified
         // against the 300 dpi dump (FF06 Round-2 / FF07 precedent); S1/S280 append

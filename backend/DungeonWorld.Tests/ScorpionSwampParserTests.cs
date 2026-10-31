@@ -11,6 +11,16 @@ namespace DungeonWorld.Tests;
 /// </summary>
 public sealed class ScorpionSwampParserTests
 {
+    [Fact]
+    public void S171_RestoresBodyFromScan()
+    {
+        var content = ScorpionSwampParser.ApplySectionFixes(171, string.Empty);
+
+        Assert.Contains("SLIME SKILL 5 STAMINA 17", content);
+        Assert.Contains("turn to 153", content, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("turn to 38.", content);
+    }
+
     [Theory]
     [InlineData(191, "Friendship? Turn to 204", "Friendship? Turn to 294")]
     [InlineData(137, "Turn back to 336", "Turn to 336")]

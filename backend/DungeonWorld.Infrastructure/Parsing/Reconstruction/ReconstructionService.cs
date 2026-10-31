@@ -13,7 +13,7 @@ namespace DungeonWorld.Infrastructure.Parsing.Reconstruction;
 /// </summary>
 public static class ReconstructionService
 {
-    /// <summary>A single OCR'd transcript line on a page.</summary>
+    /// <summary>A single OCR'd transcript line; line numbers are local to its page and side.</summary>
     public sealed record OcrLine(int Page, int N, string Side, double Top, string Text);
 
     /// <summary>One manifest body-start point: section <paramref name="Number"/> begins at line
@@ -23,7 +23,7 @@ public static class ReconstructionService
 
     /// <summary>
     /// Renders every requested page of the PDF at <paramref name="dpi"/> and OCRs the content
-    /// region, returning per-page line transcripts ordered by (page, n). When no page list is
+    /// region, returning transcripts ordered by (page, side, n). When no page list is
     /// given the whole document is rendered. Line numbering matches the transcript format the
     /// manifest line references were produced against.
     /// </summary>
@@ -43,7 +43,11 @@ public static class ReconstructionService
                 foreach (var l in OcrPageLines(png, split))
                     lock (lines) lines.Add(new OcrLine(pp, l.n, l.side, l.top, l.text));
             });
-            return lines.OrderBy(l => l.Page).ThenBy(l => l.N).ToList();
+            return lines
+                .OrderBy(l => l.Page)
+                .ThenBy(l => l.Side, StringComparer.Ordinal)
+                .ThenBy(l => l.N)
+                .ToList();
         }
         finally
         {
@@ -75,32 +79,42 @@ public static class ReconstructionService
                 return words.Count() >= 3;
             }));
 
-        var filtered = lineStream.Where(l =>
-            textHalves.Contains((l.Page, l.Side)) ||
-            wordyCount.GetValueOrDefault((l.Page, l.Side)) >= 5).ToList();
+        var filtered = lineStream
+            .Where(l =>
+                textHalves.Contains((l.Page, l.Side)) ||
+                wordyCount.GetValueOrDefault((l.Page, l.Side)) >= 5)
+            .OrderBy(l => l.Page)
+            .ThenBy(l => l.Side, StringComparer.Ordinal)
+            .ThenBy(l => l.N)
+            .ToList();
         var lineIndex = filtered
-            .Select((l, i) => (Key: (l.Page, l.N), Idx: i))
+            .Select((l, i) => (Key: (l.Page, l.Side, l.N), Idx: i))
             .ToDictionary(x => x.Key, x => x.Idx);
 
         var sections = new List<Section>();
         for (int i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
-            if (!lineIndex.TryGetValue((e.Page, e.Line), out int startIdx)) continue;
+            if (!lineIndex.TryGetValue((e.Page, e.Side, e.Line), out int startIdx)) continue;
             int endIdx;
             if (e.EndLine.HasValue)
             {
-                if (!lineIndex.TryGetValue((e.Page, e.EndLine.Value), out int ei)) ei = startIdx;
+                if (!lineIndex.TryGetValue((e.Page, e.Side, e.EndLine.Value), out int ei)) ei = startIdx;
                 endIdx = ei + 1;
-            }
-            else if (i + 1 < entries.Count &&
-                     lineIndex.TryGetValue((entries[i + 1].Page, entries[i + 1].Line), out int ni))
-            {
-                endIdx = ni;
             }
             else
             {
                 endIdx = filtered.Count;
+                for (int next = i + 1; next < entries.Count; next++)
+                {
+                    if (!lineIndex.TryGetValue(
+                            (entries[next].Page, entries[next].Side, entries[next].Line),
+                            out int nextIdx))
+                        continue;
+
+                    endIdx = nextIdx;
+                    break;
+                }
             }
 
             var raw = filtered.GetRange(startIdx, Math.Max(0, endIdx - startIdx)).Select(l => l.Text).ToList();
@@ -123,7 +137,10 @@ public static class ReconstructionService
     {
         var sb = new StringBuilder();
         foreach (var page in pages)
-            foreach (var line in lineStream.Where(l => l.Page == page).OrderBy(l => l.N))
+            foreach (var line in lineStream
+                         .Where(l => l.Page == page)
+                         .OrderBy(l => l.Side, StringComparer.Ordinal)
+                         .ThenBy(l => l.N))
             {
                 string t = line.Text.Trim();
                 if (t.Length == 0) continue;
@@ -258,7 +275,13 @@ public static class ReconstructionService
             CollectRegion(engine, pix, new Rect(0, 0, w / 2, h), "L", h, result);
             CollectRegion(engine, pix, new Rect(w / 2, 0, w - w / 2, h), "R", h, result);
         }
-        return result.OrderBy(l => l.Item2).ThenBy(l => l.Item3).Select((l, i) => (i, l.Item2, l.Item3, l.Item4)).ToList();
+        return result
+            .OrderBy(line => line.Item2, StringComparer.Ordinal)
+            .ThenBy(line => line.Item3)
+            .GroupBy(line => line.Item2)
+            .SelectMany(group => group.Select((line, index) =>
+                (index, group.Key, line.Item3, line.Item4)))
+            .ToList();
     }
 
     private static void CollectRegion(

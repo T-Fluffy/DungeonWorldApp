@@ -30,7 +30,7 @@ public static class BookCleaner
                 Author = book.Author,
                 SourceFile = sourceFile,
                 SectionCount = book.Sections.Count,
-                PresentSectionCount = book.Sections.Count,
+                PresentSectionCount = 0,
                 MissingSectionCount = 0,
                 MapPath = string.IsNullOrWhiteSpace(book.MapPath) ? null : book.MapPath,
                 AdventureSheetPath = string.IsNullOrWhiteSpace(book.AdventureSheetPath) ? null : book.AdventureSheetPath,
@@ -40,10 +40,12 @@ public static class BookCleaner
             Sections = book.Sections.Select(s => ContentAnalyzer.Analyze(s, book.Sections.Count)).ToList(),
         };
 
-        var missing = Enumerable.Range(1, cleaned.Meta.SectionCount)
+        var missingNumbers = Enumerable.Range(1, cleaned.Meta.SectionCount)
             .Where(n => cleaned.Sections.All(s => s.Number != n))
             .ToList();
-        cleaned.Meta.MissingSectionCount = missing.Count;
+        var missingTextCount = cleaned.Sections.Count(s => s.Features.MissingText);
+        cleaned.Meta.PresentSectionCount = cleaned.Sections.Count - missingTextCount;
+        cleaned.Meta.MissingSectionCount = missingNumbers.Count + missingTextCount;
 
         cleaned.Meta.CombatSectionCount = cleaned.Sections.Count(s => s.Features.HasCombat);
         cleaned.Meta.EnemyCount = cleaned.Sections.Sum(s => s.Features.Enemies.Count);

@@ -11,11 +11,10 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// Intros/ff10.txt. Section exits adjudicated against the arek.bdmonkeys.net
 /// walkthrough (sol9): all 142 path edges resolve, choices match references,
 /// no dangling targets. Page-top running-head echoes moved to true bare
-/// headers so overflow tails stay with their section. Open items: S107's
-/// body was lost to full-page art (ghost, exits unknown); misread headers
-/// restored as S147/S194/S313/S314/S319/S397; S220/S400 verified against
-/// sol9 summaries; ~17 off-path sections stay unreachable (lost bodies or
-/// parents).
+/// headers so overflow tails stay with their section. S107's body is restored
+/// from the local scan; misread headers restored as S147/S194/S313/S314/S319/S397;
+/// S220/S400 verified against sol9 summaries; ~17 off-path sections stay
+/// unreachable (lost bodies or parents).
 /// </summary>
 public sealed class HouseOfHellParser : ManifestDungeonWorldParser
 {
@@ -33,16 +32,15 @@ public sealed class HouseOfHellParser : ManifestDungeonWorldParser
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
 
+    private const string Section107 =
+        "You walk over to the curtains and part them slowly. Outside, the storm is still raging. " +
+        "Thunder rolls across the sky and rain rattles against the window. The window is barred. " +
+        "There is no way out here. Turn to 168.";
+
     public static string ApplySectionFixes(int sectionNumber, string content)
     {
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            return sectionNumber switch
-            {
-                // S107's body was lost to full-page art (ghost, exits unknown).
-                _ => content,
-            };
-        }
+        if (sectionNumber == 107 && string.IsNullOrWhiteSpace(content)) return Section107;
+
         // Truncated tails: the slice ends mid-exit (number lives in the next
         // slice), so complete it. Suffix-checked, never fires on whole text.
         if (sectionNumber == 352 && content.TrimEnd().EndsWith("Then turn", StringComparison.OrdinalIgnoreCase))

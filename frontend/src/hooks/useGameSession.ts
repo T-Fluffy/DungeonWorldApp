@@ -58,8 +58,8 @@ export const useGameSession = (bookTitle: string | null) => {
     }
   }, [bookTitle, user?.isLoggedIn, user?.skill, user?.stamina, user?.luck, section, stats]);
 
-  const goTo = useCallback(async (sectionNumber: number) => {
-    if (!bookTitle || isProcessing) return;
+  const goTo = useCallback(async (sectionNumber: number): Promise<boolean> => {
+    if (!bookTitle || isProcessing) return false;
 
     setIsProcessing(true);
     addLog(`> ${sectionNumber}`, 'player');
@@ -82,12 +82,19 @@ export const useGameSession = (bookTitle: string | null) => {
       // closure is still the *previous* section until the next render.
       const completed = sectionNumber >= 400 || data.choices.length === 0;
       await save(completed, data.number);
+      return true;
     } catch (err) {
       addLog(extractError(err), 'system');
+      return false;
     } finally {
       setIsProcessing(false);
     }
   }, [bookTitle, isProcessing, addLog, save]);
+
+  const failTrial = useCallback(async (message: string) => {
+    addLog(message, 'system');
+    await save(true);
+  }, [addLog, save]);
 
   const reset = useCallback(() => {
     setLogs([]);
@@ -197,6 +204,10 @@ export const useGameSession = (bookTitle: string | null) => {
     // Allow jumping straight to a section number, e.g. "go 12" or "12"
     const goMatch = lower.match(/\bgo\s+(\d+)\b/) || lower.match(/^\s*(\d+)\s*$/);
     if (goMatch) {
+      if (section?.number === 309 && /phantoms? of fear/i.test(bookTitle)) {
+        addLog('Choose a five-square route to reach the judges before turning to a section.', 'system');
+        return;
+      }
       await goTo(parseInt(goMatch[1], 10));
       return;
     }
@@ -290,6 +301,7 @@ export const useGameSession = (bookTitle: string | null) => {
     error,
     combat,
     goTo,
+    failTrial,
     processCommand,
     reset,
     save,

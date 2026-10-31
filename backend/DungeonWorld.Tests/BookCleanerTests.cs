@@ -82,6 +82,7 @@ public class BookCleanerTests
 
         Assert.Equal("Test Dungeon", cleaned.Meta.Title);
         Assert.Equal(5, cleaned.Meta.SectionCount);
+        Assert.Equal(5, cleaned.Meta.PresentSectionCount);
         Assert.Equal(0, cleaned.Meta.MissingSectionCount);
 
         Assert.Equal(1, cleaned.Meta.CombatSectionCount);
@@ -98,6 +99,30 @@ public class BookCleanerTests
 
         var chest = cleaned.Sections.Single(s => s.Number == 4);
         Assert.Contains(chest.Features.Booty, b => b.Contains("5"));
+    }
+
+    [Fact]
+    public void Clean_CountsEmptyAndPlaceholderBodiesAsMissingText()
+    {
+        var book = new Book
+        {
+            Title = "Partial Dungeon",
+            Sections =
+            {
+                new() { SectionNumber = 1, Content = "The adventure begins here." },
+                new() { SectionNumber = 2, Content = string.Empty },
+                new() { SectionNumber = 3, Content = " \r\n " },
+                new() { SectionNumber = 4, Content = "[Text missing or unreadable in PDF]" },
+            }
+        };
+
+        var cleaned = BookCleaner.Clean(book, "Partial Dungeon.json");
+
+        Assert.Equal(1, cleaned.Meta.PresentSectionCount);
+        Assert.Equal(3, cleaned.Meta.MissingSectionCount);
+        Assert.True(cleaned.Sections.Single(s => s.Number == 2).Features.MissingText);
+        Assert.True(cleaned.Sections.Single(s => s.Number == 3).Features.MissingText);
+        Assert.True(cleaned.Sections.Single(s => s.Number == 4).Features.MissingText);
     }
 
     [Fact]

@@ -11,6 +11,15 @@ namespace DungeonWorld.Tests;
 /// </summary>
 public sealed class HouseOfHellParserTests
 {
+    [Fact]
+    public void S107_RestoresBodyFromScan()
+    {
+        var content = HouseOfHellParser.ApplySectionFixes(107, string.Empty);
+
+        Assert.StartsWith("You walk over to the curtains", content);
+        Assert.EndsWith("Turn to 168.", content);
+    }
+
     [Theory]
     [InlineData(64, "disappeared. Turn\nnow to 375.", "Turn\nto 375.")]
     [InlineData(93, "passageway or 166 to\nlook around.", "passageway or turn to 166 to")]

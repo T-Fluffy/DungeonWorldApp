@@ -276,7 +276,7 @@ var factory = new DungeonWorldParserFactory(
     new IBookParser[]
     {
         new SeasOfBloodParser(extractor, storageOptions),
-        new WarlockOfFiretopMountainParser(extractor, storageOptions),
+        new WarlockOfFiretopMountainParser(storageOptions),
         new CitadelOfChaosParser(storageOptions),
         new ForestOfDoomParser(storageOptions),
         new StarshipTravellerParser(storageOptions),
@@ -302,6 +302,7 @@ var factory = new DungeonWorldParserFactory(
         new BeneathNightmareCastleParser(storageOptions),
         new CryptsOfTheSorcererParser(storageOptions),
         new StarStriderParser(storageOptions),
+        new PhantomOfFearParser(storageOptions),
     },
     defaultParser,
     NullLogger<DungeonWorldParserFactory>.Instance);
@@ -342,11 +343,9 @@ foreach (var pdf in pdfs)
         var book = await parser.ParseAsync(pdf);
 
         DungeonWorldBookParserBase CreateOcrParser(IPdfTextExtractor ext) =>
-            title.Contains("Warlock of Firetop Mountain", StringComparison.OrdinalIgnoreCase)
-                ? new WarlockOfFiretopMountainParser(ext, storageOptions)
-                : new DefaultDungeonWorldParser(ext, storageOptions);
+            new DefaultDungeonWorldParser(ext, storageOptions);
 
-        var present = book.Sections.Count(s => s.Content != Placeholder);
+        var present = book.Sections.Count(s => HasText(s.Content));
         var candidates = new List<Book> { book };
         // Manifest parsers are authoritative reconstructions: never fall through to the OCR merge.
         if (present < MergeThreshold && parser is not ManifestDungeonWorldParser)
@@ -356,7 +355,7 @@ foreach (var pdf in pdfs)
             async Task<Book> RunOcrPass(TwoUpMode mode, int dpi) =>
                 await RunOcr(new OcrPdfTextExtractor(twoUpMode: mode, workers: 10, dpi: dpi)).ParseAsync(pdf);
 
-            int CountPresent(Book b) => b.Sections.Count(s => s.Content != Placeholder);
+            int CountPresent(Book b) => b.Sections.Count(s => HasText(s.Content));
 
             var flatBook = await RunOcrPass(TwoUpMode.Flat, ocrDpi);
             var splitBook = await RunOcrPass(TwoUpMode.RegionSplit, ocrDpi);
@@ -674,6 +673,9 @@ static string? FindStorageRoot()
     return null;
 }
 
+static bool HasText(string? content) =>
+    !string.IsNullOrWhiteSpace(content) && content != Placeholder;
+
 static void CleanPreviousOutput(string title, string processedDir, string cleanedDir, string[] protectedTitles)
 {
     if (protectedTitles.Contains(title, StringComparer.OrdinalIgnoreCase)) return;
@@ -694,7 +696,7 @@ static void CleanPreviousOutput(string title, string processedDir, string cleane
 
 static bool PrintReport(string title, string parserId, Book book, CleanedBook cleaned, string outPath)
 {
-    var present = book.Sections.Where(s => s.Content != Placeholder).ToList();
+    var present = book.Sections.Where(s => HasText(s.Content)).ToList();
     var missing = book.Sections.Count - present.Count;
     var maxNum = book.Sections.Count > 0 ? book.Sections.Max(s => s.SectionNumber) : 0;
     var avgLen = present.Count > 0 ? (int)present.Average(s => s.Content.Length) : 0;
@@ -704,7 +706,7 @@ static bool PrintReport(string title, string parserId, Book book, CleanedBook cl
     // Larger books (FF17 has 440 sections) legitimately exceed the 400 cap used
     // by the OCR merge path, so never flag the book's own high references.
     var outOfRange = choices.Count(c => c.TargetSectionNumber < 1 || c.TargetSectionNumber > Math.Max(MaxSection, maxNum));
-    var missingSet = book.Sections.Where(s => s.Content == Placeholder).Select(s => s.SectionNumber).ToHashSet();
+    var missingSet = book.Sections.Where(s => !HasText(s.Content)).Select(s => s.SectionNumber).ToHashSet();
     var toMissing = choices.Count(c => missingSet.Contains(c.TargetSectionNumber));
 
     int introLen = cleaned.Meta.Introduction?.Length ?? 0;
@@ -755,8 +757,8 @@ static Book MergeBooks(IEnumerable<Book> candidates, int maxSection)
             foreach (var s in list)
             {
                 if (best == null) { best = s; continue; }
-                bool sReal = s.Content != Placeholder;
-                bool bReal = best.Content != Placeholder;
+                bool sReal = HasText(s.Content);
+                bool bReal = HasText(best.Content);
                 if (sReal && !bReal) { best = s; continue; }
                 if (!sReal && bReal) continue;
                 if (s.Content.Length > best.Content.Length) best = s;
@@ -765,7 +767,7 @@ static Book MergeBooks(IEnumerable<Book> candidates, int maxSection)
         merged.Add(best ?? new Section { SectionNumber = n, Content = Placeholder });
     }
 
-    var src = candidates.OrderByDescending(b => b.Sections.Count(s => s.Content != Placeholder)).First();
+    var src = candidates.OrderByDescending(b => b.Sections.Count(s => HasText(s.Content))).First();
     return new Book
     {
         Title = src.Title,

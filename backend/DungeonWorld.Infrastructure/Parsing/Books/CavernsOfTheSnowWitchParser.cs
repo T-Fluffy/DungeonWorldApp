@@ -1,3 +1,4 @@
+using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Options;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,57 @@ public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
     protected override string Slug => "ff09_caverns_of_the_snow_witch";
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff09.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 3, 12, 13 };
+    protected override bool ManifestInTranscriptOrder => true;
+
+    private static readonly IReadOnlyDictionary<int, int[]> MissingSectionReferences = new Dictionary<int, int[]>
+    {
+        [7] = new[] { 4, 380 },
+        [39] = new[] { 240, 386 },
+        [40] = new[] { 244 },
+        [43] = new[] { 88, 29 },
+        [45] = new[] { 65, 338 },
+        [47] = new[] { 337 },
+        [49] = new[] { 234, 393 },
+        [51] = new[] { 336 },
+        [55] = new[] { 6, 236 },
+        [64] = Array.Empty<int>(),
+        [70] = new[] { 241 },
+        [80] = new[] { 111 },
+        [82] = new[] { 201, 280 },
+        [88] = new[] { 237, 250, 221 },
+        [109] = new[] { 81, 371 },
+        [164] = new[] { 38 },
+        [165] = new[] { 59 },
+        [167] = new[] { 252 },
+        [177] = new[] { 137 },
+        [178] = new[] { 324, 129 },
+        [197] = new[] { 212 },
+        [220] = new[] { 94, 326, 107 },
+        [222] = new[] { 242 },
+        [269] = new[] { 75 },
+        [276] = new[] { 39, 102 },
+        [277] = Array.Empty<int>(),
+        [283] = new[] { 370 },
+        [284] = new[] { 217 },
+        [286] = new[] { 293, 319 },
+        [287] = new[] { 151, 82 },
+        [292] = new[] { 93, 357 },
+        [294] = new[] { 372 },
+        [347] = new[] { 106 },
+        [383] = new[] { 339 },
+        [385] = new[] { 170, 377 },
+    };
+
+    protected override void PostProcessBook(Book book) => ApplyReferenceFixes(book);
+
+    public static void ApplyReferenceFixes(Book book)
+    {
+        foreach (var section in book.Sections)
+        {
+            if (MissingSectionReferences.TryGetValue(section.SectionNumber, out var targets))
+                section.ReferenceOverride = targets.ToList();
+        }
+    }
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));

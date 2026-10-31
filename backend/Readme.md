@@ -133,15 +133,16 @@ On startup, `CatalogSeeder` populates the game database:
 The local `Storage/Books` data is generated/ignored content; it is not included in the repository. Current audit snapshot:
 
 - **28 canonical books** are present in both `ProcessedBooks` and `CleanedData`; 24 have bodies for all their sections.
-- **FF09 — Caverns of the Snow Witch:** 38 section bodies are missing (362/400 present): §§7, 39–40, 43, 45, 47, 49, 51, 55, 64, 70, 80–82, 88, 109, 164–165, 167, 177–178, 197, 220–222, 269, 276–277, 283–284, 286–287, 292, 294, 347, and 383–385. The local scan does not supply usable text for those sections.
-- **FF11 — Talisman of Death:** §§38 and 77 are missing (398/400 present); the corresponding local scan pages appear to contain artwork only.
-- **FF26 — Crypts of the Sorcerer:** §§14–17 are missing (396/400 present); those sections are absent from the local scan.
-- **FF28 — Phantoms of Fear:** 222/400 bodies are present; 106 are blank and 72 are explicit missing-text placeholders. Sections 308, 334, and 347 have unusually long bodies that likely contain merged section boundaries.
+- **FF09 — Caverns of the Snow Witch:** 38 section bodies are missing (362/400 present): §§7, 39–40, 43, 45, 47, 49, 51, 55, 64, 70, 80–82, 88, 109, 164–165, 167, 177–178, 197, 220–222, 269, 276–277, 283–284, 286–287, 292, 294, 347, and 383–385. User-supplied section references are now pinned for 35 of these; §§81, 221, and 384 still lack a supplied transcription.
+- **FF11 — Talisman of Death:** §§38 and 77 are missing (398/400 present); their user-supplied exit to §43 is recorded, but the corresponding scan pages appear to contain artwork only.
+- **FF26 — Crypts of the Sorcerer:** §§14–17 are missing (396/400 present). The supplied candidate links conflict with the checked-in flowchart graph and tests, so they need source verification before changing the graph.
+- **FF28 — Phantoms of Fear:** the manifest now matches OCR lines by physical page, side, and side-local line number. Reprocessing the local scan with that correction produced text for 293/400 sections; 107 remain missing, and the longest section is 3,519 characters. Visually checked exits are recorded as parser overrides; unverified OCR-derived links remain provisional.
+- **FF28 §309 — Trial of Ghosts:** the parser records the 165 distinct section totals reachable by five adjacent squares from the six die-start positions, excluding routes that revisit a square and totals outside §§1–400. The game client presents the board as a route-selection interaction; totals without a section fail the trial.
 - **FF09 §67** is also unusually long (5,387 characters) and needs a boundary/source-page check.
 
-The remaining body gaps need better scans or verified transcription. Preserve `Storage/Books/tmp` PDFs and reconstruction/OCR evidence while this work continues. Confirm uncertain section links against the page images before changing parser logic or golden graphs; goldens are expected-data snapshots, not proof that OCR or the source scan is correct.
+The remaining FF28 body gaps will be checked with alternative OCR settings before requesting page images. Preserve `Storage/Books/tmp` PDFs and reconstruction/OCR evidence while this work continues. Confirm uncertain section links against the page images before changing parser logic or golden graphs; goldens are expected-data snapshots, not proof that OCR or the source scan is correct.
 
-The latest combined graph/structure validation snapshot had **39 tests passing and 16 failing**: 14 graph snapshots have unresolved differences, and two structure checks report four oversized sections (FF09 §67 and the three FF28 sections above). User-verified corrections for FF02–FF05 are recorded, but other graph differences still need visual adjudication.
+The last broad cross-book graph/structure validation, before the latest FF28 changes, had **122 tests passing and 16 failing**. Fourteen graph snapshots still had unresolved differences, and two structure checks reported oversized sections. Re-run that suite before treating the snapshot as current; FF28-specific parser tests pass, and the remaining cross-book graph differences still need visual adjudication.
 
 ## 🛠️ Local Setup (without Docker)
 

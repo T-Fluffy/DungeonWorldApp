@@ -52,6 +52,7 @@ public sealed class CityOfThievesParser : ManifestDungeonWorldParser
         sectionNumber switch
         {
             12 => content.Replace("turn to aye", "turn to 176", StringComparison.Ordinal)
+                .Replace("turn io 383", "turn to 383", StringComparison.OrdinalIgnoreCase)
                 .Replace("'Abem!'", "'Ahem!'", StringComparison.Ordinal),
             14 => content.Replace("tun\nto 237", "turn to 237", StringComparison.Ordinal)
                 .Replace("turn to aga", "turn to 191", StringComparison.Ordinal),

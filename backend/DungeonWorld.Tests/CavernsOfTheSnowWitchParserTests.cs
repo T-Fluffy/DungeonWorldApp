@@ -1,3 +1,4 @@
+using DungeonWorld.Core.Entities;
 using DungeonWorld.Infrastructure.Parsing;
 using Xunit;
 
@@ -72,5 +73,52 @@ public sealed class CavernsOfTheSnowWitchParserTests
     {
         var fixed_ = CavernsOfTheSnowWitchParser.ApplySectionFixes(section, "Foreign body text without exits.");
         Assert.Contains(expected, fixed_);
+    }
+
+    [Theory]
+    [InlineData(7, new[] { 4, 380 })]
+    [InlineData(39, new[] { 240, 386 })]
+    [InlineData(40, new[] { 244 })]
+    [InlineData(43, new[] { 88, 29 })]
+    [InlineData(45, new[] { 65, 338 })]
+    [InlineData(47, new[] { 337 })]
+    [InlineData(49, new[] { 234, 393 })]
+    [InlineData(51, new[] { 336 })]
+    [InlineData(55, new[] { 6, 236 })]
+    [InlineData(64, new int[0])]
+    [InlineData(70, new[] { 241 })]
+    [InlineData(80, new[] { 111 })]
+    [InlineData(82, new[] { 201, 280 })]
+    [InlineData(88, new[] { 237, 250, 221 })]
+    [InlineData(109, new[] { 81, 371 })]
+    [InlineData(164, new[] { 38 })]
+    [InlineData(165, new[] { 59 })]
+    [InlineData(167, new[] { 252 })]
+    [InlineData(177, new[] { 137 })]
+    [InlineData(178, new[] { 324, 129 })]
+    [InlineData(197, new[] { 212 })]
+    [InlineData(220, new[] { 94, 326, 107 })]
+    [InlineData(222, new[] { 242 })]
+    [InlineData(269, new[] { 75 })]
+    [InlineData(276, new[] { 39, 102 })]
+    [InlineData(277, new int[0])]
+    [InlineData(283, new[] { 370 })]
+    [InlineData(284, new[] { 217 })]
+    [InlineData(286, new[] { 293, 319 })]
+    [InlineData(287, new[] { 151, 82 })]
+    [InlineData(292, new[] { 93, 357 })]
+    [InlineData(294, new[] { 372 })]
+    [InlineData(347, new[] { 106 })]
+    [InlineData(383, new[] { 339 })]
+    [InlineData(385, new[] { 170, 377 })]
+    public void MissingSectionReferences_AreRestoredWithoutAddingBodyText(int sectionNumber, int[] expected)
+    {
+        var section = new Section { SectionNumber = sectionNumber };
+        var book = new Book { Sections = new List<Section> { section } };
+
+        CavernsOfTheSnowWitchParser.ApplyReferenceFixes(book);
+
+        Assert.Equal(expected, section.ReferenceOverride);
+        Assert.True(string.IsNullOrEmpty(section.Content));
     }
 }

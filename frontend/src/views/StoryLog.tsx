@@ -5,6 +5,7 @@ import { useGame } from '../Context/useGame';
 import { StatusHUD } from '../components/StatusHUD';
 import { Navigation } from '../components/Navigation';
 import { useGameSession } from '../hooks/useGameSession';
+import { Section309Trial } from '../components/Section309Trial';
 import { listBooks, getAdventures, getBookMeta } from '../api/client';
 import type { AdventureResponse, BookMetaDto } from '../api/client';
 import type { LogEntry } from '../types/game';
@@ -45,6 +46,7 @@ export function StoryLog() {
     goTo,
     processCommand,
     save,
+    failTrial,
   } = useGameSession(currentBook);
 
   useEffect(() => {
@@ -94,6 +96,10 @@ export function StoryLog() {
 
   const coverArtOf = (title: string): string | null =>
     bookMetas[title]?.mapPath ?? bookMetas[title]?.adventureSheetPath ?? null;
+
+  const isSection309Trial = section?.number === 309 &&
+    (meta?.title.toLowerCase().includes('phantom of fear') === true ||
+      meta?.title.toLowerCase().includes('phantoms of fear') === true);
 
   const progressOf = (title: string): AdventureResponse | undefined =>
     adventures.find(a => a.bookTitle === title);
@@ -499,7 +505,9 @@ export function StoryLog() {
             </div>
 
             {/* Choices for the current section */}
-            {section && section.choices.length > 0 && (
+            {isSection309Trial ? (
+              <Section309Trial onNavigate={goTo} onFailure={failTrial} isProcessing={isProcessing} />
+            ) : section && section.choices.length > 0 && (
               <div className="shrink-0 border-t border-white/10 bg-white/[0.02]">
                 <button
                   onClick={() => setChoicesOpen(o => !o)}
