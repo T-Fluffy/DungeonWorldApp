@@ -121,11 +121,11 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     }
 
     /// <summary>
-    /// When true, manifest entries are ordered by transcript position (page, line) and each
+    /// When true, manifest entries are ordered by transcript position (page, side, line) and each
     /// entry carries its own section number, so section bounds run from one pin to the next
     /// pin in the book instead of from one section number to the next. Defaults to false:
     /// books whose sections print in numeric order keep numeric bounds. Needed for books with
-    /// scrambled section order (FF20), where numeric-neighbour bounds would swallow chapters
+    /// scrambled section order, where numeric-neighbour bounds would swallow chapters
     /// or produce empty sections.
     /// </summary>
     protected virtual bool ManifestInTranscriptOrder => false;
@@ -211,7 +211,11 @@ public abstract class ManifestDungeonWorldParser : IBookParser
                 e.GetProperty("line").GetInt32(),
                 e.TryGetProperty("end", out var en) && en.ValueKind == JsonValueKind.Number ? en.GetInt32() : null));
         return ManifestInTranscriptOrder
-            ? entries.OrderBy(e => e.Page).ThenBy(e => e.Line).ToList()
+            ? entries.OrderBy(e => e.Page)
+                .ThenBy(e => e.Side, StringComparer.Ordinal)
+                .ThenBy(e => e.Line)
+                .ThenBy(e => e.Number)
+                .ToList()
             : entries.OrderBy(e => e.Number).ToList();
     }
 

@@ -8,8 +8,8 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// <summary>
 /// FF28 Phantom of Fear (Steve Jackson and Ian Livingstone, 1985). Rebuilt from a manual reconstruction
 /// manifest (300 dpi line transcripts, 400 sections across PDF pages 14-139; each PDF page is a two-up
-/// portrait spread split into L/R halves). Sections print in ascending numeric order, so bounds run from
-/// one section number to the next. The introduction is assembled from the cover and introduction pages.
+/// portrait spread split into L/R halves). Section bounds follow page/side/line order because some
+/// section numbers appear out of numeric order. The introduction is assembled from the cover and introduction pages.
 ///
 /// <para><b>Exit graph.</b> The graph resource is currently an empty placeholder. Section exits
 /// visually verified against the book are applied as overrides; all other sections retain their
@@ -37,6 +37,8 @@ public sealed class PhantomOfFearParser : ManifestDungeonWorldParser
 
     protected override string ManifestResourceName =>
         "DungeonWorld.Infrastructure.Parsing.Manifests.ff28.json";
+
+    protected override bool ManifestInTranscriptOrder => true;
 
     /// <summary>Cover blurb (book p1) plus INTRODUCTION (book p7); the rules pages are not narrative.</summary>
     protected override IReadOnlyList<int> IntroPages => new[] { 2, 7 };

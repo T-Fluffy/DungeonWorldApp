@@ -56,4 +56,30 @@ public sealed class ReconstructionServiceTests
         Assert.Contains("Right side continues", sections[1].Content);
         Assert.DoesNotContain("Left side", sections[1].Content);
     }
+
+    [Fact]
+    public void ApplyManifest_UsesTranscriptOrderWhenSectionNumbersAreOutOfOrder()
+    {
+        var lines = new[]
+        {
+            new ReconstructionService.OcrLine(1, 0, "L", 0.1, "Section 5 begins on the left side."),
+            new ReconstructionService.OcrLine(1, 1, "L", 0.2, "Its body ends before the right side."),
+            new ReconstructionService.OcrLine(1, 0, "R", 0.1, "Section 4 begins on the right side."),
+            new ReconstructionService.OcrLine(1, 1, "R", 0.2, "Its body stays with section 4."),
+        };
+        var entries = new[]
+        {
+            new ReconstructionService.ManifestEntry(5, 1, "L", 0, null),
+            new ReconstructionService.ManifestEntry(4, 1, "R", 0, null),
+        };
+
+        var sections = ReconstructionService.ApplyManifest(lines, entries);
+
+        Assert.Equal(2, sections.Count);
+        Assert.Equal(4, sections[0].SectionNumber);
+        Assert.Contains("Section 4", sections[0].Content);
+        Assert.Equal(5, sections[1].SectionNumber);
+        Assert.Contains("Section 5", sections[1].Content);
+        Assert.DoesNotContain("Section 4", sections[1].Content);
+    }
 }
