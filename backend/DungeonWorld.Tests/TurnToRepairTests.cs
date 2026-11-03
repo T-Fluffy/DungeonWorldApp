@@ -128,6 +128,19 @@ public class ChoicesParityTests
     }
 
     [Fact]
+    public void LongNarrativeEndingInExit_IsKeptInCleanText()
+    {
+        var narrative = $"You continue onward. {new string('x', 160)}";
+        var cleaned = ContentAnalyzer.Analyze(Sec(1, $"{narrative} Turn to 85."));
+
+        cleaned.References.Should().Equal(85);
+        cleaned.Choices.Should().ContainSingle();
+        cleaned.Choices[0].Target.Should().Be(85);
+        cleaned.Choices[0].Label.Should().BeNull();
+        cleaned.Clean.Should().Be(narrative);
+    }
+
+    [Fact]
     public void ParenthesisedPair_BecomesTwoChoices()
     {
         var cleaned = ContentAnalyzer.Analyze(

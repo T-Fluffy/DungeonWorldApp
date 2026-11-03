@@ -24,6 +24,8 @@ public static class ContentAnalyzer
         @"^\s*(?<label>.+?)[ \t]*\bturn\s*to\s*\.?\s*(?:the\s+)?(?<n>\d{1,4})\s*[.!]?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
 
+    private const int MaxChoiceLabelLength = 150;
+
     // A bare "Turn to N" footer with no label (single-exit sections). ChoiceLineRe
     // requires a label, so these never became choices despite feeding References.
     private static readonly Regex BareExitRe = new(
@@ -247,12 +249,14 @@ public static class ContentAnalyzer
             // Line of the target number itself: the match may start on a preceding
             // blank line when ^\s* consumes it, which would poison coverage.
             int line = LineIndex(lineStarts, m.Groups["n"].Index);
-            var label = TrimInlineRefs(m.Groups["label"].Value.Trim());
+            var rawLabel = m.Groups["label"].Value.Trim();
+            var label = TrimInlineRefs(rawLabel);
             // A vetoed continuation tail is narrative, not an option — but it still
             // covers the reference so the mid-line pass below must not resurrect it.
             covered.Add((line, target));
             if (label.Length > 0 && IsContinuationLine(text, m.Groups["label"].Index)) continue;
-            Add(line, target, label.Length > 0 ? label : null);
+            Add(line, target,
+                rawLabel.Length <= MaxChoiceLabelLength && label.Length > 0 ? label : null);
         }
 
         foreach (Match m in BareExitRe.Matches(text))
@@ -322,7 +326,7 @@ public static class ContentAnalyzer
         prefix = prefix.Trim().Trim('(', ')', ',', ';', ':', '.', '!', '?', '-', '–', '—', '"', '\'', '“', '”');
         if (prefix.StartsWith("or ", StringComparison.OrdinalIgnoreCase))
             prefix = prefix[3..].TrimStart();
-        if (prefix.Length == 0 || prefix.Length > 150) return null;
+        if (prefix.Length == 0 || prefix.Length > MaxChoiceLabelLength) return null;
         return prefix;
     }
 
@@ -487,6 +491,8 @@ public static class ContentAnalyzer
                 // sentence, not an option: keep the fragment and drop only the
                 // redundant "turn to N" tail.
                 if (m.Groups["label"].Value.Length > 0 && IsContinuationLine(raw, offset + m.Groups["label"].Index))
+                    kept.Add(m.Groups["label"].Value);
+                else if (m.Groups["label"].Value.Trim().Length > MaxChoiceLabelLength)
                     kept.Add(m.Groups["label"].Value);
             }
             // Bare "Turn to N" footers are navigation, not narrative: drop them.
