@@ -40,6 +40,8 @@ public static class IntroOverrides
         ("crypt of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
         ("crypts of the sorcerer", "DungeonWorld.Cleaning.Text.Intros.ff26.txt"),
         ("star strider", "DungeonWorld.Cleaning.Text.Intros.ff27.txt"),
+        ("phantom of fear", "DungeonWorld.Cleaning.Text.Intros.ff28.txt"),
+        ("phantoms of fear", "DungeonWorld.Cleaning.Text.Intros.ff28.txt"),
     ];
 
     /// <summary>Returns the canonical intro for the book, or null when none is curated.</summary>

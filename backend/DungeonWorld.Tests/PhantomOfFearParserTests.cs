@@ -1,28 +1,71 @@
+using System.Text.Json;
 using DungeonWorld.Core.Entities;
+using DungeonWorld.Core.Options;
 using DungeonWorld.Infrastructure.Parsing;
+using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace DungeonWorld.Tests;
 
+/// <summary>
+/// FF28's scan garbles too many exit numbers for <c>TurnToRepair</c> to resolve safely, so the
+/// parser attaches the complete Outspaced flowchart to every section as a
+/// <see cref="Section.ReferenceOverride"/>, with a handful of page-verified corrections. These
+/// tests pin the embedded graph itself and the override semantics; the refs golden gates the
+/// assembled book when CleanedData is present.
+/// </summary>
 public sealed class PhantomOfFearParserTests
 {
+    private const string EdgesResource =
+        "DungeonWorld.Infrastructure.Parsing.Manifests.ff28_edges.json";
+
+    private const string ManifestResource =
+        "DungeonWorld.Infrastructure.Parsing.Manifests.ff28.json";
+
     [Fact]
-    public void EmptyPlaceholderGraph_DoesNotSuppressOcrDerivedReferences()
+    public void EdgeGraph_CoversEverySectionWithTheFlowchartEdges()
     {
-        var section = new Section
-        {
-            SectionNumber = 15,
-            Content = "Turn to 2.",
-        };
-        var book = new Book { Sections = new List<Section> { section } };
+        var edges = LoadEdges();
 
-        PhantomOfFearParser.ApplyReferenceFixes(book);
+        edges.Keys.Should().BeEquivalentTo(Enumerable.Range(1, 400));
+        edges.Values.Sum(targets => targets.Count).Should().Be(618);
+    }
 
-        Assert.Null(section.ReferenceOverride);
+    [Theory]
+    [InlineData(1, new[] { 67, 306 })]
+    [InlineData(53, new[] { 364 })]
+    [InlineData(190, new[] { 80 })]
+    [InlineData(238, new[] { 75, 149, 288 })]
+    [InlineData(333, new[] { 313 })]
+    [InlineData(328, new int[0])]
+    [InlineData(342, new int[0])]
+    [InlineData(400, new int[0])]
+    public void EdgeGraph_PinsChartExits(int section, int[] expected)
+    {
+        LoadEdges()[section].Should().Equal(expected);
     }
 
     [Fact]
-    public void ApplyReferenceFixes_UsesVisuallyVerifiedExitsAndTerminalSections()
+    public void EdgeGraph_ReachesEverySectionFromEntry()
+    {
+        var edges = LoadEdges();
+        var seen = new HashSet<int> { 1 };
+        var queue = new Queue<int>();
+        queue.Enqueue(1);
+        while (queue.Count > 0)
+        {
+            foreach (var target in edges[queue.Dequeue()])
+            {
+                if (seen.Add(target)) queue.Enqueue(target);
+            }
+        }
+
+        seen.Should().BeEquivalentTo(Enumerable.Range(1, 400));
+    }
+
+    [Fact]
+    public void ApplyReferenceFixes_AttachesCompleteGraphAndPageVerifiedCorrections()
     {
         var book = new Book
         {
@@ -37,271 +80,60 @@ public sealed class PhantomOfFearParserTests
 
         PhantomOfFearParser.ApplyReferenceFixes(book);
 
-        var expected = new Dictionary<int, int[]>
-        {
-            [30] = [],
-            [31] = [259],
-            [32] = [109],
-            [33] = [217],
-            [34] = [],
-            [1] = [67, 306],
-            [5] = [337, 374],
-            [6] = [69, 321],
-            [7] = [373],
-            [8] = [27],
-            [9] = [254, 235],
-            [2] = [123, 310],
-            [3] = [26, 345],
-            [10] = [311],
-            [11] = [217],
-            [35] = [218, 279],
-            [13] = [43, 70],
-            [14] = [92],
-            [33] = [217],
-            [37] = [308],
-            [38] = [369],
-            [39] = [351, 255],
-            [40] = [231],
-            [22] = [359, 217],
-            [23] = [215, 116],
-            [24] = [13, 274],
-            [25] = [120, 169],
-            [26] = [82, 312, 353],
-            [28] = [383],
-            [36] = [119, 330],
-            [41] = [380],
-            [42] = [100, 163],
-            [80] = [338],
-            [81] = [135, 133],
-            [82] = [353, 162],
-            [88] = [141, 4],
-            [259] = [158, 192],
-            [43] = [14, 189],
-            [44] = [217, 280],
-            [46] = [340, 293],
-            [47] = [375, 125],
-            [48] = [208, 186],
-            [49] = [144],
-            [51] = [148, 227, 349],
-            [53] = [73, 364],
-            [54] = [],
-            [55] = [217],
-            [56] = [79, 103, 273],
-            [57] = [239],
-            [59] = [209, 236],
-            [62] = [161],
-            [67] = [380, 395],
-            [66] = [],
-            [70] = [14, 189],
-            [71] = [157, 185],
-            [74] = [135, 383],
-            [76] = [25],
-            [79] = [314],
-            [83] = [171],
-            [84] = [281, 333],
-            [85] = [168],
-            [89] = [146, 240],
-            [93] = [57],
-            [73] = [],
-            [94] = [52, 242],
-            [100] = [130, 317],
-            [102] = [195, 388],
-            [96] = [],
-            [104] = [332],
-            [105] = [106, 368],
-            [106] = [160],
-            [107] = [8, 155, 223],
-            [108] = [38, 96],
-            [109] = [171],
-            [110] = [379, 61],
-            [111] = [246, 284],
-            [112] = [258],
-            [114] = [386],
-            [115] = [177, 210],
-            [113] = [379],
-            [116] = [89],
-            [117] = [3, 174, 219],
-            [118] = [133, 335],
-            [119] = [21, 233],
-            [120] = [169],
-            [140] = [193, 388],
-            [122] = [277, 321],
-            [123] = [176, 320],
-            [124] = [295, 61],
-            [126] = [367, 173],
-            [127] = [29, 332],
-            [128] = [],
-            [129] = [298],
-            [130] = [276, 317],
-            [221] = [310],
-            [222] = [275, 104],
-            [235] = [309],
-            [236] = [298],
-            [328] = [348],
-            [340] = [361],
-            [366] = [322, 10],
-            [133] = [335],
-            [132] = [123, 310],
-            [134] = [147, 391],
-            [135] = [383],
-            [136] = [220, 316],
-            [137] = [372],
-            [138] = [],
-            [139] = [303],
-            [144] = [91, 341],
-            [141] = [203, 363],
-            [142] = [188],
-            [149] = [105],
-            [168] = [243, 94],
-            [150] = [65, 282, 383],
-            [189] = [92],
-            [190] = [50],
-            [147] = [371],
-            [151] = [27, 304],
-            [152] = [86, 321],
-            [163] = [143],
-            [164] = [253],
-            [171] = [383],
-            [172] = [83, 150],
-            [159] = [260, 283],
-            [178] = [18, 300],
-            [177] = [288],
-            [179] = [122, 315],
-            [187] = [81, 118],
-            [183] = [89],
-            [194] = [],
-            [196] = [272, 85],
-            [197] = [265],
-            [234] = [400],
-            [262] = [372],
-            [338] = [286],
-            [345] = [100, 42],
-            [186] = [397],
-            [201] = [400],
-            [198] = [289, 389],
-            [211] = [61],
-            [216] = [48],
-            [217] = [73, 156],
-            [218] = [279],
-            [219] = [80],
-            [224] = [115, 163],
-            [229] = [257, 336],
-            [238] = [73, 149],
-            [244] = [134, 297],
-            [246] = [],
-            [247] = [85],
-            [261] = [357, 390],
-            [263] = [54, 145],
-            [267] = [87, 394],
-            [254] = [309],
-            [273] = [314],
-            [274] = [112, 143, 288],
-            [278] = [117, 165],
-            [277] = [206],
-            [281] = [193, 385],
-            [282] = [383, 101],
-            [287] = [116, 215],
-            [290] = [380],
-            [289] = [20, 49],
-            [291] = [176, 300, 181],
-            [299] = [269, 330],
-            [302] = [76],
-            [303] = [224, 356],
-            [304] = [107, 245],
-            [307] = [146],
-            [309] =
-            [
-                66, 92, 105, 109, 111, 121, 131, 137, 147, 150, 153, 154, 159, 160, 168, 169, 171, 175,
-                176, 177, 179, 181, 183, 185, 187, 188, 189, 192, 193, 195, 197, 198, 201, 202, 204, 205,
-                209, 211, 214, 215, 216, 217, 218, 219, 220, 221, 223, 227, 230, 232, 233, 234, 237, 240,
-                242, 243, 245, 246, 248, 250, 251, 252, 253, 254, 256, 257, 259, 260, 262, 266, 267, 268,
-                269, 270, 271, 272, 273, 274, 275, 276, 277, 279, 280, 281, 282, 283, 284, 286, 288, 290,
-                291, 292, 294, 295, 296, 297, 299, 300, 302, 305, 307, 308, 312, 313, 314, 319, 321, 322,
-                324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 337, 338, 341, 342, 344, 345,
-                346, 347, 349, 350, 352, 353, 354, 356, 357, 359, 360, 361, 362, 363, 365, 367, 368, 370,
-                371, 372, 373, 374, 377, 378, 379, 380, 381, 382, 383, 384, 386, 389, 390, 392, 395, 396,
-                398, 399, 400
-            ],
-            [312] = [161, 353],
-            [313] = [174, 213],
-            [317] = [184, 393],
-            [318] = [],
-            [319] = [35, 114],
-            [321] = [384],
-            [348] = [5, 90],
-            [323] = [19],
-            [326] = [197, 265],
-            [330] = [],
-            [339] = [222, 275],
-            [342] = [362],
-            [333] = [26, 345],
-            [353] = [42],
-            [346] = [212],
-            [361] = [105, 238],
-            [363] = [127, 154, 256, 29],
-            [369] = [281, 333],
-            [374] = [237, 90, 132],
-            [378] = [136],
-            [381] = [204, 348],
-            [382] = [98],
-            [383] = [181, 56],
-            [384] = [99, 252],
-            [385] = [39],
-            [315] = [123, 310],
-            [386] = [7, 373],
-            [389] = [360],
-            [391] = [331],
-            [392] = [350],
-            [397] = [85],
-            [203] = [29],
-            [207] = [394],
-            [213] = [278],
-            [215] = [183, 116],
-            [223] = [],
-            [226] = [108, 369],
-            [228] = [263, 325],
-            [239] = [106, 199, 355],
-            [250] = [167, 346, 128],
-            [398] = [291],
-            [283] = [264, 216],
-            [284] = [335, 133],
-            [292] = [346],
-            [295] = [110, 182],
-            [253] = [341, 172],
-            [260] = [46, 142],
-            [266] = [192],
-            [268] = [214],
-            [269] = [379, 113],
-            [272] = [368],
-            [275] = [332],
-            [276] = [317],
-            [279] = [124, 114],
-            [280] = [217],
-            [285] = [116],
-            [286] = [244, 297],
-            [293] = [361],
-            [294] = [129, 298],
-            [298] = [376, 50],
-            [301] = [152, 324],
-            [311] = [267],
-            [314] = [181],
-            [325] = [],
-            [360] = [65, 334],
-            [362] = [78, 151],
-            [368] = [85],
-            [371] = [331],
-        };
+        book.Sections.Should().OnlyContain(section => section.ReferenceOverride != null);
+        book.Sections.SelectMany(section => section.ReferenceOverride!).Should().NotContain(999);
 
-        foreach (var section in book.Sections)
-        {
-            if (expected.TryGetValue(section.SectionNumber, out var targets))
-            {
-                Assert.Equal(targets, section.ReferenceOverride);
-            }
-            else
-            {
-                Assert.Null(section.ReferenceOverride);
-            }
-        }
+        // Corrections where the book disagrees with the chart.
+        book.Sections.Single(s => s.SectionNumber == 53).ReferenceOverride.Should().Equal(73, 364);
+        book.Sections.Single(s => s.SectionNumber == 190).ReferenceOverride.Should().Equal(50);
+        book.Sections.Single(s => s.SectionNumber == 328).ReferenceOverride.Should().Equal(348);
+        book.Sections.Single(s => s.SectionNumber == 333).ReferenceOverride.Should().Equal(26, 345);
+        book.Sections.Single(s => s.SectionNumber == 342).ReferenceOverride.Should().Equal(362);
+
+        // Chart edges that survive unchanged, including dotted hidden options.
+        book.Sections.Single(s => s.SectionNumber == 1).ReferenceOverride.Should().Equal(67, 306);
+        book.Sections.Single(s => s.SectionNumber == 238).ReferenceOverride.Should().Equal(75, 149, 288);
+        book.Sections.Single(s => s.SectionNumber == 400).ReferenceOverride.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CanHandle_MatchesPhantomsOfFear()
+    {
+        var parser = new PhantomOfFearParser(Options.Create(new FileStorageOptions()));
+
+        parser.CanHandle("x.pdf", "FF28 Phantoms of Fear").Should().BeTrue();
+        parser.CanHandle("x.pdf", "Phantoms of Fear").Should().BeTrue();
+        parser.CanHandle("x.pdf", "FF27 Star Strider").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Manifest_PinsAll400Sections()
+    {
+        LoadManifestSections().Should().BeEquivalentTo(Enumerable.Range(1, 400));
+    }
+
+    private static Dictionary<int, List<int>> LoadEdges()
+    {
+        using var stream = typeof(PhantomOfFearParser).Assembly
+            .GetManifestResourceStream(EdgesResource);
+        stream.Should().NotBeNull($"embedded resource {EdgesResource} must ship with the parser");
+
+        using var doc = JsonDocument.Parse(stream!);
+        return doc.RootElement.GetProperty("edges").EnumerateObject()
+            .ToDictionary(
+                property => int.Parse(property.Name),
+                property => property.Value.EnumerateArray().Select(e => e.GetInt32()).ToList());
+    }
+
+    private static List<int> LoadManifestSections()
+    {
+        using var stream = typeof(PhantomOfFearParser).Assembly
+            .GetManifestResourceStream(ManifestResource);
+        stream.Should().NotBeNull($"embedded resource {ManifestResource} must ship with the parser");
+
+        using var doc = JsonDocument.Parse(stream!);
+        return doc.RootElement.GetProperty("entries").EnumerateArray()
+            .Select(entry => entry.GetProperty("n").GetInt32())
+            .ToList();
     }
 }
