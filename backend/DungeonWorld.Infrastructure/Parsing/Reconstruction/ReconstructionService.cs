@@ -64,7 +64,8 @@ public static class ReconstructionService
     public static List<Section> ApplyManifest(
         IReadOnlyList<OcrLine> lineStream,
         IReadOnlyList<ManifestEntry> entries,
-        bool keepExitFragments = false)
+        bool keepExitFragments = false,
+        bool pageGlobalLineNumbers = false)
     {
         // Pure-illustration halves carry only garbled captions (few wordy lines);
         // a spanning section flows from the previous R half to the next text half,
@@ -91,15 +92,46 @@ public static class ReconstructionService
             .Select((l, i) => (Key: (l.Page, l.Side, l.N), Idx: i))
             .ToDictionary(x => x.Key, x => x.Idx);
 
+        // Manifests built from the older reconstruction dump number lines continuously across a
+        // spread's L and R halves, while the renderer numbers each side from zero. A page-global
+        // pin can collide with a valid side-local line (e.g. global 24 on a 33-line R half), so
+        // the book declares its convention instead of guessing. `filtered` drops illustration
+        // halves that the dump counted, so offsets come from the unfiltered transcript.
+        var sideOffsets = new Dictionary<(int Page, string Side), int>();
+        foreach (var pageGroup in lineStream.GroupBy(l => l.Page))
+        {
+            int offset = 0;
+            foreach (var sideGroup in pageGroup
+                         .GroupBy(l => l.Side)
+                         .OrderBy(group => group.Key, StringComparer.Ordinal))
+            {
+                sideOffsets[(pageGroup.Key, sideGroup.Key)] = offset;
+                offset += sideGroup.Count();
+            }
+        }
+
+        bool TryLocate(int page, string side, int line, out int index)
+        {
+            if (pageGlobalLineNumbers)
+            {
+                if (sideOffsets.TryGetValue((page, side), out int offset) &&
+                    lineIndex.TryGetValue((page, side, line - offset), out index))
+                    return true;
+                return lineIndex.TryGetValue((page, side, line), out index);
+            }
+
+            return lineIndex.TryGetValue((page, side, line), out index);
+        }
+
         var sections = new List<Section>();
         for (int i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
-            if (!lineIndex.TryGetValue((e.Page, e.Side, e.Line), out int startIdx)) continue;
+            if (!TryLocate(e.Page, e.Side, e.Line, out int startIdx)) continue;
             int endIdx;
             if (e.EndLine.HasValue)
             {
-                if (!lineIndex.TryGetValue((e.Page, e.Side, e.EndLine.Value), out int ei)) ei = startIdx;
+                if (!TryLocate(e.Page, e.Side, e.EndLine.Value, out int ei)) ei = startIdx;
                 endIdx = ei + 1;
             }
             else
@@ -107,8 +139,8 @@ public static class ReconstructionService
                 endIdx = filtered.Count;
                 for (int next = i + 1; next < entries.Count; next++)
                 {
-                    if (!lineIndex.TryGetValue(
-                            (entries[next].Page, entries[next].Side, entries[next].Line),
+                    if (!TryLocate(
+                            entries[next].Page, entries[next].Side, entries[next].Line,
                             out int nextIdx))
                         continue;
 

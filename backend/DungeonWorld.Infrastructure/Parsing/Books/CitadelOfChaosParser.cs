@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using DungeonWorld.Core.Entities;
 using DungeonWorld.Core.Options;
 using Microsoft.Extensions.Options;
 
@@ -8,9 +10,21 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// FF02 The Citadel of Chaos (Steve Jackson, 1983). Rebuilt from a manual reconstruction
 /// manifest (300 dpi line transcripts, 400 sections across pages 17-109). Front matter is
 /// pages 1-16; the intro uses the cover, title/background and HISTORY pages.
+///
+/// <para><b>Exit graph.</b> The OCR garbles exit numbers heavily (see <see cref="ApplySectionFixes"/>),
+/// so the authoritative edges come from the complete Outspaced flowchart (ff02.svgz, archived
+/// 2009-11-17: 400 nodes, 715 edges, all reachable, 20 terminals, one dotted hidden option
+/// 229→217) and are attached to every section as <see cref="Section.ReferenceOverride"/>. Text
+/// extraction is unchanged; only the cleaner's References/Choices come from the graph. Every
+/// chart-vs-scan conflict was checked against the printed pages at 300 dpi and the chart won each
+/// one, so there are no chart corrections. A terminal section gets an empty override, which clears
+/// any false OCR reference.</para>
 /// </summary>
 public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
 {
+    private const string EdgesResourceName =
+        "DungeonWorld.Infrastructure.Parsing.Manifests.ff02_edges.json";
+
     public CitadelOfChaosParser(IOptions<FileStorageOptions> storageOptions)
         : base(storageOptions)
     {
@@ -21,6 +35,16 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
     protected override string Slug => "ff02_citadel_of_chaos";
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff02.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 2, 4, 5, 16 };
+
+    /// <summary>FF02 runs to 400 sections.</summary>
+    private const int MaxSections = 400;
+    protected override int MaxSectionNumber => MaxSections;
+
+    /// <summary>The FF02 manifest was built from the older page-global line dumps.</summary>
+    protected override bool ManifestLinesArePageGlobal => true;
+
+    /// <summary>Written by Steve Jackson (print: p2/p3 credits).</summary>
+    protected override string Author => "Steve Jackson";
 
     /// <summary>
     /// Hand fixes for sections whose garble survives the shared repair, written
@@ -132,9 +156,10 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             1 => content.Replace("pose as a herbalist? turn to 28", "pose as a herbalist? turn to 261", StringComparison.Ordinal)
                 .Replace("Turn lo ze", "Turn to 20", StringComparison.Ordinal),
             10 => content.Replace("Turn foagy.", "Turn to 249.", StringComparison.Ordinal),
-            25 => content.Replace("Tum ts 206", "Turn to 206", StringComparison.Ordinal),
+            25 => content.Replace("Tum ts 206", "Turn to 206", StringComparison.Ordinal)
+                .Replace("turn to 29", "turn to 239", StringComparison.Ordinal),
             30 => content.Replace("urn boo z33.", "turn to 241.", StringComparison.Ordinal),
-            60 => content.Replace("Tusion Spell Turn ko 293", "Tusion Spell Turn to 293", StringComparison.Ordinal)
+            60 => content.Replace("Tusion Spell Turn ko 293", "Tusion Spell Turn to 295", StringComparison.Ordinal)
                 .Replace("(fumio 213).", "(turn to 213).", StringComparison.Ordinal),
             68 => content.Replace("Turn io 207", "Turn to 207", StringComparison.Ordinal)
                 .Replace("Turn tr 354", "Turn to 354", StringComparison.Ordinal),
@@ -145,10 +170,13 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             91 => content.Replace("leave anyway (tum io 140).", "leave anyway (turn to 140).", StringComparison.Ordinal),
             92 => content.Replace("Turn io 136", "Turn to 156", StringComparison.Ordinal),
             95 => content.Replace("turn to 357.", "Turn to 367.", StringComparison.Ordinal),
-            99 => content.Replace("(turn to gz)", "(turn to 92)", StringComparison.Ordinal)
+            99 => content.Replace("(turn to gz)", "(turn to 52)", StringComparison.Ordinal)
+                .Replace("(turn to 92)", "(turn to 52)", StringComparison.Ordinal)
                 .Replace("(turn to 3857", "(turn to 38", StringComparison.Ordinal),
             100 => content.Replace("I not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal)
-                .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal),
+                .Replace("1 not, turn to 107", "If not, turn to 276.", StringComparison.Ordinal)
+                .Replace("{luen lo 7g)", "{turn to 79)", StringComparison.Ordinal)
+                .Replace("1 not, turn 02h.", "If not, turn to 276.", StringComparison.Ordinal),
             102 => content.Replace("turn to 0.", "turn to 270.", StringComparison.Ordinal),
             134 => content.Replace("{turn to 90), leave them", "{turn to 60), leave them", StringComparison.Ordinal),
             140 => content.Replace("[urn iozog)?", "[turn to 104)?", StringComparison.Ordinal),
@@ -159,26 +187,36 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
             177 => content.Replace("down the steps (hum", "down the steps (turn to 344).", StringComparison.Ordinal),
             188 => content.Replace("Turn loge", "Turn to 51", StringComparison.Ordinal)
                 .Replace("Turn mo 3m", "Turn to 301", StringComparison.Ordinal),
-            205 => content.Replace("tien Lo 300", "turn to 368", StringComparison.Ordinal),
+            205 => content.Replace("tien Lo 300", "turn to 309", StringComparison.Ordinal)
+                .Replace("resolved, turn to 368", "resolved, turn to 309", StringComparison.Ordinal)
+                .Replace("turn tor 368", "turn to 368", StringComparison.Ordinal),
             206 => content.Replace("Turn to asa.", "Turn to 182.", StringComparison.Ordinal),
             228 => content.Replace("Turn ty 2946", "Turn to 296", StringComparison.Ordinal)
                 .Replace("lien te 170", "turn to 170", StringComparison.Ordinal),
-            229 => content.Replace("(fur to 230", "(turn to 230).", StringComparison.Ordinal),
+            229 => content.Replace("[turn to 30)", "[turn to 50)", StringComparison.Ordinal)
+                .Replace("(fur to 164)", "(turn to 164)", StringComparison.Ordinal)
+                .Replace("If 20 hom fo the sectiom", "If so, turn to the section", StringComparison.Ordinal),
             230 => content.Replace("(turn to 10 96),", "(turn to 96),", StringComparison.Ordinal)
                 .Replace("(furn [ny 288).", "(turn to 288).", StringComparison.Ordinal),
-            235 => content.Replace("(tum fo 2451", "(turn to 245", StringComparison.Ordinal),
+            235 => content.Replace("(tum fo 2451", "(turn to 245", StringComparison.Ordinal)
+                .Replace("(turn to 236", "(turn to 269", StringComparison.Ordinal),
             245 => content.Replace("{turn to 37)?", "{turn to 47)?", StringComparison.Ordinal)
+                .Replace("continue {turn to 261)", "continue {turn to 161)", StringComparison.Ordinal)
                 .Replace("(ELrm bo 390,", "(turn to 390,", StringComparison.Ordinal),
             261 => content.Replace("Eylitrone Turn to Ba", "Eylitrone Turn to 81", StringComparison.Ordinal)
                 .Replace("Pincus Twn te 175", "Pincus Turn to 175", StringComparison.Ordinal)
                 .Replace("Bla Turn ter 394", "Bla Turn to 394", StringComparison.Ordinal),
-            273 => content.Replace("Scimitar? turn to 372", "Scimitar? turn to 371", StringComparison.Ordinal),
-            292 => content.Replace("gift for her? Lien to gz", "gift for her? turn to 42", StringComparison.Ordinal),
+            273 => content.Replace("Scimitar? turn to 372", "Scimitar? turn to 371", StringComparison.Ordinal)
+                .Replace("Turn Gx 233", "Turn to 255", StringComparison.Ordinal)
+                .Replace("Kraken? turn to 29", "Kraken? turn to 49", StringComparison.Ordinal),
+            292 => content.Replace("gift for her? Lien to gz", "gift for her? turn to 42", StringComparison.Ordinal)
+                .Replace("Tun toby", "Turn to 64", StringComparison.Ordinal),
             293 => content.Replace("Tam fo 374.", "turn to 374.", StringComparison.Ordinal),
             323 => content.Replace("Turn io 144", "Turn to 144", StringComparison.Ordinal),
             330 => Regex.Replace(
                 content.Replace("ten Lo 208", "turn to 208.", StringComparison.Ordinal),
-                @"turn to 33\b", "turn to 120."),
+                @"turn to (?:33|120)\b", "turn to 119."),
+            331 => content.Replace("turn to 332-333", "turn to 265.", StringComparison.Ordinal),
             338 => content.Replace("Tum to ge.", "Turn to 90.", StringComparison.Ordinal),
             339 => content.Replace("Turn tor 134", "Turn to 134", StringComparison.Ordinal)
                 .Replace("Timm tor 140", "Turn to 149", StringComparison.Ordinal)
@@ -191,4 +229,41 @@ public sealed class CitadelOfChaosParser : ManifestDungeonWorldParser
 
     protected override string PostProcessSection(int sectionNumber, string content) =>
         ApplySectionFixes(sectionNumber, PostProcessContent(content));
+
+    /// <summary>
+    /// Attaches the authoritative Outspaced flowchart to every section after gap filling, so even a
+    /// section missing from this scan carries the correct exits. A terminal section gets an empty
+    /// override, which clears any false OCR reference.
+    /// </summary>
+    protected override void PostProcessBook(Book book) => ApplyReferenceFixes(book);
+
+    public static void ApplyReferenceFixes(Book book)
+    {
+        var edges = LoadEdges();
+        foreach (var section in book.Sections)
+        {
+            section.ReferenceOverride = edges.TryGetValue(section.SectionNumber, out var targets)
+                ? targets
+                : new List<int>();
+        }
+    }
+
+    private static Dictionary<int, List<int>> LoadEdges()
+    {
+        using var stream = typeof(CitadelOfChaosParser).Assembly
+            .GetManifestResourceStream(EdgesResourceName)
+            ?? throw new InvalidOperationException(
+                $"Missing embedded graph resource {EdgesResourceName}.");
+
+        using var doc = JsonDocument.Parse(stream);
+        var edges = new Dictionary<int, List<int>>();
+        foreach (var property in doc.RootElement.GetProperty("edges").EnumerateObject())
+        {
+            edges[int.Parse(property.Name)] = property.Value
+                .EnumerateArray()
+                .Select(e => e.GetInt32())
+                .ToList();
+        }
+        return edges;
+    }
 }

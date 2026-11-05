@@ -58,6 +58,36 @@ public sealed class ReconstructionServiceTests
     }
 
     [Fact]
+    public void ApplyManifest_ResolvesLegacyPageGlobalLineNumbers()
+    {
+        var lines = new[]
+        {
+            new ReconstructionService.OcrLine(1, 0, "L", 0.1, "Left side first line."),
+            new ReconstructionService.OcrLine(1, 1, "L", 0.2, "Left side second line."),
+            new ReconstructionService.OcrLine(1, 0, "R", 0.1, "Right side first line."),
+            new ReconstructionService.OcrLine(1, 1, "R", 0.2, "Right side second line."),
+            new ReconstructionService.OcrLine(1, 2, "R", 0.3, "Right side third line."),
+            new ReconstructionService.OcrLine(1, 3, "R", 0.4, "Right side fourth line."),
+        };
+        var entries = new[]
+        {
+            // Left-side pin keeps the L half in the transcript set (its entries define text halves).
+            new ReconstructionService.ManifestEntry(2, 1, "L", 0, null),
+            // Page-global numbering: two left lines, then the right side's second line.
+            // Side-local line 3 also exists, so this pins that the global convention wins.
+            new ReconstructionService.ManifestEntry(1, 1, "R", 3, null),
+        };
+
+        var sections = ReconstructionService.ApplyManifest(
+            lines, entries, pageGlobalLineNumbers: true);
+
+        Assert.Equal(2, sections.Count);
+        var section = sections.Single(s => s.SectionNumber == 1);
+        Assert.Contains("Right side second line.", section.Content);
+        Assert.Contains("Right side fourth line.", section.Content);
+    }
+
+    [Fact]
     public void ApplyManifest_UsesTranscriptOrderWhenSectionNumbersAreOutOfOrder()
     {
         var lines = new[]

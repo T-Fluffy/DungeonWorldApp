@@ -45,6 +45,9 @@ public sealed class StarStriderParser : ManifestDungeonWorldParser
     private const int MaxSections = 400;
     protected override int MaxSectionNumber => MaxSections;
 
+    /// <summary>The FF27 manifest was built from the older page-global line dumps.</summary>
+    protected override bool ManifestLinesArePageGlobal => true;
+
     /// <summary>Written by Ian Livingstone (print: p2/p3 credits).</summary>
     protected override string Author => "Ian Livingstone";
 

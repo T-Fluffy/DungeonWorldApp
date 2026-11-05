@@ -268,10 +268,10 @@ public class ChoicesParityTests
     [InlineData(100, "1 not, turn to 107", "If not, turn to 276.")]
     [InlineData(74, "counter-attack. Tum", "counter-attack. Turn to 377.")]
     [InlineData(177, "down the steps (hum", "down the steps (turn to 344).")]
-    [InlineData(205, "tien Lo 300", "turn to 368")]
-    [InlineData(229, "(fur to 230", "(turn to 230).")]
+    [InlineData(205, "tien Lo 300", "turn to 309")]
+    [InlineData(229, "[turn to 30)", "[turn to 50)")]
     [InlineData(330, "ten Lo 208", "turn to 208.")]
-    [InlineData(330, "turn to 33", "turn to 120.")]
+    [InlineData(330, "turn to 33", "turn to 119.")]
     [InlineData(354, "turn to 355", "Turn to 188.")]
     public void CitadelSectionFix_MapsCurrentPipelineForms(int section, string garbled, string expected)
     {

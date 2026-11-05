@@ -130,6 +130,14 @@ public abstract class ManifestDungeonWorldParser : IBookParser
     /// </summary>
     protected virtual bool ManifestInTranscriptOrder => false;
 
+    /// <summary>
+    /// True when this book's manifest pins use page-global line numbers, i.e. numbered
+    /// continuously across a spread's L and R halves (the older reconstruction dump format).
+    /// The renderer now numbers each side from zero, so these manifests need translation.
+    /// Defaults to false; FF02/FF26/FF27 opt in.
+    /// </summary>
+    protected virtual bool ManifestLinesArePageGlobal => false;
+
     /// <summary>Static JSON serializer options mirroring the block pipeline's persistence format.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -162,7 +170,8 @@ public abstract class ManifestDungeonWorldParser : IBookParser
         var lines = UseHardScanOcr
             ? HardScanReconstruction.OcrPdfMerged(fullPdfPath, Dpi, pages, MaxSectionNumber)
             : ReconstructionService.OcrPdf(fullPdfPath, Dpi, pages, ForceSplitPages);
-        var sections = ReconstructionService.ApplyManifest(lines, entries, KeepExitFragments);
+        var sections = ReconstructionService.ApplyManifest(
+            lines, entries, KeepExitFragments, ManifestLinesArePageGlobal);
         string intro = ReconstructionService.BuildIntroduction(lines, IntroPages);
 
         var book = new Book
