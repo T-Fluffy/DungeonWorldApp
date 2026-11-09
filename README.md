@@ -10,7 +10,7 @@ It is a single monorepo composed of two applications that talk over HTTP:
 
 ```
 ┌──────────────────────────────┐      /api      ┌──────────────────────────────────────────────┐
-│   frontend/  (React + Vite)  │ ◄────────────► │   backend/  (.NET 8 + ASP.NET Core Web API)    │
+│   frontend/  (React + Vite)  │ ◄────────────► │   backend/  (.NET 10 + ASP.NET Core Web API)   │
 │   The playable dark-fantasy  │                │   PDF ingestion engine + user/game REST API    │
 │   client (Chronicle, Profile)│                │                                              │
 └──────────────────────────────┘                │   ├─ DungeonWorld.API           (controllers) │
@@ -32,7 +32,7 @@ It is a single monorepo composed of two applications that talk over HTTP:
 | Path | What it is | Read more |
 | --- | --- | --- |
 | [`frontend/`](frontend/) | React 19 + Vite + Tailwind client — accounts, PDF "Ritual" ingestion, Chronicle reader, character profile | [frontend/README.md](frontend/README.md) |
-| [`backend/`](backend/) | .NET 8 Clean-Architecture API — PDF → structured JSON engine, layout-aware parsers, EF Core/PostgreSQL persistence, user & game endpoints | [backend/Readme.md](backend/Readme.md) |
+| [`backend/`](backend/) | .NET 10 Clean-Architecture API — PDF → structured JSON engine, layout-aware parsers, EF Core/PostgreSQL persistence, user & game endpoints | [backend/Readme.md](backend/Readme.md) |
 | `compose.yaml` | Root Docker Compose that runs all three services together (Postgres + API + frontend) | — |
 
 ## 🚀 Quick Start (Docker)
@@ -76,7 +76,7 @@ Live screenshots captured from the app (logged-in session):
 
 ## 🧱 What Each Part Does
 
-### Backend — the engine (`.NET 8`)
+### Backend — the engine (`.NET 10`)
 - Parses gamebook PDFs into structured JSON (sections, choices, illustrations, map) using PdfPig, with automatic **single-page vs double-page layout detection** and a parser factory that picks the right engine.
 - Serves the parsed books through a REST API (`/api/game`, `/api/admin`), with section illustrations served statically at `/assets/game-art`.
 - Handles player accounts and progression: PBKDF2-hashed auth, profiles, subscriptions, achievements, assets, and per-book adventure saves — persisted in **PostgreSQL via EF Core**.

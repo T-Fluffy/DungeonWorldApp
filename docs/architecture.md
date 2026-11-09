@@ -5,7 +5,7 @@
 ```
 DungeonWorldApp/
 ├── frontend/                      React 19 + Vite + Tailwind client
-├── backend/                       .NET 8 solution (DungeonWorldBackend.sln)
+├── backend/                       .NET 10 solution (DungeonWorldBackend.sln)
 │   ├── DungeonWorld.Core/         Domain model + contracts (zero dependencies)
 │   ├── DungeonWorld.Infrastructure/  Parsers, EF Core persistence, helpers
 │   ├── DungeonWorld.Cleaning/     BookCleaner + structured-output model

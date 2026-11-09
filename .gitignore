@@ -1,6 +1,7 @@
 # --- .NET build output ---
 bin/
 obj/
+.artifacts/
 
 # --- Node / frontend ---
 node_modules/

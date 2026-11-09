@@ -20,7 +20,7 @@ tooling.
 
 ```
 frontend/   React 19 + Vite + Tailwind — accounts, Chronicle reader, combat, profile
-backend/    .NET 8 solution — PDF → structured JSON → cleaned JSON → REST API → PostgreSQL
+backend/    .NET 10 solution — PDF → structured JSON → cleaned JSON → REST API → PostgreSQL
 ```
 
 The single most important flow to understand is the **PDF ingestion pipeline**
