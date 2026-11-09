@@ -12,10 +12,12 @@ namespace DungeonWorld.Core.Text;
 /// <item>Verb-variant normalization: OCR misreads of "turn"
 ///   (tum/fum/tumn/turm/furn/lum/turnto/turnin/...) followed by a numeric
 ///   target, including garbled prepositions ("Tum o 327", "furn te 221",
-///   "turn bo b1" verb part), become "turn to N". Genuine navigation prose
-///   "turning to N" ("approach by turning to 258") normalizes too — only
-///   with an in-range numeric target, so "turning to dust/you/the door"
-///   stays verbatim.</item>
+///   "turn bo b1" verb part), become "turn to N". The longer garbled forms
+///   "tor"/"toe"/"boy"/"Eo" ("Turn tor 273", "turn boy 21", "turn Eo 199")
+///   match only as standalone words, so "torque"/"boys" stay prose. Genuine
+///   navigation prose "turning to N" ("approach by turning to 258") normalizes
+///   too — only with an in-range numeric target, so "turning to dust/you/the
+///   door" stays verbatim.</item>
 /// <item>Verb confusion "burn to N" (FF04: "burn to 24/233/292") becomes
 ///   "turn to N" — only when the token maps to an in-range number, so
 ///   narrative "burn to ash" stays verbatim.</item>
@@ -39,7 +41,7 @@ public static partial class TurnToRepair
     // periods ("to.237") and separators ("&", "(") are tolerated. Every
     // alternative is safe by construction: the match is rewritten only when
     // the token maps unambiguously to an in-range number.
-    [GeneratedRegex(@"\b(turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(to|bo|te|o|lo|fo|b|w|tu|ta))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
+    [GeneratedRegex(@"\b(turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)(?:\s*(tor(?=\s)|toe(?=\s)|boy(?=\s)|eo(?=\s)|to|bo|te|o|lo|fo|b|w|tu|ta))?\s*\.?[&({[]?\s*([A-Za-z0-9]{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex TurnVerbVariantRegex();
 
@@ -60,7 +62,7 @@ public static partial class TurnToRepair
     // garbled verbs). Joining first keeps references, choices and labels
     // whole; without it the orphaned number fragment pollutes the next
     // choice's label.
-    [GeneratedRegex(@"\b(?:turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:to|bo|te|o|lo|fo|b|w|tu|ta)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
+    [GeneratedRegex(@"\b(?:turning|turnto|turmn|turm|tumn|tum|furn|fum|fom|mur|tarn|lurn|lum|hurmn|turnin|tuma?|turn|rn)\s*(?:tor(?=\s)|toe(?=\s)|boy(?=\s)|eo(?=\s)|to|bo|te|o|lo|fo|b|w|tu|ta)?\s*\.?[&({[]?\s*\r?\n\s*(\d{1,4})\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex WrappedTurnToRegex();
 
@@ -124,6 +126,7 @@ public static partial class TurnToRepair
         // is NOT stripped ("turn to 5x", ordinals like "21st" must not become
         // references). Empty remainders stay unrepaired.
         int start = 0;
+        bool rawHadDigit = token.Any(char.IsAsciiDigit);
         while (start < token.Length && start < 2 && !char.IsAsciiDigit(token[start])
                && !DigitMap.ContainsKey(token[start]))
             start++;
@@ -131,10 +134,13 @@ public static partial class TurnToRepair
         {
             if (start >= token.Length) return null;
             token = token[start..];
-            // Never salvage a lone mapped char from stripped junk: "lum|bers"
-            // would otherwise yield "turn to 5" from the "s" and re-garble a
-            // real word ("lumbers") on the cleaning pass.
-            if (token.Length == 1) return null;
+            // Never salvage a lone *letter-mapped* char from stripped junk:
+            // "lum|bers" would otherwise yield "turn to 5" from the "s" and
+            // re-garble a real word ("lumbers") on the cleaning pass. A lone
+            // real digit is a different case ("turn to m1"/"m8"/"m2" in FF06
+            // are the printed 1/8/2 with an OCR speck in front), so allow it
+            // when the raw token actually contained a digit.
+            if (token.Length == 1 && !rawHadDigit) return null;
         }
         var mapped = new char[token.Length];
         for (int i = 0; i < token.Length; i++)

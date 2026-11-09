@@ -41,6 +41,26 @@ public class TurnToRepairTests
     }
 
     [Theory]
+    [InlineData("turn to m1", "turn to 1")]   // FF06 S39  "If you win, turn to m1."
+    [InlineData("turn to m8", "turn to 8")]   // FF06 S374
+    [InlineData("turn to m2", "turn to 2")]   // FF06 S378
+    [InlineData("turn to x5", "turn to 5")]
+    public void RepairContent_RecoversSingleDigitBehindJunkSpeck(string garbled, string expected)
+    {
+        TurnToRepair.RepairContent(garbled, maxSection: 400).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("turn boy 21", "turn to 21")]      // FF05 S125 "climb up it (turn boy 21)"
+    [InlineData("Turn tor 273", "turn to 273")]    // FF05 S154
+    [InlineData("turn toe 122", "turn to 122")]    // FF05 S158
+    [InlineData("turn Eo 199", "turn to 199")]     // FF04 S304
+    public void RepairContent_NormalizesGarbledPrepositions(string garbled, string expected)
+    {
+        TurnToRepair.RepairContent($"Choose {garbled}.").Should().Contain(expected);
+    }
+
+    [Theory]
     [InlineData("Turn to o261", "Turn to 261")]
     [InlineData("Turn to z10", "Turn to 210")]
     [InlineData("Turn to 8s", "Turn to 85")]
@@ -98,6 +118,9 @@ public class TurnToRepairTests
     [InlineData("turning to dust")]
     [InlineData("Turning to the door")]
     [InlineData("turning to you")]
+    [InlineData("turn tomorrow at dawn")]  // "to" prefix of a real word
+    [InlineData("turn torque the bolt")]
+    [InlineData("turn boys and girls")]
     public void RepairContent_IsIdempotentOnCleanText(string input)
     {
         TurnToRepair.RepairContent(input).Should().Be(input);
@@ -169,6 +192,17 @@ public class ChoicesParityTests
         cleaned.Choices.Should().ContainSingle();
         cleaned.Choices[0].Target.Should().Be(150);
         cleaned.Clean.Should().NotContain("Tum o");
+    }
+
+    [Fact]
+    public void GarbledPreposition_RepairedBeforeChoiceExtraction()
+    {
+        var cleaned = ContentAnalyzer.Analyze(
+            Sec(125, "Unable to rid yourself of this handicap, you climb up it (turn boy 21)."));
+
+        cleaned.References.Should().Equal(21);
+        cleaned.Choices.Should().ContainSingle();
+        cleaned.Choices[0].Target.Should().Be(21);
     }
 
     [Fact]
