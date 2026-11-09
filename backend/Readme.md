@@ -1,9 +1,9 @@
 # ⚔️ Dungeon World Engine (Backend)
 
-The backend of **Dungeon World** — a .NET 8 service that turns Fighting Fantasy-style gamebook PDFs into structured, playable game data and exposes it (plus player accounts, progress, and inventory) through a REST API.
+The backend of **Dungeon World** — a .NET 10 service that turns Fighting Fantasy-style gamebook PDFs into structured, playable game data and exposes it (plus player accounts, progress, and inventory) through a REST API.
 
 ![C#](https://img.shields.io/badge/c%23-%23239120.svg?style=for-the-badge&logo=c-sharp&logoColor=white)
-![.NET 8](https://img.shields.io/badge/.NET%208-512BD4?style=for-the-badge&logo=.net&logoColor=white)
+![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=.net&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![EF Core](https://img.shields.io/badge/EF_Core-512BD4?style=for-the-badge&logo=.net&logoColor=white)
 ![PdfPig](https://img.shields.io/badge/PdfPig-FF6F00?style=for-the-badge&logo=pdf&logoColor=white)
@@ -143,7 +143,13 @@ The local `Storage/Books` data is generated/ignored content; it is not included 
 
 Alternative local extraction checks for FF28 (200/400 dpi OCR, Tesseract sparse-text segmentation, the PDF's embedded text layer, and targeted 300 dpi contrast/sharpen/threshold preprocessing) did not produce any reliable additional section bodies. Section 191 was recovered from the user transcription and anchored across the p71R–p72L spread. Confirm uncertain section links against the page images before changing parser logic or golden graphs; goldens are expected-data snapshots, not proof that OCR or the source scan is correct. FF28's OCR text is demonstrably wrong at §§349 and 370 (it reads 138/221 where the printed pages read 118/211); the flowchart is correct there.
 
-The last broad cross-book graph/structure validation (after the FF02 rebuild) had **1,617 tests passing and 14 failing**. Thirteen graph snapshots still have unresolved differences in earlier books, and FF09 reports an oversized §67 body; FF02's graph, structure, and parser tests all pass. Re-run that suite before treating the snapshot as current; the remaining cross-book graph differences still need visual adjudication.
+The last broad cross-book graph/structure validation (after the FF02 rebuild) had **1,617 tests passing and 14 failing**, and has since been partly re-baselined. Seven books now match their goldens exactly:
+
+- **FF01, FF03, FF04, FF05** — regenerated against verified prose. Almost every stale entry was a `section + 1` sequential fallback that the shared turn-to repair has since replaced (the printed text carries the real target, the stale snapshot did not), and a targeted repair for the garbled prepositions `tor`/`toe`/`boy`/`Eo` recovered five genuinely lost exits (FF04 §304; FF05 §§125, 154, 158, 197).
+- **Deathtrap Dungeon (FF06)** — three exits were being lost because `"turn to m1"/"m8"/"m2"` (the printed 1/8/2 with an OCR speck in front) tripped the single-character salvage guard; that guard now only blocks letter-mapped characters, so the real digit survives (S39, S374, S378). The snapshot also drops a bogus `§387 → 5` that came from the old `"lumbers" → 5` misread in the same guard's absence.
+- **FF16 Seas of Blood** — its golden declared `"FF16 Seas of Blood.json"` while the cleaned file is `Seas of Blood.json`, so the gate skipped it entirely and reported nothing. The snapshot now names the real file; the reference data already matched (680 edges), so no re-ingest was needed.
+
+Eight graph snapshots still differ (FF07, FF08, FF09, FF10, FF11, FF14, FF17, FF18), and FF09 still reports an oversized §67 body. Re-run the suite before treating the snapshot as current; the remaining cross-book graph differences still need visual adjudication.
 
 ## 🛠️ Local Setup (without Docker)
 
