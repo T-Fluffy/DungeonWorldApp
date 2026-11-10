@@ -10,12 +10,20 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// 14-118; two-up L/R halves). Intro uses the cover/title pages (1, 3) plus the
 /// BACKGROUND narrative (12-13); the curated intro text ships in Intros/ff09.txt.
 /// Section exits were adjudicated against the arek.bdmonkeys.net walkthrough
-/// (sol8): all 169 path edges resolve, choices match references, no dangling
-/// targets. Ghost slices (empty in ff09.json) carry restored exits; dup-slot
-/// slices keep the foreign body verbatim with the true exit appended. Known
-/// scan losses: ~29 off-path sections stay unreachable (lost bodies/parents,
-/// e.g. 60/90/105), S33's Lucky exit number is cut, and S109 shares S111's
-/// body with unrecoverable true exits.
+/// (sol8); sections whose bodies the scan lost carry restored exits through
+/// <see cref="MissingSectionReferences"/>.
+///
+/// The manifest numbers lines continuously across a spread's L and R halves (the
+/// older dump format), so <see cref="ManifestLinesArePageGlobal"/> must stay on:
+/// against a fresh 300 dpi transcript 288/400 pins land on their own printed
+/// header that way, versus 164/400 without it. Two blocks had been parked on the
+/// wrong pages (§29-§63 and §68-§79) and were re-pinned by hand; four of those
+/// headers are garbled rather than missing ("33" -> §55, "5b" -> §56,
+/// "bo" -> §60, "fz" -> §62). That removed section 67's four-page merge
+/// (5,387 -> 1,949 characters) and restored ~21 bodies.
+///
+/// Remaining scan losses: 29 sections still have no body (371/400 present); a
+/// few keep a truncated body where the header sits in an unreadable margin.
 /// </summary>
 public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
 {
@@ -30,6 +38,16 @@ public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
     protected override string ManifestResourceName => "DungeonWorld.Infrastructure.Parsing.Manifests.ff09.json";
     protected override IReadOnlyList<int> IntroPages => new[] { 1, 3, 12, 13 };
     protected override bool ManifestInTranscriptOrder => true;
+
+    /// <summary>
+    /// This manifest was produced against the older reconstruction dump, which numbered lines
+    /// continuously across a spread's L and R halves. Measuring the committed pins against a
+    /// fresh 300 dpi transcript puts 288/400 on their own printed header under page-global
+    /// numbering versus 164/400 under the renderer's side-local numbering, so the flag has to
+    /// be on: without it roughly a third of the sections were assembled from the wrong lines
+    /// (section 67 swallowed four pages, and 68-79 shipped as one-line fragments).
+    /// </summary>
+    protected override bool ManifestLinesArePageGlobal => true;
 
     private static readonly IReadOnlyDictionary<int, int[]> MissingSectionReferences = new Dictionary<int, int[]>
     {
