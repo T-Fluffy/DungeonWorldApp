@@ -1,26 +1,81 @@
-# Book-by-book completion plan (resume tomorrow)
+# Book-by-book completion plan
 
-Strict rule agreed with the user: **complete each book to 400/400 (all data extracted)
-before moving to the next.** Only document a ceiling when a page is genuinely unreadable
-after recovery attempts.
+Strict rule agreed with the user: **complete each book before moving to the next.**
+Only document a ceiling when a page is genuinely unreadable after recovery attempts
+(blank or art-only scan pages, or a spread that is absent from the PDF).
 
-## Current state (as of 2026-08-15)
+## Current state (2026-11-10)
 
-| Book | Status |
-|------|--------|
-| FF01 The Warlock of Firetop Mountain | **400/400 — complete (manual reconstruction)** |
-| FF02 Citadel of Chaos | **400/400 — complete** |
-| FF03 Forest of Doom | **400/400 — complete (manual reconstruction)** |
-| FF04 Starship Traveller | **343/343 — complete** (physical ceiling: no sections 344–400 exist) |
-| FF05 City of Thieves | **400/400 — complete** |
-| FF16 Seas of Blood | **400/400 — complete** (reference book) |
+**28 canonical books ingested; 11,217 of 11,223 section bodies present.** All 28 match
+their golden graph snapshots, no book has an empty or oversized body, `verify_books.py`
+reports `ALL CLEAN`, and the structure gate is green for the whole catalogue.
 
-FF02 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff02test\FF02 Citadel of Chaos.pdf`
-FF01 sources: `backend\Storage\Books\tmp\FF01 The Warlock of Firetop Mountain.pdf`; dump/overrides in `C:\Users\Halloul\AppData\Local\Temp\opencode\ff01reconstruct\`
-FF03 sources: `backend\Storage\Books\tmp\FF03 Forest of Doom.pdf`; dump in `C:\Users\Halloul\AppData\Local\Temp\opencode\ff03reconstruct\` (105 pages)
-FF04 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\pw2up\FF04 Starship Traveller.pdf` (also `testsingle`)
-FF05 sources: `C:\Users\Halloul\AppData\Local\Temp\opencode\ff05reconstruct\` (300 dpi dump; also `backend\Storage\Books\tmp\FF05 City of Thieves.pdf`)
-FF16: `backend\Storage\Books\Seas of Blood.pdf` (protected: CleanPreviousOutput skips it)
+| Book | Bodies | Reachable | Notes |
+|------|--------|-----------|-------|
+| FF01 The Warlock of Firetop Mountain | 400/400 | 379 | manual reconstruction |
+| FF02 Citadel of Chaos | 400/400 | 400 | authoritative Outspaced flowchart, 715 edges |
+| FF03 Forest of Doom | 400/400 | 390 | manual reconstruction |
+| FF04 Starship Traveller | 343/343 | 280 | physical ceiling — the book prints 343 sections |
+| FF05 City of Thieves | 400/400 | 355 | manual reconstruction |
+| FF06 Deathtrap Dungeon | 400/400 | 397 | "turn to m1/m8/m2" speck repair |
+| FF07 Island of the Lizard King | 400/400 | 384 | |
+| FF08 Scorpion Swamp | 400/400 | 374 | |
+| FF09 Caverns of the Snow Witch | 400/400 | 364 | rebuilt this session — see below |
+| FF10 House of Hell | 400/400 | 396 | |
+| FF11 Talisman of Death | **398/400** | 384 | §§38, 77 sit on blank/art-only scan pages |
+| FF12 Space Assassin | 400/400 | 355 | |
+| FF13 Freeway Fighter | 380/380 | 354 | physical ceiling — the book prints 380 sections |
+| FF14 Temple of Terror | 400/400 | 366 | |
+| FF15 Rings of Kether | 400/400 | 296 | |
+| FF16 Seas of Blood | 400/400 | 380 | curated reference book, protected from re-ingest |
+| FF17 Appointment With F.E.A.R. | 440/440 | 191 | 440 sections; heavily branching |
+| FF18 Rebel Planet | 400/400 | 400 | |
+| FF19 Demons of the Deep | 400/400 | 330 | |
+| FF20 Sword of the Samurai | 400/400 | 205 | |
+| FF21 Trial of Champions | 400/400 | 317 | |
+| FF22 Robot Commando | 400/400 | 353 | |
+| FF23 Masks of Mayhem | 400/400 | 317 | |
+| FF24 Creature of Havoc | 460/460 | 341 | 460 sections |
+| FF25 Beneath Nightmare Castle | 400/400 | 317 | |
+| FF26 Crypts of the Sorcerer | **396/400** | 400 | §§14–17: that spread is absent from the scan (p17 ends at §13, p18 opens at §18) |
+| FF27 Star Strider | 400/400 | 400 | |
+| FF28 Phantoms of Fear | 400/400 | 400 | authoritative Outspaced flowchart, 622 edges |
+
+### FF09 rebuild (2026-11-10)
+
+FF09 was the last structurally broken book. Its manifest numbers lines continuously across
+a spread's L and R halves (the older dump format), but `ManifestLinesArePageGlobal` had
+never been enabled: against a fresh 300 dpi transcript, 288/400 pins land on their own
+printed header that way versus 164/400 without it. Enabling it exposed five blocks parked
+on the wrong pages, all re-pinned by hand from the transcript:
+
+- §5–7, 29–82, 88–110, 162–169, 177–199, 220–224, 275–299, 345–350, 383–385;
+- several headers are garbled rather than missing and were matched by their page folio
+  (`p28L12 "33"` → §55, `p30L19 "fz"` → §62, `p36L0 "Bo"` → §80, `p86L1 "264"` → §269);
+- §64 has no printed header at all — it is the avalanche-death paragraph at p30R31;
+- the walkthrough override table now applies only to sections that still assemble empty.
+  Its guesses contradicted the printed text once bodies returned (§177 prints 237, not
+  137; §269 prints 73, not 75; §347 prints 108, not 106) and forcing them cost ~40
+  reachable sections.
+
+Result: 400/400 bodies, §67 down from 5,387 to 1,949 characters, reachability 364/400,
+unreachable 36 (off-path in the printed book), golden re-baselined to 607 edges.
+
+### Remaining ceilings
+
+- **FF11** — §§38 and 77: the scan pages are blank (p48 and p74 have zero OCR lines), and
+  p49/p75 resume directly at §39/§78. Only an external transcription can fill them.
+- **FF26** — §§14–17: the printed spread is not in the PDF at all. Their edges are known
+  from the flowchart (14/15 terminal, 16 → 100/171, 17 → 30), so the graph is complete
+  even though the bodies are not.
+
+## Sources
+
+All 63 source PDFs are now in `backend\Storage\Books\tmp\`. The per-book reconstruction
+dumps referenced by the task notes below live under `%TEMP%\opencode\...` and may have been
+cleaned up; regenerate them with
+`dotnet run --project backend/DungeonWorld.Ingestor -- --reconstruct <pdf> --out <dir> --dpi 300`.
+
 
 ## Task 1 — FF02 Citadel of Chaos: DONE (400/400), tails enriched 2026-08-15
 
@@ -144,9 +199,20 @@ Rebuilt from a fresh 300 dpi dump (with the wide-page fix in `Program.cs`: `bool
 - Win section 337 ("Congratulations…") → turn to 400; sec 400 = the ending at p110L.
 - Final `ProcessedBooks/FF05 City of Thieves.json`: 400 sections, avgLen 380, full ImagePaths (`/assets/game-art/ff05_city_of_thieves/p{page}_i0.png`), Introduction from the back-cover blurb (p2). CleanedData regenerated: 400 present, 0 missing, 0 out-of-range refs (109 parsed choices), 28 combat sections, orphanLinks 0. Sparse graph (unreachable-heavy) is the same pipeline artifact as FF01/02/03/04 — OCR-garbled "furn/burn/tum/qoo to" defeats the reference regexes.
 
-## Task 5 — continue the loop
+## Next work
 
-- Continue FF06…FF15, FF17…FF63 one book at a time.
+1. **FF29–FF63 (35 books):** all source PDFs are in `backend\Storage\Books\tmp\`, but there
+   is no parser or manifest for them yet. Each needs a manifest parser (or the generic
+   block pipeline) plus the goldens test added — the per-book workflow is documented in
+   `docs/backend/parsing-pipeline.md`.
+2. **Documented ceilings:** FF11 §§38/77 and FF26 §§14–17 need an external transcription;
+   their graphs are already complete via the flowchart/override tables.
+3. **Illustrations — the largest open item outside parsing.** Only 1,112 of the 3,305
+   image paths resolved by the cleaned books exist in `Storage/GameArt`; ten books
+   (Deathtrap, FF02–FF11, FF17, FF20–FF25, FF28) have no art directory at all. The PDFs
+   are present, so this is an extraction run rather than missing source material.
+4. **App features still open** (see the root README roadmap): server-driven inventory grid,
+   ML-assisted layout correction.
 
 ## Housekeeping 2026-08-15 — CleanedData deduplication
 
