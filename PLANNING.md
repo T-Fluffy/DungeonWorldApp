@@ -6,7 +6,7 @@ Only document a ceiling when a page is genuinely unreadable after recovery attem
 
 ## Current state (2026-11-10)
 
-**28 canonical books ingested; 11,217 of 11,223 section bodies present.** All 28 match
+**28 canonical books ingested; 11,219 of 11,223 section bodies present.** All 28 match
 their golden graph snapshots, no book has an empty or oversized body, `verify_books.py`
 reports `ALL CLEAN`, and the structure gate is green for the whole catalogue.
 
@@ -22,7 +22,7 @@ reports `ALL CLEAN`, and the structure gate is green for the whole catalogue.
 | FF08 Scorpion Swamp | 400/400 | 374 | |
 | FF09 Caverns of the Snow Witch | 400/400 | 364 | rebuilt this session — see below |
 | FF10 House of Hell | 400/400 | 396 | |
-| FF11 Talisman of Death | **398/400** | 384 | §§38, 77 sit on blank/art-only scan pages |
+| FF11 Talisman of Death | 400/400 | 384 | §§38, 77 recovered from headerless blocks on p47/p73 |
 | FF12 Space Assassin | 400/400 | 355 | |
 | FF13 Freeway Fighter | 380/380 | 354 | physical ceiling — the book prints 380 sections |
 | FF14 Temple of Terror | 400/400 | 366 | |
@@ -63,11 +63,15 @@ unreachable 36 (off-path in the printed book), golden re-baselined to 607 edges.
 
 ### Remaining ceilings
 
-- **FF11** — §§38 and 77: the scan pages are blank (p48 and p74 have zero OCR lines), and
-  p49/p75 resume directly at §39/§78. Only an external transcription can fill them.
-- **FF26** — §§14–17: the printed spread is not in the PDF at all. Their edges are known
-  from the flowchart (14/15 terminal, 16 → 100/171, 17 → 30), so the graph is complete
-  even though the bodies are not.
+- **FF26** — §§14–17: the printed spread is not in the PDF. Page 17 ends at §13, page 18's
+  left leaf is a full-page illustration and its right leaf opens at §18; a content search
+  finds no body carrying §16's paired exits (100/171), so the text is absent rather than
+  mis-assigned. Their edges are known from the flowchart (14/15 terminal, 16 → 100/171,
+  17 → 30), so the graph is complete even though the bodies are not.
+
+FF11's §§38/77 turned out **not** to be a ceiling: both are printed without a header
+directly after the preceding section (p47 after §37, p73 after §76) and had simply been
+pinned to the following page. Check for a headerless body before declaring a scan loss.
 
 ## Sources
 
@@ -205,8 +209,8 @@ Rebuilt from a fresh 300 dpi dump (with the wide-page fix in `Program.cs`: `bool
    is no parser or manifest for them yet. Each needs a manifest parser (or the generic
    block pipeline) plus the goldens test added — the per-book workflow is documented in
    `docs/backend/parsing-pipeline.md`.
-2. **Documented ceilings:** FF11 §§38/77 and FF26 §§14–17 need an external transcription;
-   their graphs are already complete via the flowchart/override tables.
+2. **Documented ceiling:** FF26 §§14–17 need an external transcription; its graph is
+   already complete via the flowchart.
 3. **Illustrations — the largest open item outside parsing.** Only 1,112 of the 3,305
    image paths resolved by the cleaned books exist in `Storage/GameArt`; ten books
    (Deathtrap, FF02–FF11, FF17, FF20–FF25, FF28) have no art directory at all. The PDFs

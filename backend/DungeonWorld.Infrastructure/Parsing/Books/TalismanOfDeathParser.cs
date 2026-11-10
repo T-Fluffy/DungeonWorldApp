@@ -41,8 +41,17 @@ public sealed class TalismanOfDeathParser : ManifestDungeonWorldParser
     {
         foreach (var section in book.Sections)
         {
-            if (MissingSectionReferences.TryGetValue(section.SectionNumber, out var targets))
-                section.ReferenceOverride = targets.ToList();
+            if (!MissingSectionReferences.TryGetValue(section.SectionNumber, out var targets))
+                continue;
+
+            // Both entries were written when S38/S77 looked absent (their pins had been parked
+            // on the following page, so the slices were zero-width). The bodies are in fact on
+            // p47 and p73 after the preceding section, printed without a header, so the prose
+            // now supplies the exit. Only apply the guess if a slice is still empty.
+            if (!string.IsNullOrWhiteSpace(section.Content))
+                continue;
+
+            section.ReferenceOverride = targets.ToList();
         }
     }
 
