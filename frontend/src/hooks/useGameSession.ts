@@ -69,18 +69,33 @@ export const useGameSession = (bookTitle: string | null) => {
       setSection(data);
       setHistory((prev) => [...prev, sectionNumber]);
       addLog(`- Section ${data.number} -`, 'system');
-      addLog(data.clean || data.raw, 'narrator');
+
+      // A few sections have no recoverable body (FF26 §§14-17: their printed spread is
+      // missing from the scan). Say so plainly instead of printing the parser's
+      // "[Text missing or unreadable in PDF]" placeholder, and never treat it as an
+      // ending - a missing body has no choices, which the rule below would otherwise
+      // read as a victory and reward a medallion.
+      const bodyMissing = data.features.missingText;
+      if (bodyMissing) {
+        addLog(
+          'This section’s text is missing from the scanned book, so it is not counted as an ending.',
+          'system',
+        );
+      } else {
+        addLog(data.clean || data.raw, 'narrator');
+      }
+
       if (data.features.hasCombat) {
         addLog('A fight erupts! Steel meets shadow.', 'system');
       }
-      if (data.choices.length === 0) {
+      if (data.choices.length === 0 && !bodyMissing) {
         addLog('The path ends here. (Victory, or a dead end?)', 'system');
       }
 
       // Auto-save after every navigation (best-effort).
       // Pass the fetched section number explicitly — the `section` state in the
       // closure is still the *previous* section until the next render.
-      const completed = sectionNumber >= 400 || data.choices.length === 0;
+      const completed = !bodyMissing && (sectionNumber >= 400 || data.choices.length === 0);
       await save(completed, data.number);
       return true;
     } catch (err) {

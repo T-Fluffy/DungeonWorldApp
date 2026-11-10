@@ -67,7 +67,11 @@ unreachable 36 (off-path in the printed book), golden re-baselined to 607 edges.
   left leaf is a full-page illustration and its right leaf opens at §18; a content search
   finds no body carrying §16's paired exits (100/171), so the text is absent rather than
   mis-assigned. Their edges are known from the flowchart (14/15 terminal, 16 → 100/171,
-  17 → 30), so the graph is complete even though the bodies are not.
+  17 → 30), so the graph is complete even though the bodies are not. All four are reachable
+  from §1 (271→14, 225→15, 371→15, 391→16, 229→17), so the reader now detects
+  `features.missingText`: it prints an explicit notice instead of the parser placeholder and
+  never counts such a section as an ending — previously §14/§15 have no choices, which the
+  client read as a victory and rewarded with a medallion.
 
 FF11's §§38/77 turned out **not** to be a ceiling: both are printed without a header
 directly after the preceding section (p47 after §37, p73 after §76) and had simply been
