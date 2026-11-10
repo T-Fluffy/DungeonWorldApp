@@ -28,7 +28,9 @@ const int MergeThreshold = 400;
 const int MaxBodyChars = 5000;
 var mergeDpis = new[] { 200, 250, 300, 400 };
 
-var protectedTitles = new[] { "Seas of Blood" };
+// Curated books that a batch ingest must never overwrite. Both spellings are
+// listed because the curated FF16 data predates the "FF16 " title prefix.
+var protectedTitles = new[] { "FF16 Seas of Blood", "Seas of Blood" };
 
 string? dirArg = null;
 var excludes = new List<string>();
