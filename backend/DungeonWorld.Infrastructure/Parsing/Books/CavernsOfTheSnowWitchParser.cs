@@ -16,14 +16,14 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// The manifest numbers lines continuously across a spread's L and R halves (the
 /// older dump format), so <see cref="ManifestLinesArePageGlobal"/> must stay on:
 /// against a fresh 300 dpi transcript 288/400 pins land on their own printed
-/// header that way, versus 164/400 without it. Two blocks had been parked on the
-/// wrong pages (§29-§63 and §68-§79) and were re-pinned by hand; four of those
-/// headers are garbled rather than missing ("33" -> §55, "5b" -> §56,
-/// "bo" -> §60, "fz" -> §62). That removed section 67's four-page merge
-/// (5,387 -> 1,949 characters) and restored ~21 bodies.
+/// header that way, versus 164/400 without it. Five blocks had been parked on the
+/// wrong pages and were re-pinned by hand, recovering 37 bodies; several headers
+/// are garbled rather than missing ("33" -> 55, "bo" -> 60, "fz" -> 62,
+/// "Bo" -> 80, "264" -> 269). That removed section 67's four-page merge
+/// (5,387 -> 1,949 characters) and restored section 75's Healer body, which had
+/// been shipping as 73.
 ///
-/// Remaining scan losses: 29 sections still have no body (371/400 present); a
-/// few keep a truncated body where the header sits in an unreadable margin.
+/// Remaining scan loss: 1 section (§64) has no recoverable body (399/400).
 /// </summary>
 public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
 {
