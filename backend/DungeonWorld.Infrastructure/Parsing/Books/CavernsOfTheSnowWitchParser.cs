@@ -23,7 +23,11 @@ namespace DungeonWorld.Infrastructure.Parsing;
 /// (5,387 -> 1,949 characters) and restored section 75's Healer body, which had
 /// been shipping as 73.
 ///
-/// Remaining scan loss: 1 section (§64) has no recoverable body (399/400).
+/// Remaining scan loss: none - all 400 bodies are present. The walkthrough
+/// override table below is now only consulted for sections that still assemble
+/// empty; forcing its guesses onto recovered bodies contradicted the printed text
+/// (177 prints 237, 269 prints 73, 347 prints 108) and cost ~40 reachable
+/// sections. Reachability is 364/400, with 36 sections off-path in the book.
 /// </summary>
 public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
 {
@@ -94,8 +98,20 @@ public sealed class CavernsOfTheSnowWitchParser : ManifestDungeonWorldParser
     {
         foreach (var section in book.Sections)
         {
-            if (MissingSectionReferences.TryGetValue(section.SectionNumber, out var targets))
-                section.ReferenceOverride = targets.ToList();
+            if (!MissingSectionReferences.TryGetValue(section.SectionNumber, out var targets))
+                continue;
+
+            // The table was written while these bodies were still lost to the scan (ghost
+            // slices parked on the wrong page), so its exits are walkthrough guesses. The
+            // re-pinned manifest now recovers almost all of those bodies, and several of the
+            // guesses contradict the printed text (S177 prints "turn to 237", not 137; S269
+            // prints 73, not 75; S347 prints 108, not 106). Forcing a stale guess would keep
+            // a wrong edge and break reachability, so only sections that still have no body
+            // take the override.
+            if (!string.IsNullOrWhiteSpace(section.Content))
+                continue;
+
+            section.ReferenceOverride = targets.ToList();
         }
     }
 
