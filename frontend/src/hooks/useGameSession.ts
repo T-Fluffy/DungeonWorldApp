@@ -76,9 +76,12 @@ export const useGameSession = (bookTitle: string | null) => {
       // ending - a missing body has no choices, which the rule below would otherwise
       // read as a victory and reward a medallion.
       const bodyMissing = data.features.missingText;
+      const deadEnd = data.choices.length === 0;
       if (bodyMissing) {
         addLog(
-          'This section’s text is missing from the scanned book, so it is not counted as an ending.',
+          deadEnd
+            ? 'This was an ending, but its text is missing from the scanned book. Type RESET to begin again.'
+            : 'This section’s text is missing from the scanned book, but both paths below still work.',
           'system',
         );
       } else {
@@ -88,7 +91,7 @@ export const useGameSession = (bookTitle: string | null) => {
       if (data.features.hasCombat) {
         addLog('A fight erupts! Steel meets shadow.', 'system');
       }
-      if (data.choices.length === 0 && !bodyMissing) {
+      if (deadEnd && !bodyMissing) {
         addLog('The path ends here. (Victory, or a dead end?)', 'system');
       }
 
