@@ -1,6 +1,6 @@
-# Fighting System — Seas of Blood
+# Fighting System — FF16 Seas of Blood
 
-Rules extracted from the parsed *Seas of Blood* PDF (Fighting Fantasy gamebook by Steve Jackson / Ian Livingstone).
+Rules extracted from the parsed *FF16 Seas of Blood* PDF (Fighting Fantasy gamebook by Steve Jackson / Ian Livingston).
 
 ## Character Stats
 

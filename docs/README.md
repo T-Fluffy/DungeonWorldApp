@@ -14,7 +14,7 @@ tooling.
 | [`backend/persistence.md`](backend/persistence.md) | EF Core `DungeonWorldDbContext`, entities, migrations |
 | [`frontend/README.md`](frontend/README.md) | React app structure: context, hooks, views, components, API client, combat engine |
 | [`operations.md`](operations.md) | Docker Compose, storage layout, how to run the Ingestor and DataCleaner, ML tooling, secrets |
-| [`fighting-system.md`](fighting-system.md) | Fighting Fantasy rules extracted from the *Seas of Blood* book (game rules reference) |
+| [`fighting-system.md`](fighting-system.md) | Fighting Fantasy rules extracted from the *FF16 Seas of Blood* book (game rules reference) |
 
 ## Quick orientation
 

@@ -33,7 +33,11 @@ to the ASP.NET API over `/api` (Vite dev proxy) and persists the session in
 
 - `boot` loads book meta + intro, resumes a saved adventure (or starts at section 1).
 - `goTo(n)` fetches the section, appends narrator/player/system log entries, and
-  auto-saves progress (best-effort, never blocks navigation).
+  auto-saves progress (best-effort, never blocks navigation). It honours
+  `features.missingText`: a section whose body the scan lost is reported as such, is never
+  counted as an ending (so it cannot award a medallion), and still offers its printed
+  choices when the graph supplies them — the four unrecoverable FF26 sections are the only
+  case in the catalogue.
 - `processCommand` parses the terminal input: `GO <n>` / bare number, `RESET`,
   `LOGOUT`, `LOOK`, `HELP`, `BATTLE`, `FLEE`, `ROLL DICE`, `SAVE`, `INVENTORY`.
 - `resetRun` tears the chronicle down and rewinds to section 1.

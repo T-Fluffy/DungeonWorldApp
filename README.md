@@ -69,6 +69,9 @@ Live screenshots captured from the app (logged-in session):
 
 ## ✨ Recent Updates
 
+- **.NET 10 + self-contained container build** — every backend project targets `net10.0` with EF Core 10, Npgsql 10 and Swashbuckle 10, and the Dockerfile builds on `sdk:10.0` / `aspnet:10.0`. Restore is scoped to the API project, so a clean checkout builds without the (git-ignored) solution file.
+- **Catalogue complete** — 28 gamebooks ingested, **11,219 of 11,223 sections carrying text**, and all 28 matching their golden graph snapshots. FF09 *Caverns of the Snow Witch* and FF11 *Talisman of Death* were finished this cycle; FF26 is the only gap left (four sections whose printed spread is absent from the scan).
+- **Honest missing-section handling** — the reader detects `features.missingText`, says so instead of printing the parser's placeholder, and never counts such a section as an ending (it used to award a medallion for a blank page).
 - **Chronicle command language** — `LOOK`, `GO <n>`, `INVENTORY`, `SAVE`, `RESET`, `LOGOUT`, and a formatted `HELP` guide. `RESET` tears the chronicle back to section 1 and re-seals progress; `LOGOUT` plays a cinematic parting ritual before severing the session.
 - **Book switcher & grimoire slider** — switch bound adventures from the Chronicle header slider or the feed's "Switch Grimoire" dropdown (auto-saves the current run first).
 - **Streamlined Chronicle layout** — left column shows the current section's illustration, the center feed is the terminal, and objectives/equipment sit on the right; the navigation docked directly beneath the command bar.
@@ -80,7 +83,8 @@ Live screenshots captured from the app (logged-in session):
 - Parses gamebook PDFs into structured JSON (sections, choices, illustrations, map) using PdfPig, with automatic **single-page vs double-page layout detection** and a parser factory that picks the right engine.
 - Serves the parsed books through a REST API (`/api/game`, `/api/admin`), with section illustrations served statically at `/assets/game-art`.
 - Handles player accounts and progression: PBKDF2-hashed auth, profiles, subscriptions, achievements, assets, and per-book adventure saves — persisted in **PostgreSQL via EF Core**.
-- Ships with an xUnit test suite covering layout detection and parser regressions.
+- Ships with an xUnit test suite covering layout detection, parser regressions, per-book golden
+  graph snapshots and a body-structure gate, plus `tools/verify_books.py` for a per-book audit.
 - Includes an optional Python **ML_Pipeline** (`pdf_to_images.py`) that renders PDFs to 300-DPI image datasets for OCR/CNN training.
 
 ### Frontend — the adventure (React + Vite)
@@ -110,6 +114,12 @@ cd backend && dotnet test DungeonWorldBackend.sln   # xUnit parser/layout suite
 cd frontend && npm run lint                          # ESLint
 ```
 
+The suite includes per-book golden graph snapshots and a body-structure gate. Both compare
+against `backend/Storage/Books/CleanedData`, which is git-ignored, so they **pass vacuously on a
+clone without book data** — run them where the cleaned books are present to get the real signal.
+`python tools/verify_books.py` prints the per-book reachability/dangling/missing report, and
+`python tools/make_golden.py <book>` re-baselines a snapshot after an intentional graph change.
+
 ## 🗺️ Roadmap
 
 - [x] PDF ingestion → structured, playable game data
@@ -117,6 +127,10 @@ cd frontend && npm run lint                          # ESLint
 - [x] Chronicle reader with section navigation & commands
 - [x] Character sheet with pack, achievements, and saved adventures
 - [x] Persist chronicle saves to the backend from the reader (`SAVE` / auto-save / book switching)
+- [x] .NET 10 service with a self-contained container build
+- [x] 28-book catalogue ingested — every book on its golden graph, structure-gated
+- [ ] Illustration extraction for the books with no art folder yet (Deathtrap, FF02–FF11, FF17, FF20–FF25, FF28)
+- [ ] FF26 §§14–17 — only recoverable from an external transcription (that spread is absent from the scan)
 - [ ] Server-driven inventory grid
 - [ ] ML-assisted layout correction via the ML_Pipeline
 

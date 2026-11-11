@@ -39,14 +39,13 @@ After the reorganization, the parser files live in
 | `MediaArtParser.cs` | Art-only extraction: crops full-page scans, exports embedded art |
 | `ArtRegionDetector.cs` | Locates dense ink illustration blocks in a full-page scan |
 | `TextBlock.cs` | Text-paragraph DTO with layout metadata |
-| `Books/SeasOfBloodParser.cs` | Legacy rule-based parser for *Seas of Blood* |
+| `Books/SeasOfBloodParser.cs` | Rule-based parser for FF16 *Seas of Blood* |
 | `Books/WarlockOfFiretopMountainParser.cs` | Rule-based parser for FF01 |
-| `Books/CitadelOfChaosParser.cs` | Manifest parser for FF02 + section tail fixes |
-| `Books/ForestOfDoomParser.cs` | Manifest parser for FF03 |
-| `Books/StarshipTravellerParser.cs` | Manifest parser for FF04 (343 sections) |
-| `Books/CityOfThievesParser.cs` | Manifest parser for FF05 |
-| `Manifests/ff02.json … ff05.json` | Embedded reconstruction manifests |
+| `Books/*Parser.cs` (26 more) | One manifest parser per book, e.g. `CitadelOfChaosParser` (FF02), `DeathtrapDungeonParser` (FF06), `CavernsOfTheSnowWitchParser` (FF09), `TalismanOfDeathParser` (FF11), `CryptsOfTheSorcererParser` (FF26) |
+| `Manifests/ff01.json … ff28.json` | Embedded reconstruction manifests |
+| `Manifests/ff02,ff26,ff27,ff28_edges.json` | Authoritative flowchart graphs for the books whose scan garbles exits beyond repair |
 | `Reconstruction/ReconstructionService.cs` | OCR + manifest application shared with the batch CLI |
+| `Reconstruction/HardScanReconstruction.cs` | Second-pass OCR overlay for the hard scans (FF13/FF15/FF17) |
 
 ## 1. Text extraction
 
@@ -86,9 +85,11 @@ Per-book hooks override behavior: `MaxSectionNumber` (FF04 = 343), `HeaderFooter
 
 ## 3. Manifest reconstruction (`ManifestDungeonWorldParser`)
 
-For scan-heavy books (FF02–FF05) the automated rule pipeline cannot recover 400/400
-sections, so the books were rebuilt **manually**: an operator reviewed OCR line
-transcripts page by page and produced a manifest of body-start points.
+For scan-heavy books (FF02–FF15, FF17–FF28) the automated rule pipeline cannot recover
+every section, so the books were rebuilt **manually**: an operator reviewed OCR line
+transcripts page by page and produced a manifest of body-start points. In this scan family
+the printed page usually carries a folio such as `178-179` at the top, which states exactly
+which section numbers that page holds — the most reliable anchor when headers are garbled.
 
 A manifest entry is `{ n, page, side, line, [end] }`:
 
@@ -113,6 +114,44 @@ The manifest JSON ships as an **embedded resource** (csproj:
 `<EmbeddedResource Include="Parsing\Manifests\*.json" />`), so each parser is
 self-contained and reproducible.
 
+### Line numbering: page-global vs side-local
+
+The two dump formats disagree, and getting it wrong is silent and destructive:
+
+- the **older** reconstruction dump numbers lines continuously across a spread's L and R
+  halves (L 0–20, then R 21–49), and manifests built against it need
+  `ManifestLinesArePageGlobal => true`;
+- the current renderer numbers **each side from zero**, which is the default.
+
+A manifest read with the wrong convention still "works" — sections just assemble from the
+wrong lines, which shows up as oversized bodies and collapsed neighbours rather than an
+error. Measure before trusting a flag: compare each pin against the printed header under
+both interpretations. FF09 scored 288/400 under page-global versus 164/400 under side-local;
+it had been running the wrong one, which is why §67 swallowed four pages. FF02, FF26, FF27
+and FF28 are the other books on the older format.
+
+### A section can have no header
+
+Some sections are printed without a header line at all — usually because the preceding
+section's body ends at the foot of a page or under an illustration. Two real examples:
+
+- **FF09 §64** is the avalanche-death paragraph at p30R31: no header, no exits.
+- **FF11 §§38 and 77** sit at the foot of p47 and p73 (folios `37-38` and `76-77`), directly
+  after §37 and §76.
+
+When such a pin is left on the *next* page's first line the slice is zero-width, so the
+section assembles empty and looks like a missing page. Before declaring a scan loss, check
+the folio range and whether the previous section's body ends mid-page — the body is often
+already in the transcript.
+
+### Override tables are a fallback, not a fix
+
+Books carry a `MissingSectionReferences` table (walkthrough-verified exits for sections whose
+bodies were lost). Apply it **only when the slice is empty**: once the bodies are recovered the
+printed prose is authoritative, and stale guesses start contradicting it (FF09 §177 prints
+`turn to 237`, not 137; §269 prints 73, not 75; §347 prints 108, not 106). Forcing them kept
+wrong edges and cost ~40 reachable sections.
+
 Per-book overrides on the manifest parsers:
 
 | Book | Quirk handled in the parser |
@@ -121,6 +160,11 @@ Per-book overrides on the manifest parsers:
 | FF03 Forest of Doom | `NormalizeTurnTos = true` (normalizes garbled "Turnto261"→"turn to 261"); fixes section 193's "turn to 1710"→"turn to 171" |
 | FF04 Starship Traveller | `MaxSectionNumber = 343` (the book physically has 343 sections) |
 | FF05 City of Thieves | no code fix — its quirks (duplicate page 23≈24, page 64 header, mid-column starts) were resolved entirely inside the manifest |
+| FF06 Deathtrap Dungeon | the shared `TurnToRepair` recovers a lone digit behind an OCR speck (`"turn to m1"` → 1) while still refusing letter-mapped salvage (`"lumbers"` → 5) |
+| FF09 Caverns of the Snow Witch | `ManifestLinesArePageGlobal = true`; 43 pins re-pinned against the transcript; override table restricted to empty slices |
+| FF11 Talisman of Death | §§38/77 pinned as headerless bodies at the foot of p47/p73; override table restricted to empty slices |
+| FF26 Crypts of the Sorcerer | every section gets `ReferenceOverride` from `ff26_edges.json` — the scan garbles exits beyond `TurnToRepair` |
+| FF28 Phantoms of Fear | `ReferenceOverride` from `ff28_edges.json`; its §309 "Trial of Ghosts" puzzle is implemented client-side |
 
 ### Section-aware post-processing
 

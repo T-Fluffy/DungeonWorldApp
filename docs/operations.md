@@ -65,7 +65,7 @@ dotnet run --project backend/DungeonWorld.Ingestor \
 - Writes `ProcessedBooks/<Title>.json`, `CleanedData/<Title>.json`, and GameArt.
 - Prints a per-book quality report (sections present, avg length, choices, combat,
   graph metrics) and a summary. `[CHECK]` lines need attention.
-- **Protected titles** (e.g. *Seas of Blood*) are never overwritten.
+- **Protected titles** (e.g. *FF16 Seas of Blood*) are never overwritten.
 - Manifest parsers are authoritative (no OCR merge fallback for FF02–FF05).
 - Debug flags: `--ocr-extract`, `--ocr-dump`, `--ocr-test`, `--probe`,
   `--reconstruct`, `--reconstruct-apply` (see
@@ -138,12 +138,18 @@ control from this repo; the app repo and the data repo are independent).
 
 ## Book reconstruction status
 
-Per-book completion (400/400 means all printed sections extracted) is tracked in
-[`PLANNING.md`](../PLANNING.md):
+Per-book completion is tracked in [`PLANNING.md`](../PLANNING.md), with the audit snapshot in
+[`backend/Readme.md`](../backend/Readme.md). Current state: **28 canonical books, 11,219 of
+11,223 section bodies**, and all 28 matching their golden graph snapshots.
 
-- FF01 Warlock of Firetop Mountain — 400/400 (manual reconstruction)
-- FF02 Citadel of Chaos — 400/400 (manual reconstruction; tails enriched)
-- FF03 Forest of Doom — 400/400 (manual reconstruction)
-- FF04 Starship Traveller — 343/343 (physical ceiling)
-- FF05 City of Thieves — 400/400 (manual reconstruction)
-- FF16 Seas of Blood — 400/400 (reference book)
+- **FF01–FF08, FF10, FF12–FF25, FF27–FF28** — complete. (FF04 prints 343 sections, FF13 380,
+  FF17 440 and FF24 460; those are the printed counts, not shortfalls.)
+- **FF09 Caverns of the Snow Witch** — complete at 400/400 after enabling page-global manifest
+  numbering and re-pinning five misplaced blocks; §67's four-page merge is resolved.
+- **FF11 Talisman of Death** — complete at 400/400; §§38 and 77 were headerless bodies after
+  §37/§76, not missing pages.
+- **FF16 Seas of Blood** — complete, curated reference book (protected from batch ingest).
+- **FF26 Crypts of the Sorcerer** — 396/400; §§14–17 are absent from the PDF (the printed
+  spread is not there), so those bodies cannot be recovered locally. Their edges are known
+  from the flowchart, and the reader reports such a section explicitly instead of treating it
+  as an ending.
