@@ -59,6 +59,7 @@ All routes are exposed under `/api`. Swagger UI is available at `/swagger` in De
 | --- | --- | --- |
 | `POST` | `/api/admin/upload` | Upload a PDF (multipart, ≤ 200 MB) |
 | `POST` | `/api/admin/analyze-layout` | Diagnose single vs double-page layout of a file |
+| `POST` | `/api/admin/import-books?replace=` | Project the cleaned JSON into the `Books`/`Sections`/`Choices` tables |
 | `POST` | `/api/admin/ingest?fileName=` | Parse the PDF into structured book JSON |
 
 ### Game — reading the book
@@ -91,6 +92,7 @@ All routes are exposed under `/api`. Swagger UI is available at `/swagger` in De
 | `GET` | `/api/catalog/commands` | Chat-box commands the player uses to interact with the game |
 | `GET` | `/api/catalog/adventures` | Adventure books: title, section count, medallion awarded |
 | `GET` | `/api/catalog/adventures/{bookTitle}` | A single adventure's catalog entry |
+| `GET` | `/api/catalog/adventures/{bookTitle}/commands` | The commands that adventure supports (aliases + usage from the catalog) |
 | `POST/PUT/DELETE` | `/api/catalog/{items,spells,commands,adventures}[/{id}]` | Admin CRUD for the catalog tables *(admin role only)* |
 
 ## 🔐 Roles
@@ -113,7 +115,7 @@ On startup, `CatalogSeeder` populates the game database:
 
 - EF Core over Npgsql (`DungeonWorldDbContext`), with retry-on-failure enabled for container startup races.
 - Schema is created via `Database.Migrate()` at startup (initial migration: `InitialCreate`).
-- Tables: `Users` (incl. SKILL/STAMINA/LUCK/XP/Role + avatar path), `GameItems`, `Spells`, `Commands`, `Adventures`, `Subscriptions`, `Achievements`, `UserAssets`, `AdventureProgresses`.
+- Tables: `Users` (incl. SKILL/STAMINA/LUCK/XP/Role + avatar path), `GameItems`, `Spells`, `Commands`, `Adventures` (incl. per-adventure `CommandsCsv`), `Subscriptions`, `Achievements`, `UserAssets`, `AdventureProgresses`, and the playable-content tables `Books`, `Sections`, `Choices`.
 - Passwords are hashed with **PBKDF2** (100k iterations, 16-byte salt), stored as `base64(salt):base64(hash)`.
 - Avatars are saved to `Storage/Avatars` and served statically at `/assets/avatars`.
 - Adding a new migration: `dotnet ef migrations add <Name> --project DungeonWorld.Infrastructure --startup-project DungeonWorld.Infrastructure` (a design-time `DungeonWorldDbContextFactory` avoids needing the API host or a live DB).

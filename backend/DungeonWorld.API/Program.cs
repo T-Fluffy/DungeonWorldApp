@@ -195,4 +195,13 @@ await BookContentImporter.SeedIfEmptyAsync(
     app.Services,
     app.Services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(BookContentImporter)));
 
+// 7. Give each adventure its own command set (combat verbs only where the book has fights).
+using (var commandScope = app.Services.CreateScope())
+{
+    var db = commandScope.ServiceProvider.GetRequiredService<DungeonWorldDbContext>();
+    await AdventureCommandCatalog.SyncAsync(
+        db,
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(AdventureCommandCatalog)));
+}
+
 app.Run();

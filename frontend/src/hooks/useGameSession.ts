@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getSection, getBookMeta, upsertAdventure, getAdventure } from '../api/client';
+import { getSection, getBookMeta, upsertAdventure, getAdventure, getAdventureCommands } from '../api/client';
 import { useGame } from '../Context/useGame';
 import { useCombat } from './useCombat';
 import { parseDiceExpr, rollDice, formatDiceResult } from '../utils/combat';
-import type { SectionDto, BookMetaDto } from '../api/client';
+import type { SectionDto, BookMetaDto, GameCommandResponse } from '../api/client';
 
 export type LogType = 'narrator' | 'player' | 'system';
 
@@ -25,6 +25,10 @@ export const useGameSession = (bookTitle: string | null) => {
   const [meta, setMeta] = useState<BookMetaDto | null>(null);
   const [section, setSection] = useState<SectionDto | null>(null);
   const [history, setHistory] = useState<number[]>([]);
+  // Commands this particular adventure supports (served per book by the API).
+  const [commands, setCommands] = useState<GameCommandResponse[]>([]);
+  // Traveller's pack: what the reader has picked up this run (TAKE/DROP).
+  const [pack, setPack] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +187,14 @@ export const useGameSession = (bookTitle: string | null) => {
           addLog(bookMeta.introduction, 'narrator');
         }
 
+        // Which verbs this book actually supports; best-effort so a catalog hiccup never blocks play.
+        try {
+          const available = await getAdventureCommands(bookTitle);
+          if (!cancelled) setCommands(available);
+        } catch {
+          if (!cancelled) setCommands([]);
+        }
+
         // Resume from a saved adventure if one exists
         const saved = user?.isLoggedIn ? await getAdventure(bookTitle) : null;
         if (cancelled) return;
@@ -243,6 +255,76 @@ export const useGameSession = (bookTitle: string | null) => {
       return;
     }
 
+    // BACK: step to the previous section of this run.
+    if (/^(back|prev|previous)(\s|$)/.test(lower)) {
+      if (history.length < 2) {
+        addLog('You stand at the beginning of this chronicle.', 'system');
+        return;
+      }
+      await goTo(history[history.length - 2]);
+      return;
+    }
+
+    // REREAD: print the current section again without moving.
+    if (/^(reread|repeat|again)(\s|$)/.test(lower)) {
+      if (section) addLog(section.clean || section.raw, 'narrator');
+      return;
+    }
+
+    // TAKE: put something the section mentions into the pack.
+    const takeMatch = lower.match(/^(?:take|get|pickup|grab)\s+(.+)$/);
+    if (takeMatch) {
+      const item = takeMatch[1].trim();
+      const here = `${section?.clean ?? ''} ${section?.raw ?? ''}`.toLowerCase();
+      if (!here.includes(item.split(' ')[0])) {
+        addLog(`There is no ${item} here to take.`, 'system');
+      } else if (pack.some((p) => p.toLowerCase() === item)) {
+        addLog(`You already carry the ${item}.`, 'system');
+      } else {
+        setPack([...pack, item]);
+        addLog(`Taken: ${item}. Into your pack it goes.`, 'system');
+      }
+      return;
+    }
+
+    // DROP: remove something from the pack.
+    const dropMatch = lower.match(/^(?:drop|discard|remove)\s+(.+)$/);
+    if (dropMatch) {
+      const item = dropMatch[1].trim();
+      const next = pack.filter((p) => p.toLowerCase() !== item);
+      if (next.length === pack.length) {
+        addLog(`You are not carrying a ${item}.`, 'system');
+      } else {
+        setPack(next);
+        addLog(`Dropped: ${item}.`, 'system');
+      }
+      return;
+    }
+
+    // USE: acknowledge equipment use; the pack is the source of truth.
+    const useMatch = lower.match(/^(?:use|equip|wield)\s+(.+)$/);
+    if (useMatch) {
+      const item = useMatch[1].trim();
+      const held = pack.some((p) => p.toLowerCase() === item);
+      addLog(
+        held
+          ? `You ready the ${item}. The chronicle records the act.`
+          : `You do not carry a ${item}. Try TAKE <item> first, or INVENTORY.`,
+        'system',
+      );
+      return;
+    }
+
+    // CAST: only meaningful where the book has spells; the API advertises it per adventure.
+    const castMatch = lower.match(/^(?:cast|channel|spell)\s+(.+)$/);
+    if (castMatch) {
+      addLog(
+        `You invoke ${castMatch[1].trim()}. The air shivers, but this chronicle records no such working yet.`,
+        'system',
+      );
+      return;
+    }
+
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -251,19 +333,24 @@ export const useGameSession = (bookTitle: string | null) => {
     if (lower.includes('look')) {
       responseContent = section?.clean.slice(0, 120) || 'Shadows veil your sight.';
     } else if (lower.includes('help')) {
-      responseContent = [
-        'AVAILABLE COMMANDS:',
-        '  LOOK       Re-read the current section.',
-        '  GO <n>     Jump to section <n> (or type the number directly).',
-        '  BATTLE     Strike one combat round against the current foe.',
-        '  ROLL DICE  Roll 2d6 (or ROLL <n>d<m>) for the book\'s dice checks.',
-        '  FLEE       Try to escape from combat.',
-        '  INVENTORY  Inspect the contents of your pack.',
-        '  SAVE       Seal your progress into the Grimoire.',
-        '  RESET      Tear the chronicle asunder and begin again at section 1.',
-        '  LOGOUT     Sever the pact and leave this session.',
-        '  HELP       Display this guide.',
-      ].join('\n');
+      responseContent = commands.length > 0
+        ? [
+            'COMMANDS FOR THIS ADVENTURE:',
+            ...commands.map((c) => `  ${c.name.padEnd(10)} ${c.description}`),
+          ].join('\n')
+        : [
+            'AVAILABLE COMMANDS:',
+            '  LOOK       Re-read the current section.',
+            '  GO <n>     Jump to section <n> (or type the number directly).',
+            '  BACK       Step back to the previous section.',
+            '  BATTLE     Strike one combat round against the current foe.',
+            '  ROLL DICE  Roll 2d6 (or ROLL <n>d<m>) for the book\'s dice checks.',
+            '  FLEE       Try to escape from combat.',
+            '  INVENTORY  Inspect the contents of your pack.',
+            '  SAVE       Seal your progress into the Grimoire.',
+            '  RESET      Tear the chronicle asunder and begin again at section 1.',
+            '  HELP       Display this guide.',
+          ].join('\n');
       responseType = 'system';
     } else if (/^(battle|fight|attack|strike)\b/i.test(lower)) {
       if (!section?.features.hasCombat) {
@@ -297,23 +384,27 @@ export const useGameSession = (bookTitle: string | null) => {
         : 'You must be signed in to seal your progress.';
       responseType = 'system';
     } else if (lower.includes('inventory')) {
-      responseContent = 'Your pack feels light. Perhaps fate will provide.';
+      responseContent = pack.length > 0
+        ? `YOUR PACK:\n${pack.map((p) => `  ${p}`).join('\n')}`
+        : 'Your pack is empty. TAKE anything the section offers, or type LOOK.';
       responseType = 'system';
     } else {
-      responseContent = 'The shadows shift, but nothing happens. Try LOOK, GO [number], BATTLE, ROLL DICE, or INVENTORY.';
+      responseContent = 'The shadows shift, but nothing happens. Try HELP to see this adventure\'s commands.';
     }
 
     if (responseContent) {
       addLog(responseContent, responseType);
     }
     setIsProcessing(false);
-  }, [bookTitle, section, addLog, goTo, save, resetRun, logout, user?.isLoggedIn, user?.luck, stats, combatAttack, combatFlee, isCombatActive]);
+  }, [bookTitle, section, addLog, goTo, save, resetRun, logout, user?.isLoggedIn, user?.luck, stats, combatAttack, combatFlee, isCombatActive, history, commands, pack]);
 
   return {
     logs,
     meta,
     section,
     history,
+    commands,
+    pack,
     isLoading,
     isProcessing,
     error,

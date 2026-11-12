@@ -34,17 +34,18 @@ ASP.NET Core Web API in `backend/DungeonWorld.API`. Composition root is
 | `POST upload` | Save an uploaded PDF to `Storage/Books/` (200 MB limit, `.pdf` only) |
 | `POST ingest?fileName=` | Resolve the parser via `IParserFactory`, `ParseAsync`, then `BookCleaner.Clean` + write `CleanedData/<Title>.json`; returns parser used, section count, map found |
 | `POST analyze-layout?fileName=` | Diagnostic: `PdfPigLayoutAnalyzer.IsDoublePageLayout` → report double/single layout |
+| `POST import-books?replace=` | Project the cleaned JSON into the `Books`/`Sections`/`Choices` tables; `replace=true` re-imports existing titles |
 
 ### `GameController` — `api/game`
 
 | Route | Purpose |
 | --- | --- |
-| `GET list-books` | Titles of every file in `CleanedData/` |
+| `GET list-books` | Titles of every imported book, alphabetically |
 | `GET {bookTitle}/meta` | `BookMetaDto` (title, author, introduction, map/adventure-sheet paths, counts, rules) |
 | `GET {bookTitle}/{sectionNumber}` | One `CleanedSection` |
 
-Reads the cleaned JSON directly from `Storage/Books/CleanedData/` (no database for
-game content).
+Serves from the `Books`/`Sections`/`Choices` tables and falls back to the cleaned JSON
+files while the database is empty, so a fresh checkout works before the first import.
 
 ### `UserController` — `api/user`
 
@@ -72,12 +73,18 @@ Seeded game catalog (admin CRUD + public reads):
 | Route | Purpose |
 | --- | --- |
 | `GET items` / `GET spells` / `GET commands` / `GET adventures` | Public reads |
+| `GET adventures/{bookTitle}/commands` | The commands that adventure supports, with aliases/usage joined from the command catalog |
 | `POST/PUT/DELETE …` | Admin writes (seeded `Items`, `Spells`, `Commands`, `Adventures`) |
 
 ## Seeding
 
 - **`AdminSeeder`** — creates the initial admin from `Admin:Username` / `Admin:Email`
   / `Admin:Password` configuration.
+- **`BookContentImporter`** — projects the cleaned JSON into `Books`/`Sections`/`Choices`
+  when the tables are empty (or on demand through the admin endpoint).
+- **`AdventureCommandCatalog`** — recomputes each adventure's `CommandsCsv` from its
+  imported book: navigation/lore/system verbs always, `FIGHT`/`FLEE`/`ROLL` only when the
+  book has combat sections, `CAST` only when the catalog holds spells for that title.
 - **`CatalogSeeder`** — seeds commands (the Chronicle command vocabulary), adventures
   (from cleaned book metadata), and heuristic items/spells extracted from processed
   book prose via **`GameContentExtractor`**.

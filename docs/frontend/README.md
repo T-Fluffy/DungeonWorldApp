@@ -38,8 +38,11 @@ to the ASP.NET API over `/api` (Vite dev proxy) and persists the session in
   counted as an ending (so it cannot award a medallion), and still offers its printed
   choices when the graph supplies them — the four unrecoverable FF26 sections are the only
   case in the catalogue.
-- `processCommand` parses the terminal input: `GO <n>` / bare number, `RESET`,
-  `LOGOUT`, `LOOK`, `HELP`, `BATTLE`, `FLEE`, `ROLL DICE`, `SAVE`, `INVENTORY`.
+- `processCommand` parses the terminal input: `GO <n>` / bare number, `BACK`, `REREAD`,
+  `LOOK`, `HELP`, `BATTLE`/`FIGHT`, `FLEE`, `ROLL DICE`, `TAKE <item>`, `DROP <item>`,
+  `USE <item>`, `CAST <spell>`, `INVENTORY`, `SAVE`, `RESET`, `LOGOUT`. The available set is
+  per adventure: `boot` loads it from `/api/catalog/adventures/{title}/commands`, and `HELP`
+  prints that list. `TAKE`/`DROP` maintain a run-local pack shown by `INVENTORY`.
 - `resetRun` tears the chronicle down and rewinds to section 1.
 - Combines `useCombat`.
 

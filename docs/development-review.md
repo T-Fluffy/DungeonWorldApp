@@ -50,9 +50,9 @@ PDF → layout detection → parser (rule-based or manifest reconstruction)
 
 | Risk | Detail |
 | --- | --- |
-| **Content lives in files, not the database** | `GameController` reads `CleanedData/<title>.json` from disk on each request. The database only holds accounts and a small catalog. No per-section querying, full-text search, or transactional content updates. |
-| **Command surface is half-implemented** | The `Commands` table seeds 15 commands (`TAKE`, `USE`, `DROP`, `BACK`, `REREAD`, `CAST`, …) but the client only implements `GO`, `LOOK`, `HELP`, `BATTLE/FIGHT`, `FLEE`, `ROLL`, `SAVE`, `INVENTORY`, `RESET`, `LOGOUT`. The catalog and the engine disagree. |
-| **No per-adventure command set** | Commands are global. A book without combat still advertises `FIGHT`; nothing records which commands an adventure actually supports. |
+| ~~Content lives in files, not the database~~ | **Addressed.** Book content is now projected into `Books`/`Sections`/`Choices` by `BookContentImporter`, and the API serves from there with a file fallback. The cleaned JSON remains the import source. |
+| ~~Command surface is half-implemented~~ | **Addressed.** The client now implements every seeded verb (`TAKE`, `USE`, `DROP`, `BACK`, `REREAD`, `CAST`, `RESTART`, …) and `HELP` prints the real list. |
+| **Per-adventure command sets** | **Addressed.** `Adventure.CommandsCsv` records which verbs each book supports (combat verbs only where it has fights, `CAST` only where it has spells), served at `/api/catalog/adventures/{title}/commands`. |
 | **Art coverage** | 2,193 of 3,305 referenced illustrations are missing; ten books have no art folder. Source PDFs are present, so this is an extraction run. |
 | **Tests can't run in every environment** | The VSTest host opens its parent process handle, which fails under restricted runners. Verify in CI or the container. |
 | **Dev-only secrets** | `Jwt:Key` is a committed placeholder; admin seeding needs `ADMIN_*` env vars or `/api/admin/*` is unusable. |

@@ -25,13 +25,28 @@ PostgreSQL. Registered through `AddPersistence(connectionString)` (in
 ## Migrations
 
 `Persistence/Migrations/` contains the initial create migration
-(`20260809152707_InitialCreate`) plus the model snapshot. The API applies migrations
-automatically at startup (`db.Database.Migrate()` in `Program.cs`), then runs the
-seeders.
+(`20260809152707_InitialCreate`), `AddBookContent` (the playable-content tables) and
+`AddAdventureCommands` (per-adventure command sets), plus the model snapshots. The API
+applies migrations automatically at startup (`db.Database.Migrate()` in `Program.cs`),
+then runs the seeders.
 
 ## Where game content lives
 
-Note the split: **game-book content is NOT in the database.** `GameController` reads
-the cleaned book JSON files from `Storage/Books/CleanedData/`. The database holds the
-player-facing data (users, progress, assets, achievements, subscriptions) and the
-seeded catalog (items, spells, commands, adventure metadata).
+The cleaned book JSON under `Storage/Books/CleanedData/` remains the **source of truth**
+(the git-ignored data repository holds it), but it is now **projected into the database**
+so the API can query it instead of re-reading files on every request:
+
+| Table | Row | Key columns |
+| --- | --- | --- |
+| `Books` | one per cleaned book | `Title` (unique), `Author`, `Introduction`, `MapPath`, section/combat/enemy counts, `RulesJson` |
+| `Sections` | one per book + section number | `(BookId, Number)` unique, `Raw`, `Clean`, `ImagePath`, `HasCombat`/`MissingText`/`IsEnd`/`DeathEnd`/`VictoryEnd`, `FeaturesJson`, `ReferencesCsv` |
+| `Choices` | one per navigable exit | `SectionId`, `Target`, `Label`, `Text`, `Kind`, `IsDiceRoll`; indexed on `(SectionId, Target)` |
+
+`BookContentImporter` fills them from the JSON — automatically at startup when `Books` is
+empty, and on demand via `POST /api/admin/import-books?replace=true`. `Adventure.CommandsCsv`
+records which commands an adventure supports (combat verbs only where the book has fights,
+`CAST` only where it has spells), recomputed at startup by `AdventureCommandCatalog`.
+
+Everything else — users, progress, assets, achievements, subscriptions, and the seeded
+catalog (items, spells, commands, adventure metadata) — stays in its own tables as before.
+

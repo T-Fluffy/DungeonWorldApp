@@ -50,6 +50,33 @@ public class CatalogController : ControllerBase
             : Ok(ToDto(adventure));
     }
 
+    /// <summary>
+    /// The commands this adventure actually supports, with their aliases and usage examples
+    /// joined from the global command catalog. The reader uses this to drive HELP and to know
+    /// which verbs are meaningful in the current book.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("adventures/{bookTitle}/commands")]
+    public async Task<IActionResult> GetAdventureCommands(string bookTitle)
+    {
+        var adventure = await _db.Adventures.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.BookTitle == bookTitle);
+        if (adventure == null)
+            return NotFound(new { error = $"Adventure '{bookTitle}' not found." });
+
+        var allowed = adventure.CommandsCsv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var commands = await _db.Commands.AsNoTracking()
+            .Where(c => allowed.Contains(c.Name))
+            .OrderBy(c => c.Category)
+            .ThenBy(c => c.Name)
+            .ToListAsync();
+
+        return Ok(commands.Select(ToDto).ToList());
+    }
+
     // --- Admin management ---
 
     [Authorize(Roles = "Admin")]

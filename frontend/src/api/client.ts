@@ -373,3 +373,14 @@ export const getAdventureCatalogItem = async (bookTitle: string): Promise<Advent
   const { data } = await api.get<AdventureCatalogResponse>(`/catalog/adventures/${encodeURIComponent(bookTitle)}`);
   return data;
 };
+
+/**
+ * The commands this specific adventure supports (combat verbs only where the book has fights,
+ * CAST only where it has spells), joined with their aliases/usage from the command catalog.
+ */
+export const getAdventureCommands = async (bookTitle: string): Promise<GameCommandResponse[]> => {
+  const { data } = await api.get<GameCommandResponse[]>(
+    `/catalog/adventures/${encodeURIComponent(bookTitle)}/commands`
+  );
+  return data;
+};
