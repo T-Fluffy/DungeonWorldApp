@@ -189,4 +189,10 @@ using (var scope = app.Services.CreateScope())
     await CatalogSeeder.SeedAsync(scope.ServiceProvider);
 }
 
+// 6. Populate the playable-content tables from the cleaned JSON on a fresh database.
+//    Skipped once the Books table has rows; /api/admin/import-books re-runs it on demand.
+await BookContentImporter.SeedIfEmptyAsync(
+    app.Services,
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(BookContentImporter)));
+
 app.Run();

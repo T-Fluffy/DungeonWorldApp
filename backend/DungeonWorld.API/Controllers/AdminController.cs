@@ -1,8 +1,10 @@
 using DungeonWorld.Core.Options;
 using DungeonWorld.Cleaning;
 using DungeonWorld.Infrastructure.Parsing;
+using DungeonWorld.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace DungeonWorld.API.Controllers;
@@ -14,16 +16,46 @@ public class AdminController : ControllerBase
 {
     private readonly IParserFactory _parserFactory; // Changed from IBookParser
     private readonly FileStorageOptions _storageOptions;
+    private readonly DungeonWorldDbContext _db;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         IParserFactory parserFactory,
         IOptions<FileStorageOptions> storageOptions,
+        DungeonWorldDbContext db,
         ILogger<AdminController> logger)
     {
         _parserFactory = parserFactory;
         _storageOptions = storageOptions.Value;
+        _db = db;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Imports (or re-imports) the cleaned book JSON into the Books/Sections/Choices tables.
+    /// Runs automatically on an empty database; this endpoint forces a refresh after re-ingesting.
+    /// </summary>
+    [HttpPost("import-books")]
+    public async Task<IActionResult> ImportBooks([FromQuery] bool replace = false)
+    {
+        var cleanedDir = Path.Combine(Path.GetFullPath(_storageOptions.PdfUploadPath), "CleanedData");
+        var summary = await BookContentImporter.ImportAsync(_db, cleanedDir, replace, _logger);
+
+        var totals = new
+        {
+            books = await _db.Books.CountAsync(),
+            sections = await _db.Sections.CountAsync(),
+            choices = await _db.Choices.CountAsync()
+        };
+
+        return Ok(new
+        {
+            imported = summary.Imported,
+            skipped = summary.Skipped,
+            sectionsTouched = summary.Sections,
+            choicesTouched = summary.Choices,
+            totals
+        });
     }
 
     [HttpPost("upload")]

@@ -18,6 +18,10 @@ public class DungeonWorldDbContext : DbContext
     public DbSet<GameCommand> Commands => Set<GameCommand>();
     public DbSet<Adventure> Adventures => Set<Adventure>();
 
+    public DbSet<StoredBook> Books => Set<StoredBook>();
+    public DbSet<StoredSection> Sections => Set<StoredSection>();
+    public DbSet<StoredChoice> Choices => Set<StoredChoice>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity =>
@@ -70,6 +74,31 @@ public class DungeonWorldDbContext : DbContext
         modelBuilder.Entity<Adventure>(entity =>
         {
             entity.HasIndex(a => a.BookTitle).IsUnique();
+        });
+
+        // Playable book content (imported from the cleaned JSON, see BookContentImporter).
+        modelBuilder.Entity<StoredBook>(entity =>
+        {
+            entity.HasIndex(b => b.Title).IsUnique();
+            entity.HasMany(b => b.Sections)
+                  .WithOne(s => s.Book)
+                  .HasForeignKey(s => s.BookId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StoredSection>(entity =>
+        {
+            entity.HasIndex(s => new { s.BookId, s.Number }).IsUnique();
+            entity.HasIndex(s => s.Number);
+            entity.HasMany(s => s.Choices)
+                  .WithOne(c => c.Section)
+                  .HasForeignKey(c => c.SectionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StoredChoice>(entity =>
+        {
+            entity.HasIndex(c => new { c.SectionId, c.Target });
         });
     }
 }

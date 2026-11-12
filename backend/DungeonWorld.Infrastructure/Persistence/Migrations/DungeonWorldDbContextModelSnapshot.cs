@@ -17,7 +17,7 @@ namespace DungeonWorld.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -132,7 +132,7 @@ namespace DungeonWorld.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string[]>("Aliases")
+                    b.PrimitiveCollection<string[]>("Aliases")
                         .IsRequired()
                         .HasColumnType("text[]");
 
@@ -252,6 +252,144 @@ namespace DungeonWorld.Infrastructure.Persistence.Migrations
                     b.HasIndex("Name");
 
                     b.ToTable("Spells");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredBook", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdventureSheetPath")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Author")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CombatSectionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EnemyCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ImportedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Introduction")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MapPath")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MissingSectionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PresentSectionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RulesJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SectionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Title")
+                        .IsUnique();
+
+                    b.ToTable("Books");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredChoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDiceRoll")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Label")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Target")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SectionId", "Target");
+
+                    b.ToTable("Choices");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredSection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Clean")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("DeathEnd")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FeaturesJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("HasCombat")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsEnd")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MissingText")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Raw")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReferencesCsv")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("VictoryEnd")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number");
+
+                    b.HasIndex("BookId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Sections");
                 });
 
             modelBuilder.Entity("DungeonWorld.Core.Entities.Subscription", b =>
@@ -402,6 +540,28 @@ namespace DungeonWorld.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredChoice", b =>
+                {
+                    b.HasOne("DungeonWorld.Core.Entities.StoredSection", "Section")
+                        .WithMany("Choices")
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Section");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredSection", b =>
+                {
+                    b.HasOne("DungeonWorld.Core.Entities.StoredBook", "Book")
+                        .WithMany("Sections")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
             modelBuilder.Entity("DungeonWorld.Core.Entities.Subscription", b =>
                 {
                     b.HasOne("DungeonWorld.Core.Entities.User", "User")
@@ -422,6 +582,16 @@ namespace DungeonWorld.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredBook", b =>
+                {
+                    b.Navigation("Sections");
+                });
+
+            modelBuilder.Entity("DungeonWorld.Core.Entities.StoredSection", b =>
+                {
+                    b.Navigation("Choices");
                 });
 
             modelBuilder.Entity("DungeonWorld.Core.Entities.User", b =>
