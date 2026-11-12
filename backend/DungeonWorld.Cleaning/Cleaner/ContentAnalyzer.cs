@@ -173,7 +173,7 @@ public static class ContentAnalyzer
         var note = CombatNoteRe.Match(text);
         if (note.Success) features.CombatNote = Normalize(note.Value);
 
-        clean.Clean = StripAdverts(PageRangeFooterRe.Replace(StripChoiceLines(text), ""));
+        clean.Clean = OcrTypography.Repair(StripAdverts(PageRangeFooterRe.Replace(StripChoiceLines(text), "")));
         return clean;
     }
 

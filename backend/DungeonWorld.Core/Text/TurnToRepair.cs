@@ -101,7 +101,10 @@ public static partial class TurnToRepair
         // a reference — notably the English plural "turns to ...", where the "s"
         // would otherwise map to 5 ("stare turns to an" -> "turn to 5").
         if (prep.Length == 0 && !token.Any(char.IsDigit)) return m.Value;
-        var repaired = MapToken(token, maxSection);
+        // A lone salvaged digit ("turn to m1") is only trusted when the preposition is
+        // actually present. Without one, "turn f3 30g" would strip the junk and read a
+        // single "3" out of what is a mangled multi-digit target - a fabricated edge.
+        var repaired = MapToken(token, maxSection, allowSingleDigitSalvage: prep.Length > 0);
         // Unrepairable token: leave verbatim (e.g. narrative "turn both 12").
         if (repaired is null) return m.Value;
         // Already-canonical "turn to" keeps its original casing/spacing; only
@@ -117,7 +120,7 @@ public static partial class TurnToRepair
     }
 
     /// <summary>Maps a garbled target token to digits; null when not unambiguously repairable.</summary>
-    private static string? MapToken(string token, int maxSection)
+    private static string? MapToken(string token, int maxSection, bool allowSingleDigitSalvage = true)
     {
         if (int.TryParse(token, out var already) && already >= 1 && already <= maxSection)
             return token;
@@ -139,8 +142,10 @@ public static partial class TurnToRepair
             // re-garble a real word ("lumbers") on the cleaning pass. A lone
             // real digit is a different case ("turn to m1"/"m8"/"m2" in FF06
             // are the printed 1/8/2 with an OCR speck in front), so allow it
-            // when the raw token actually contained a digit.
-            if (token.Length == 1 && !rawHadDigit) return null;
+            // when the raw token actually contained a digit and the caller saw
+            // a preposition - without one the digits may belong to a longer,
+            // unrelated target ("turn f3 30g").
+            if (token.Length == 1 && !(rawHadDigit && allowSingleDigitSalvage)) return null;
         }
         var mapped = new char[token.Length];
         for (int i = 0; i < token.Length; i++)

@@ -41,6 +41,14 @@ public class TurnToRepairTests
     }
 
     [Theory]
+    [InlineData("turn f3 30g")]  // no preposition: the "3" belongs to a longer, mangled target
+    [InlineData("turn f5 123")]
+    public void RepairContent_RefusesLoneDigitWithoutPreposition(string input)
+    {
+        TurnToRepair.RepairContent(input, maxSection: 400).Should().Be(input);
+    }
+
+    [Theory]
     [InlineData("turn to m1", "turn to 1")]   // FF06 S39  "If you win, turn to m1."
     [InlineData("turn to m8", "turn to 8")]   // FF06 S374
     [InlineData("turn to m2", "turn to 2")]   // FF06 S378
